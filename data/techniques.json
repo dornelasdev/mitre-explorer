@@ -1,0 +1,29 @@
+[
+    {
+      "id": "T1059",
+      "name": "Command and Scripting Interpreter",
+      "description": "Adversaries may abuse command interpreters to execute commands.",
+      "tactics": ["Execution"],
+      "platforms": ["Windows", "Linux", "macOS"],
+      "data_sources": ["Process monitoring", "Command execution"],
+      "detection_notes": "Monitor suspicious shell and script interpreter usage."
+    },
+    {
+      "id": "T1566",
+      "name": "Phishing",
+      "description": "Adversaries may send phishing messages to gain access.",
+      "tactics": ["Initial Access"],
+      "platforms": ["Windows", "Linux", "macOS", "Office 365"],
+      "data_sources": ["Email logs", "Network traffic"],
+      "detection_notes": "Detect malicious attachments, links, and sender anomalies."
+    },
+    {
+      "id": "T1046",
+      "name": "Network Service Discovery",
+      "description": "Adversaries may scan services on a network to identify targets.",
+      "tactics": ["Discovery"],
+      "platforms": ["Windows", "Linux", "macOS", "Network"],
+      "data_sources": ["Network traffic", "Host logs"],
+      "detection_notes": "Look for unusual port scanning and service enumeration patterns."
+    }
+]
