@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"sort"
 	"strings"
 	"time"
 )
@@ -60,14 +61,14 @@ func main() {
 		const sourceURL = "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json"
 		const rawPath = "data/enterprise-attack.json"
 
-		force := len(os.Args) >= 3 && os.Args[2] == "-f"
+		force := len(os.Args) >= 3 && (os.Args[2] == "-f" || os.Args[2] == "--force")
 
 		var n int64
 		if !force {
 			if info, err := os.Stat(rawPath); err == nil {
 				n = info.Size()
 				fmt.Printf("Raw file already exists: %s\n", rawPath)
-				fmt.Println("Skipping download. Use `go run . update --force` to re-download")
+				fmt.Println("Skipping download. Use `go run . update --force or -f` to re-download")
 			} else {
 				stop := startSpinner("Downloading ATT&CK data")
 				n, err = downloadFile(sourceURL, rawPath)
@@ -165,9 +166,53 @@ func main() {
 		fmt.Printf("Data Sources: %s\n", strings.Join(technique.DataSources, ", "))
 		fmt.Printf("Detection Notes: %s\n", technique.DetectionNotes)
 
+	case "list":
+		if len(os.Args) < 4 {
+			fmt.Println("Usage:")
+			fmt.Println("  go run . list --tactic <name>")
+			fmt.Println("  go run . list --platform <name>")
+			return
+		}
+
+		techniques, err := loadTechniques(cachePath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				fmt.Println("Cache not found. Run: go run . update")
+				return
+			}
+			fmt.Printf("Error loading cache: %v\n", err)
+			return
+		}
+
+		flag := os.Args[2]
+		value := os.Args[3]
+
+		var results []Technique
+		switch flag {
+		case "--tactic":
+			results = listByTactic(techniques, value)
+		case "--platform":
+			results = listByPlatform(techniques, value)
+		default:
+			fmt.Printf("Unknown list option: %s\n", flag)
+			fmt.Println("Use --tactic or --platform")
+			return
+		}
+
+		if len(results) == 0 {
+			fmt.Println("No techniques found.")
+			return
+		}
+
+		fmt.Printf("Found %d technique(s):\n", len(results))
+		for _, t := range results {
+			fmt.Printf("- %s | %s\n", t.ID, t.Name)
+		}
+
 	default:
 		fmt.Printf("Unknown command: %s\n", command)
 	}
+
 }
 
 func downloadFile(url, outputPath string) (int64, error) {
@@ -335,4 +380,35 @@ func saveTechniques(path string, techniques []Technique) error {
 	}
 
 	return os.WriteFile(path, data, 0o644)
+}
+
+func containsSliceIgnoreCase(values []string, target string) bool {
+	for _, v := range values {
+		if strings.EqualFold(v, target) {
+			return true
+		}
+	}
+	return false
+}
+
+func listByTactic(techniques []Technique, tactic string) []Technique {
+	var out []Technique
+	for _, t := range techniques {
+		if containsSliceIgnoreCase(t.Tactics, tactic) {
+			out = append(out, t)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	return out
+}
+
+func listByPlatform(techniques []Technique, platform string) []Technique {
+	var out []Technique
+	for _, t := range techniques {
+		if containsSliceIgnoreCase(t.Platforms, platform) {
+			out = append(out, t)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	return out
 }
