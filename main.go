@@ -1,53 +1,14 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
-	"sort"
+	"strconv"
 	"strings"
-	"time"
 )
 
-type Technique struct {
-	ID string `json:"id"`
-	Name string `json:"name"`
-	Description string `json:"description"`
-	Tactics []string `json:"tactics"`
-	Platforms []string `json:"platforms"`
-	DataSources []string `json:"data_sources"`
-	DetectionNotes string `json:"detection_notes"`
-}
-
-type STIXBundle struct {
-	Objects []STIXObject `json:"objects"`
-}
-
-type STIXObject struct {
-	Type string `json:"type"`
-	Name string `json:"name"`
-	Description string `json:"description"`
-
-	KillChainPhases []struct {
-		PhaseName string `json:"phase_name"`
-	} `json:"kill_chain_phases"`
-
-	XMitrePlatforms []string `json:"x_mitre_platforms"`
-	XMitreDataSources []string `json:"x_mitre_data_sources"`
-	XMitreDetection string `json:"x_mitre_detection"`
-
-	ExternalReferences []struct {
-		SourceName string `json:"source_name"`
-		ExternalID string `json:"external_id"`
-	} `json:"external_references"`
-}
-
-const cachePath = "data/mitre-cache.json"
-
 func main() {
-	fmt.Println("MITRE Explorer v0.2")
+	fmt.Println("MITRE Explorer v0.4")
 
 	if len(os.Args) < 2 {
 		fmt.Println("Usage: go run . <command>")
@@ -109,7 +70,7 @@ func main() {
 
 	case "search":
 		if len(os.Args) < 3 {
-			fmt.Println("Usage: go run . search <term>")
+			fmt.Println("Usage: go run . search <term> [--name-only] [--limit N]")
 			return
 		}
 		techniques, err := loadTechniques(cachePath)
@@ -123,7 +84,33 @@ func main() {
 		}
 
 		term := os.Args[2]
-		results := searchTechniques(techniques, term)
+		nameOnly := false
+		limit := 0
+
+		for i := 3; i < len(os.Args); i++ {
+			switch os.Args[i] {
+			case "--name-only":
+				nameOnly = true
+			case "--limit":
+				if i+1 >= len(os.Args) {
+					fmt.Println("Usage: --limit <integer>")
+					return
+				}
+				n, err := strconv.Atoi(os.Args[i+1])
+				if err != nil || n <= 0 {
+					fmt.Println("Usage: --limit <integer>")
+					return
+				}
+				limit = n
+				i++
+			default:
+				fmt.Printf("Unknown search option: %s\n", os.Args[i])
+				fmt.Println("Use --name-only and/or --limit N")
+				return
+			}
+		}
+
+		results := searchTechniques(techniques, term, nameOnly, limit)
 
 		if len(results) == 0 {
 			fmt.Println("No techniques found.")
@@ -213,202 +200,4 @@ func main() {
 		fmt.Printf("Unknown command: %s\n", command)
 	}
 
-}
-
-func downloadFile(url, outputPath string) (int64, error) {
-	resp, err := http.Get(url)
-	if err != nil {
-		return 0, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return 0, fmt.Errorf("Unexpected HTTP status: %s", resp.Status)
-	}
-
-	if err := os.MkdirAll("data", 0o755); err != nil {
-		return 0, err
-	}
-
-	file, err := os.Create(outputPath)
-	if err != nil {
-		return 0, err
-	}
-	defer file.Close()
-
-	n, err := io.Copy(file, resp.Body)
-	if err != nil {
-		return 0, err
-	}
-
-	return n, nil
-}
-
-func buildTechniquesFromSTIX(path string) ([]Technique, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	var bundle STIXBundle
-	if err := json.Unmarshal(data, &bundle); err != nil {
-		return nil, err
-	}
-
-	var techniques []Technique
-
-	for _, obj := range bundle.Objects {
-		if obj.Type != "attack-pattern" {
-			continue
-		}
-
-		id := ""
-		for _, ref := range obj.ExternalReferences {
-			if ref.SourceName == "mitre-attack" && ref.ExternalID != "" {
-				id = ref.ExternalID
-				break
-			}
-		}
-		if id == "" {
-			continue
-		}
-
-		var tactics []string
-		for _, phase := range obj.KillChainPhases {
-			if phase.PhaseName != "" {
-				tactics = append(tactics, phase.PhaseName)
-			}
-		}
-
-		techniques = append(techniques, Technique{
-			ID: id,
-			Name: obj.Name,
-			Description: obj.Description,
-			Tactics: tactics,
-			Platforms: obj.XMitrePlatforms,
-			DataSources: obj.XMitreDataSources,
-			DetectionNotes: obj.XMitreDetection,
-		})
-	}
-
-	return techniques, nil
-}
-
-func loadTechniques(path string) ([]Technique, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	var techniques []Technique
-	if err := json.Unmarshal(data, &techniques); err != nil {
-		return nil, err
-	}
-
-	return techniques, nil
-}
-
-func containsIgnoreCase(text, term string) bool {
-	return strings.Contains(strings.ToLower(text), strings.ToLower(term))
-}
-
-func searchTechniques(techniques []Technique, term string) []Technique {
-	var results []Technique
-
-	for _, t := range techniques {
-		if containsIgnoreCase(t.Name, term) || containsIgnoreCase(t.Description, term) {
-			results = append(results, t)
-		}
-	}
-
-	return results
-}
-
-func findTechniqueByID(techniques []Technique, id string) (Technique, bool) {
-	for _, t := range techniques {
-		if strings.EqualFold(t.ID, id) {
-			return t, true
-		}
-	}
-	return Technique{}, false
-}
-
-func startSpinner(message string) func() {
-	done := make(chan struct{})
-
-	go func() {
-		frames := []rune{'|', '/', '-', '\\'}
-		i := 0
-		for {
-			select {
-			case <-done:
-				fmt.Printf("\r%s... done\n", message)
-
-				return
-			default:
-				fmt.Printf("\r%s... %c", message, frames[i%len(frames)])
-				time.Sleep(120 * time.Millisecond)
-				i++
-			}
-		}
-	}()
-
-	return func() { close(done) }
-}
-
-func humanSize(n int64) string {
-	const unit = 1000
-	if n < unit {
-		return fmt.Sprintf("%d B", n)
-	}
-	div, exp := int64(unit), 0
-	for v := n / unit; v >= unit; v /= unit {
-		div *= unit
-		exp++
-	}
-	return fmt.Sprintf("%.1f %cB", float64(n)/float64(div), "KMGTPE"[exp])
-}
-
-func saveTechniques(path string, techniques []Technique) error {
-	data, err := json.MarshalIndent(techniques, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	if err := os.MkdirAll("data", 0o755); err != nil {
-		return err
-	}
-
-	return os.WriteFile(path, data, 0o644)
-}
-
-func containsSliceIgnoreCase(values []string, target string) bool {
-	for _, v := range values {
-		if strings.EqualFold(v, target) {
-			return true
-		}
-	}
-	return false
-}
-
-func listByTactic(techniques []Technique, tactic string) []Technique {
-	var out []Technique
-	for _, t := range techniques {
-		if containsSliceIgnoreCase(t.Tactics, tactic) {
-			out = append(out, t)
-		}
-	}
-	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
-	return out
-}
-
-func listByPlatform(techniques []Technique, platform string) []Technique {
-	var out []Technique
-	for _, t := range techniques {
-		if containsSliceIgnoreCase(t.Platforms, platform) {
-			out = append(out, t)
-		}
-	}
-	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
-	return out
 }

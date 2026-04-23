@@ -12,19 +12,21 @@ The main goal is to provide a simple command-line workflow to:
 - Show technique details by ID.
 - Work offline using locally stored data.
 
-## Current Features (v0.3)
+## Current Features (v0.4)
 - `search <term>`: returns matching techniques from local cache (offline).
 - `show <technique_id>`: prints full details for a specific technique.
 - Local JSON parsing and basic CLI command handling.
 - `update`: downloads Enterprise ATT&CK STIX data, parses techniques, and builds local cache.
-  - `update --force` or `update --f`: forces raw file re-download before rebuilding cache.
+  - `update --force` or `update -f`: forces raw file re-download before rebuilding cache.
 - `list --tactic <name>`: lists techniques by tactic.
 - `list --platform <name>`: lists techniques by platform.
 
-
 ## Structure
-- `main.go`: entry point of the program, command routing, parsing, and query logic.
-- `data/techniques.json`: local sample dataset used in **v0.1**.
+- `main.go`: entry point of the program and command routing.
+- `types.go`: core data models (STIX bundle/object structs, cache path constant).
+- `update.go`: update pipeline (download raw ATT&CK data, parse STIX, build/write and load cache).
+- `query.go`: search and filter logic.
+- `ui.go`: terminal UX helpers (spinner and human-readable size formatting).
 - `data/mitre-cache.json`: normalized local cache used by `search`, `show`, and `list`.
 - `data/enterprise-attack.json`: raw Enterprise ATT&CK dataset downloaded by `update`.
 
@@ -39,6 +41,6 @@ go run . list --platform <name>
 ```
 
 ## Roadmap
-- **v0.35**: improve search quality (sorting, name-priority matches, optional filters).
-- **v0.4**: refactor `main.go` into multiple files/modules.
-- **v0.5**: smarter update logic (skip unchanged remote data with metadata checks, keep `--force` override).
+- **v0.5**: smarter update logic (skip unchanged remote data with metadata checks, keep `--force/-f` override).
+- **v0.6**: improve output UX (compact/detailed modes, optional table formatting, better error/help messages).
+- **v0.7**: add ATT&CK entity expansion (APT groups via `intrusion-set` + group-to-technique mapping commands).
