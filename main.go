@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	fmt.Println("MITRE Explorer v0.4")
+	fmt.Println("MITRE Explorer v0.5")
 
 	if len(os.Args) < 2 {
 		fmt.Println("Usage: go run . <command>")
@@ -24,30 +24,46 @@ func main() {
 
 		force := len(os.Args) >= 3 && (os.Args[2] == "-f" || os.Args[2] == "--force")
 
-		var n int64
-		if !force {
-			if info, err := os.Stat(rawPath); err == nil {
-				n = info.Size()
-				fmt.Printf("Raw file already exists: %s\n", rawPath)
-				fmt.Println("Skipping download. Use `go run . update --force or -f` to re-download")
-			} else {
-				stop := startSpinner("Downloading ATT&CK data")
-				n, err = downloadFile(sourceURL, rawPath)
-				stop()
-				if err != nil {
-					fmt.Printf("Update failed: %v\n", err)
-					return
-				}
-			}
-		} else {
-			stop := startSpinner("Downloading ATT&CK data")
-			var err error
-			n, err = downloadFile(sourceURL, rawPath)
-			stop()
-			if err != nil {
-				fmt.Printf("Update failed: %v\n", err)
+		meta, err := loadUpdateMeta(metaPath)
+		if err != nil && !os.IsNotExist(err) {
+			fmt.Printf("Failed to read update metadata: %v\n", err)
+			return
+		}
+
+		stop := startSpinner("Checking/downloading ATT&CK data")
+		dl, err := downloadFileConditional(sourceURL, rawPath, meta, force)
+		stop()
+		if err != nil {
+			fmt.Printf("Update failed: %v\n", err)
+			return
+		}
+
+		if dl.NotModified {
+			fmt.Println("Remote dataset unchanged (304 Not Modified).")
+			if _, err := os.Stat(cachePath); err == nil {
+				fmt.Println("Local cache is already up to date.")
 				return
 			}
+
+			fmt.Println("Cache file missing. Rebuilding cache from local raw dataset.")
+		}
+
+		if _, err := os.Stat(rawPath); err != nil {
+			if os.IsNotExist(err) {
+				fmt.Println("Raw dataset file is missing. Run: go run . update -f")
+				return
+			}
+			fmt.Printf("Error checking raw dataset file: %v\n", err)
+			return
+		}
+
+		if !dl.Downloaded {
+			info, err := os.Stat(rawPath)
+			if err != nil {
+				fmt.Printf("Error reading raw dataset size: %v\n", err)
+				return
+			}
+			dl.Bytes = info.Size()
 		}
 
 		techniques, err := buildTechniquesFromSTIX(rawPath)
@@ -61,12 +77,24 @@ func main() {
 			return
 		}
 
+		if err := saveUpdateMeta(metaPath, UpdateMeta{
+			ETag: dl.ETag,
+			LastModified: dl.LastModified,
+		}); err != nil {
+			fmt.Printf("Warning: failed to save update metadata: %v\n", err)
+		}
+
 		fmt.Println("Update complete.")
 		fmt.Printf("Source: %s\n", sourceURL)
 		fmt.Printf("Saved: %s\n", rawPath)
-		fmt.Printf("Size: %s (%d bytes)\n", humanSize(n), n)
+		fmt.Printf("Size: %s (%d bytes)\n", humanSize(dl.Bytes), dl.Bytes)
 		fmt.Printf("Cache: %s\n", cachePath)
 		fmt.Printf("Parsed techniques: %d\n", len(techniques))
+		if dl.Downloaded {
+			fmt.Println("Download status: downloaded new dataset")
+		} else {
+			fmt.Println("Download status: reused local raw dataset")
+		}
 
 	case "search":
 		if len(os.Args) < 3 {

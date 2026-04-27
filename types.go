@@ -33,4 +33,12 @@ type STIXObject struct {
 	} `json:"external_references"`
 }
 
-const cachePath = "data/mitre-cache.json"
+const (
+	cachePath = "data/mitre-cache.json"
+	metaPath = "data/update-meta.json"
+)
+
+type UpdateMeta struct {
+	ETag string `json:"etag"`
+	LastModified string `json:"last_modified"`
+}

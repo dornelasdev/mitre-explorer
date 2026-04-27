@@ -12,7 +12,7 @@ The main goal is to provide a simple command-line workflow to:
 - Show technique details by ID.
 - Work offline using locally stored data.
 
-## Current Features (v0.4)
+## Current Features (v0.5)
 - `search <term>`: returns matching techniques from local cache (offline).
 - `show <technique_id>`: prints full details for a specific technique.
 - Local JSON parsing and basic CLI command handling.
@@ -29,6 +29,7 @@ The main goal is to provide a simple command-line workflow to:
 - `ui.go`: terminal UX helpers (spinner and human-readable size formatting).
 - `data/mitre-cache.json`: normalized local cache used by `search`, `show`, and `list`.
 - `data/enterprise-attack.json`: raw Enterprise ATT&CK dataset downloaded by `update`.
+- `data/update-meta.json`: stores ETag/Last-Modified identifiers for update checks.
 
 ## Usage
 ```bash
@@ -41,6 +42,6 @@ go run . list --platform <name>
 ```
 
 ## Roadmap
-- **v0.5**: smarter update logic (skip unchanged remote data with metadata checks, keep `--force/-f` override).
 - **v0.6**: improve output UX (compact/detailed modes, optional table formatting, better error/help messages).
 - **v0.7**: add ATT&CK entity expansion (APT groups via `intrusion-set` + group-to-technique mapping commands).
+- **v0.8**: add export/report features (--json / --md) for search/list/show results.

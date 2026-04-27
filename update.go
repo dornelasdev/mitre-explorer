@@ -8,33 +8,78 @@ import (
 	"os"
 )
 
-func downloadFile(url, outputPath string) (int64, error) {
-	resp, err := http.Get(url)
+type DownloadResult struct {
+	Downloaded bool
+	NotModified bool
+	Bytes int64
+	ETag string
+	LastModified string
+}
+
+func downloadFileConditional(url, outputPath string, prev UpdateMeta, force bool) (DownloadResult, error) {
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		return 0, err
+		return DownloadResult{}, err
+	}
+
+	if !force {
+		if prev.ETag != "" {
+			req.Header.Set("If-None-Match", prev.ETag)
+		}
+		if prev.LastModified != "" {
+			req.Header.Set("If-Modified-Since", prev.LastModified)
+		}
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return DownloadResult{}, err
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode == http.StatusNotModified {
+		return DownloadResult{
+			NotModified: true,
+			ETag: prev.ETag,
+			LastModified: prev.LastModified,
+		}, nil
+	}
+
 	if resp.StatusCode != http.StatusOK {
-		return 0, fmt.Errorf("Unexpected HTTP status: %s", resp.Status)
+		return DownloadResult{}, fmt.Errorf("Unexpected HTTP status: %s", resp.Status)
 	}
 
 	if err := os.MkdirAll("data", 0o755); err != nil {
-		return 0, err
+		return DownloadResult{}, err
 	}
 
 	file, err := os.Create(outputPath)
 	if err != nil {
-		return 0, err
+		return DownloadResult{}, err
 	}
 	defer file.Close()
 
 	n, err := io.Copy(file, resp.Body)
 	if err != nil {
-		return 0, err
+		return DownloadResult{}, err
 	}
 
-	return n, nil
+	etag := resp.Header.Get("ETag")
+	if etag == "" {
+		etag = prev.ETag
+	}
+
+	lastMod := resp.Header.Get("Last-Modified")
+	if lastMod == "" {
+		lastMod = prev.LastModified
+	}
+
+	return DownloadResult{
+		Downloaded: true,
+		Bytes: n,
+		ETag: etag,
+		LastModified: lastMod,
+	}  , nil
 }
 
 func buildTechniquesFromSTIX(path string) ([]Technique, error) {
@@ -112,4 +157,29 @@ func loadTechniques(path string) ([]Technique, error) {
 	}
 
 	return techniques, nil
+}
+
+func loadUpdateMeta(path string) (UpdateMeta, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return UpdateMeta{}, err
+	}
+
+	var m UpdateMeta
+	if err := json.Unmarshal(data, &m); err != nil {
+		return UpdateMeta{}, err
+	}
+	return m, nil
+}
+
+func saveUpdateMeta(path string, m UpdateMeta) error {
+	data, err := json.MarshalIndent(m, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll("data", 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0o644)
 }
