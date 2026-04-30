@@ -93,3 +93,27 @@ func listByPlatform(techniques []Technique, platform string) []Technique {
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out
 }
+
+func collectUniqueTactics(techniques []Technique) []string {
+	seen := make(map[string]struct{})
+	var tactics []string
+
+	for _, tech := range techniques {
+		for _, t := range tech.Tactics {
+			key := strings.TrimSpace(strings.ToLower(t))
+			if key == "" {
+				continue
+			}
+			if _, ok := seen[key]; ok {
+				continue
+			}
+			seen[key] = struct{}{}
+			tactics = append(tactics, t)
+		}
+	}
+
+	sort.Slice(tactics, func(i, j int) bool {
+		return strings.ToLower(tactics[i]) < strings.ToLower(tactics[j])
+	})
+	return tactics
+}

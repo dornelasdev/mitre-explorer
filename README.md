@@ -12,7 +12,9 @@ The main goal is to provide a simple command-line workflow to:
 - Show technique details by ID.
 - Work offline using locally stored data.
 
-## Current Features (v0.5)
+## Current Features (v0.6)
+
+### Core Commands
 - `search <term>`: returns matching techniques from local cache (offline).
 - `show <technique_id>`: prints full details for a specific technique.
 - Local JSON parsing and basic CLI command handling.
@@ -20,6 +22,12 @@ The main goal is to provide a simple command-line workflow to:
   - `update --force` or `update -f`: forces raw file re-download before rebuilding cache.
 - `list --tactic <name>`: lists techniques by tactic.
 - `list --platform <name>`: lists techniques by platform.
+
+### Interactive Mode
+- Launches wheh running `go run .` with no command arguments.
+- **GUIDED EXPLORER**: navigate tactic -> technique -> details with in-terminal prompts.
+- **MANUAL COMMAND MODE**: type commands directly inside the app.
+- Navigation shortcuts: `q` to quit, `back`/`b` where applicable.
 
 ## Structure
 - `main.go`: entry point of the program and command routing.
@@ -42,6 +50,6 @@ go run . list --platform <name>
 ```
 
 ## Roadmap
-- **v0.6**: improve output UX (compact/detailed modes, optional table formatting, better error/help messages).
+- **v0.65**: improve output UX/UI (colors, compact/detailed modes, optional table formatting, clearer error/help messages, and more).
 - **v0.7**: add ATT&CK entity expansion (APT groups via `intrusion-set` + group-to-technique mapping commands).
 - **v0.8**: add export/report features (--json / --md) for search/list/show results.
