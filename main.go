@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	fmt.Println("MITRE Explorer v0.6")
+	fmt.Println("MITRE Explorer v0.65")
 
 	if len(os.Args) < 2 {
 		startInteractiveMode()
@@ -21,9 +21,11 @@ func main() {
 
 func startInteractiveMode() {
 
+	useColor = true
+
 	reader := bufio.NewReader(os.Stdin)
 	for {
-		fmt.Println("MITRE EXPLORER V0.6")
+		fmt.Println("MITRE EXPLORER V0.65")
 		fmt.Println("Choose mode:")
 		fmt.Println("  [1] Guided Explorer")
 		fmt.Println("  [2] Manual Command Mode")
@@ -32,7 +34,7 @@ func startInteractiveMode() {
 
 		choice := readLine(reader)
 
-		switch  strings.ToLower(choice) {
+		switch strings.ToLower(choice) {
 		case "1":
 			fmt.Println("Guided Explorer mode selected.")
 			runGuidedExplorer()
@@ -40,9 +42,9 @@ func startInteractiveMode() {
 		case "2":
 			fmt.Println("Manual mode selected.")
 			fmt.Println("Type a command (without `go run .`), for example:")
-			fmt.Println("  search powershell --limit 5")
+			fmt.Println("  search powershell --limit 5 --detailed")
 			fmt.Println("  show T1059")
-			fmt.Println("  list --tactic execution")
+			fmt.Println("  list --tactic execution --plain")
 			fmt.Println("Type `back` to return to mode menu, or `q` to quit.")
 
 			for {
@@ -76,7 +78,7 @@ func runGuidedExplorer() {
 	 techniques, err := loadTechniques(cachePath)
 	 if err != nil {
 		if os.IsNotExist(err) {
-			fmt.Println("Cache not found. Run: go run . update")
+			fmt.Println(errText("Cache not found. Run: go run . update"))
 			return
 		}
 		fmt.Printf("Error loading cache: %v\n", err)
@@ -118,10 +120,9 @@ func runGuidedExplorer() {
 		}
 
 		for {
-			fmt.Printf("Techniques for tactic %q (%d):\n", selectedTactic, len(results))
-			for i, t := range results {
-				fmt.Printf("  [%d] %s | %s\n", i+1, t.ID, t.Name)
-			}
+			fmt.Println(title("Techniques"))
+			fmt.Printf("%s %q (%d)\n", ok("Tactic:"), selectedTactic, len(results))
+			printTechniqueTable(results)
 			fmt.Println("  [b] Back to tactics")
 			fmt.Println("  [q] Exit guided mode")
 			fmt.Print("> ")
@@ -199,7 +200,21 @@ func runCommand(args []string) {
 		return
 	}
 
+	useColor = true
+
 	command := args[0]
+
+	filtered := make([]string, 0, len(args))
+	filtered = append(filtered, command)
+
+	for _, a := range args[1:] {
+		if a == "--plain" {
+			useColor = false
+			continue
+		}
+		filtered = append(filtered, a)
+	}
+	args = filtered
 
 	switch command {
 	case "update":
@@ -207,6 +222,14 @@ func runCommand(args []string) {
 		const rawPath = "data/enterprise-attack.json"
 
 		force := len(args) >= 2 && (args[1] == "-f" || args[1] == "--force")
+		if len(args) > 2 {
+			fmt.Println("Usage: go run . update [-f|--force] [--plain]")
+			return
+		}
+		if len(args) == 2 && args[1] != "-f" && args[1] != "--force" {
+			fmt.Println("Usage: go run . update [-f|--force] [--plain]")
+			return
+		}
 
 		meta, err := loadUpdateMeta(metaPath)
 		if err != nil && !os.IsNotExist(err) {
@@ -223,13 +246,13 @@ func runCommand(args []string) {
 		}
 
 		if dl.NotModified {
-			fmt.Println("Remote dataset unchanged (304 Not Modified).")
+			fmt.Println(warn("Remote dataset unchanged (304 Not Modified)."))
 			if _, err := os.Stat(cachePath); err == nil {
 				fmt.Println("Local cache is already up to date.")
 				return
 			}
 
-			fmt.Println("Cache file missing. Rebuilding cache from local raw dataset.")
+			fmt.Println(warn("Cache file missing. Rebuilding cache from local raw dataset."))
 		}
 
 		if _, err := os.Stat(rawPath); err != nil {
@@ -268,7 +291,7 @@ func runCommand(args []string) {
 			fmt.Printf("Warning: failed to save update metadata: %v\n", err)
 		}
 
-		fmt.Println("Update complete.")
+		fmt.Println(ok("Update complete."))
 		fmt.Printf("Source: %s\n", sourceURL)
 		fmt.Printf("Saved: %s\n", rawPath)
 		fmt.Printf("Size: %s (%d bytes)\n", humanSize(dl.Bytes), dl.Bytes)
@@ -282,13 +305,13 @@ func runCommand(args []string) {
 
 	case "search":
 		if len(args) < 2 {
-			fmt.Println("Usage: go run . search <term> [--name-only] [--limit N]")
+			fmt.Println("Usage: go run . search <term> [--name-only] [--limit N] [--detailed] [--plain]")
 			return
 		}
 		techniques, err := loadTechniques(cachePath)
 		if err != nil {
 			if os.IsNotExist(err) {
-				fmt.Println("Cache not found. Run: go run . update")
+				fmt.Println(errText("Cache not found. Run: go run . update"))
 				return
 			}
 			fmt.Printf("Error loading cache: %v\n", err)
@@ -297,6 +320,7 @@ func runCommand(args []string) {
 
 		term := args[1]
 		nameOnly := false
+		detailed := false
 		limit := 0
 
 		for i := 2; i < len(args); i++ {
@@ -315,6 +339,8 @@ func runCommand(args []string) {
 				}
 				limit = n
 				i++
+			case "--detailed":
+				detailed = true
 			default:
 				fmt.Printf("Unknown search option: %s\n", args[i])
 				fmt.Println("Use --name-only and/or --limit N")
@@ -329,10 +355,17 @@ func runCommand(args []string) {
 			return
 		}
 
-		fmt.Printf("Found %d technique(s):\n", len(results))
-		for _, r := range results {
-			fmt.Printf("- %s | %s\n", r.ID, r.Name)
+		fmt.Printf("%s %d technique(s)\n", ok("Found"), len(results))
+		if detailed {
+			for i, r := range results {
+				fmt.Printf("\n[%d] %s | %s\n", i+1, r.ID, r.Name)
+				fmt.Printf("    Tactics: %s\n", strings.Join(r.Tactics, ", "))
+				fmt.Printf("    Platforms: %s\n", strings.Join(r.Platforms, ", "))
+			}
+		} else {
+			printTechniqueTable(results)
 		}
+
 
 	case "show":
 		if len(args) < 2 {
@@ -357,32 +390,44 @@ func runCommand(args []string) {
 			return
 		}
 
-		fmt.Printf("ID: %s\n", technique.ID)
-		fmt.Printf("Name: %s\n", technique.Name)
-		fmt.Printf("Description: %s\n", technique.Description)
-		fmt.Printf("Tactics: %s\n", strings.Join(technique.Tactics, ", "))
-		fmt.Printf("Platforms: %s\n", strings.Join(technique.Platforms, ", "))
-		fmt.Printf("Data Sources: %s\n", strings.Join(technique.DataSources, ", "))
-		fmt.Printf("Detection Notes: %s\n", technique.DetectionNotes)
+		fmt.Printf("%s %s\n", label("ID:"), technique.ID)
+		fmt.Printf("%s %s\n", label("Name:"), technique.Name)
+		fmt.Printf("%s %s\n", label("Description:"), technique.Description)
+		fmt.Printf("%s %s\n", label("Tactics:"), strings.Join(technique.Tactics, ", "))
+		fmt.Printf("%s %s\n", label("Platforms:"), strings.Join(technique.Platforms, ", "))
+		fmt.Printf("%s %s\n", label("Data Sources:"), strings.Join(technique.DataSources, ", "))
+		fmt.Printf("%s %s\n", label("Detection Notes:"), technique.DetectionNotes)
 
 	case "list":
 		if len(args) < 3 {
 			fmt.Println("Usage:")
-			fmt.Println("  go run . list --tactic <name>")
-			fmt.Println("  go run . list --platform <name>")
+			fmt.Println("  go run . list --tactic <name> [--detailed] [--plain]")
+			fmt.Println("  go run . list --platform <name> [--detailed] [--plain]")
 			return
 		}
 
 		techniques, err := loadTechniques(cachePath)
 		if err != nil {
 			if os.IsNotExist(err) {
-				fmt.Println("Cache not found. Run: go run . update")
+				fmt.Println(errText("Cache not found. Run: go run . update"))
 				return
 			}
 			fmt.Printf("Error loading cache: %v\n", err)
 			return
 		}
 
+		detailed := false
+		filtered := make([]string, 0, len(args))
+		filtered = append(filtered, args[0])
+
+		for _, a := range args[1:] {
+			if a == "--detailed" {
+				detailed = true
+				continue
+			}
+			filtered = append(filtered, a)
+		}
+		args = filtered
 		flag := args[1]
 		value := args[2]
 
@@ -403,9 +448,15 @@ func runCommand(args []string) {
 			return
 		}
 
-		fmt.Printf("Found %d technique(s):\n", len(results))
-		for _, t := range results {
-			fmt.Printf("- %s | %s\n", t.ID, t.Name)
+		fmt.Printf("%s %d technique(s)\n", ok("Found"), len(results))
+		if detailed {
+			for i, t := range results {
+				fmt.Printf("\n[%d] %s | %s\n", i+1, t.ID, t.Name)
+				fmt.Printf("    Tactics: %s\n", strings.Join(t.Tactics, ", "))
+				fmt.Printf("    Platforms: %s\n", strings.Join(t.Platforms, ", "))
+			}
+		} else {
+			printTechniqueTable(results)
 		}
 
 	default:
