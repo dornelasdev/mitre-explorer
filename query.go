@@ -95,12 +95,49 @@ func listByPlatform(techniques []Technique, platform string) []Technique {
 }
 
 func collectUniqueTactics(techniques []Technique) []string {
+	// ATT&CK Enterprise tactic order
+	attackOrder := []string{
+		"Reconnaissance",
+		"Resource Development",
+		"Initial Access",
+		"Execution",
+		"Persistence",
+		"Privilege Escalation",
+		"Defense Evasion",
+		"Credential Access",
+		"Discovery",
+		"Lateral Movement",
+		"Collection",
+		"Command and Control",
+		"Exfiltration",
+		"Impact",
+	}
+
+	normalize := func(s string) string {
+		s = strings.TrimSpace(strings.ToLower(s))
+		s = strings.ReplaceAll(s, "-", " ")
+		s = strings.ReplaceAll(s, "_", " ")
+		return s
+	}
+
+	orderIndex := make(map[string]int, len(attackOrder))
+	displayName := make(map[string]string, len(attackOrder))
+	for i, t := range attackOrder {
+		k := normalize(t)
+		orderIndex[k] = i
+		displayName[k] = t
+	}
+
 	seen := make(map[string]struct{})
-	var tactics []string
+	type tacticItem struct {
+		display string
+		key string
+	}
+	var items []tacticItem
 
 	for _, tech := range techniques {
 		for _, t := range tech.Tactics {
-			key := strings.TrimSpace(strings.ToLower(t))
+			key := normalize(t)
 			if key == "" {
 				continue
 			}
@@ -108,12 +145,35 @@ func collectUniqueTactics(techniques []Technique) []string {
 				continue
 			}
 			seen[key] = struct{}{}
-			tactics = append(tactics, t)
+
+			display := t
+			if v, ok := displayName[key]; ok {
+				display = v
+			}
+
+			items = append(items, tacticItem{
+				display: display,
+				key: key,
+			})
 		}
 	}
 
-	sort.Slice(tactics, func(i, j int) bool {
-		return strings.ToLower(tactics[i]) < strings.ToLower(tactics[j])
+	sort.Slice(items, func(i, j int) bool {
+		oi, iok := orderIndex[items[i].key]
+		oj, jok := orderIndex[items[j].key]
+
+		if iok && jok {
+			return oi < oj
+		}
+		if iok != jok {
+			return iok
+		}
+		return items[i].key < items[j].key
+
 	})
-	return tactics
+	out := make([]string, 0, len(items))
+	for _, it := range items {
+		out = append(out, it.display)
+	}
+	return out
 }
