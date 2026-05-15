@@ -7,24 +7,40 @@ CLI tool written in Go to explore MITRE ATT&CK techniques offline.
 **THIS PROJECT USES MITRE ATT&CK DATA UNDER MITRE ATT&CK TERMS OF USE. MITRE ATT&CK AND ATT&CK ARE REGISTERED TRADEMARKS OF THE MITRE CORPORATION.**
 
 ## Description
-The main goal is to provide a simple command-line workflow to:
-- Search techniques by keyword.
-- Show technique details by ID.
-- Work offline using locally stored data.
+A CLI for exploring MITRE ATT&CK data offline in a simple, learning-friendly workflow.
+It supports quick lookup, guided navigation, and local cache-based querying without needing live web requests for every command.
 
-## Current Features (v0.65)
-- Colorized CLI output (with `--plain` fallback).
-- Guided explorer + manual interactive mode (`go run .`).
-- `--detailed` mode for search and list.
+## Current Features (v0.7)
+- Offline cache + update pipeline.
+- Technique search/show/list.
+- Group/mitigation mappings.
+- Interactive guided/manual modes.
+- Plain/detailed output modes.
 
 ### Core Commands
-- `search <term>`: returns matching techniques from local cache (offline).
-- `show <technique_id>`: prints full details for a specific technique.
-- Local JSON parsing and basic CLI command handling.
-- `update`: downloads Enterprise ATT&CK STIX data, parses techniques, and builds local cache.
-  - `update --force` or `update -f`: forces raw file re-download before rebuilding cache.
-- `list --tactic <name>`: lists techniques by tactic.
-- `list --platform <name>`: lists techniques by platform.
+- `update`
+  - Refresh local ATT&CK data and build cache.
+  - Options: `-f` or `--force` (force re-download).
+
+- `search <term>`
+  - Search techniques in local cache.
+  - Options: `--name-only`, `--limit N`.
+
+- `show <technique_id>`
+  - Show full details for one technique.
+
+- `list`
+  - `--tactic <name>`
+  - `--platform <name>`
+
+- `group techniques <group_id_or_name>`
+  - List techniques mapped to a group.
+
+- `group show <group_id_or_name>`
+  - Show group details (aliases, description, etc.)
+
+- `mitigation techniques <mitigation_id_or_name>`
+  - List techniques mapped to a mitigation.
 
 ### Interactive Mode
 - Launches when running `go run .` with no command arguments.
@@ -44,17 +60,18 @@ The main goal is to provide a simple command-line workflow to:
 
 ## Usage
 ```bash
-go run . update
-go run . update -f
-go run . # interactive menu
-go run . search <term>
-go run . search <term> --detailed
-go run . seach <term> --plain
+go run . update [-f | --force]
+go run . search <term> [--name-only] [--limit N] [--detailed] [--plain]
 go run . show <technique_id>
 go run . list --tactic <name>
 go run . list --platform <name>
+go run . group techniques <group_id_or_name>
+go run . mitigation techniques <mitigation_id_or_name>
 ```
 
-## Roadmap
-- **v0.7**: add ATT&CK entity expansion (APT groups via `intrusion-set` + group-to-technique mapping commands).
-- **v0.8**: add export/report features (--json / --md) for search/list/show results.
+- `go run .` starts interactive mode
+
+## Notes
+- ATT&CK Enterprise tactic model changed in ATT&CK v19 (April 2026):
+  - `Defense Evasion` was split into `Stealth` and `Defense Impairment`.
+- This project tracks current tactics in guided/list flows.

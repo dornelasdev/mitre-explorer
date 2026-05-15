@@ -4,12 +4,13 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 )
 
 func main() {
-	fmt.Println("MITRE Explorer v0.65")
+	fmt.Println("MITRE Explorer v0.7")
 
 	if len(os.Args) < 2 {
 		startInteractiveMode()
@@ -25,7 +26,6 @@ func startInteractiveMode() {
 
 	reader := bufio.NewReader(os.Stdin)
 	for {
-		fmt.Println("MITRE EXPLORER V0.65")
 		fmt.Println("Choose mode:")
 		fmt.Println("  [1] Guided Explorer")
 		fmt.Println("  [2] Manual Command Mode")
@@ -75,107 +75,254 @@ func startInteractiveMode() {
 }
 
 func runGuidedExplorer() {
-	 techniques, err := loadTechniques(cachePath)
-	 if err != nil {
+	cache, err := loadCacheData(cachePath)
+	if err != nil {
 		if os.IsNotExist(err) {
 			fmt.Println(errText("Cache not found. Run: go run . update"))
 			return
 		}
 		fmt.Printf("Error loading cache: %v\n", err)
 		return
-	 }
+	}
 
-	 tactics := collectUniqueTactics(techniques)
-	 if len(tactics) == 0 {
-		fmt.Println("No tactics found in cache.")
-		return
-	 }
+	reader := bufio.NewReader(os.Stdin)
 
-	 reader := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Println(title("Guided Explorer"))
+		fmt.Println("  [1] Explore Tactics")
+		fmt.Println("  [2] Explore Groups")
+		fmt.Println("  [3] Explore Mitigations")
+		fmt.Println("  [q] Exit guided mode")
+		fmt.Printf("> ")
 
-	 for {
-		fmt.Println("Select a tactic (number), or 'q' to quit:")
-		for i, t := range tactics {
-			fmt.Printf("  [%d] %s\n", i+1, t)
-		}
-		fmt.Print("> ")
+		choice := strings.ToLower(strings.TrimSpace(readLine(reader)))
 
-		tacticInput := readLine(reader)
-		if strings.EqualFold(tacticInput, "q") {
-			fmt.Println("Exiting guided explorer.")
-			return
-		}
-		tacticIndex, err := strconv.Atoi(tacticInput)
-		if err != nil || tacticIndex < 1 || tacticIndex > len(tactics) {
-			fmt.Println("Invalid selection.")
-			continue
-		}
-
-		selectedTactic := tactics[tacticIndex-1]
-		results := listByTactic(techniques, selectedTactic)
-
-		if len(results) == 0 {
-			fmt.Println("No techniques found for this tactic.")
-			continue
-		}
-
-		for {
-			fmt.Println(title("Techniques"))
-			fmt.Printf("%s %q (%d)\n", ok("Tactic:"), selectedTactic, len(results))
-			printTechniqueTable(results)
-			fmt.Println("  [b] Back to tactics")
-			fmt.Println("  [q] Exit guided mode")
-			fmt.Print("> ")
-
-			pickInput := readLine(reader)
-
-			if strings.EqualFold(pickInput, "q") {
-				fmt.Println("Exiting guided explorer.")
-				return
-			}
-			if strings.EqualFold(pickInput, "b") {
-				break
-			}
-
-			pick, err := strconv.Atoi(pickInput)
-			if err != nil || pick < 1 || pick > len(results) {
-				fmt.Println("Invalid selection.")
+		switch choice {
+		case "1":
+			techniques := cache.Techniques
+			tactics := collectUniqueTactics(techniques)
+			if len(tactics) == 0 {
+				fmt.Println("No tactics found in cache.")
 				continue
 			}
 
-			selected := results[pick-1]
-			fmt.Println()
-			printTechniqueDetails(selected)
-
-			backToTactics := false
-
 			for {
-				fmt.Println("\nNext:")
-				fmt.Println("  [1] Back to techniques")
-				fmt.Println("  [2] Back to tactics")
-				fmt.Println("  [q] Exit guided mode")
+				fmt.Println("Select a tactic (number), or 'q' to return:")
+				for i, t := range tactics {
+					fmt.Printf("  [%d] %s\n", i+1, t)
+				}
 				fmt.Print("> ")
 
-				nextInput := readLine(reader)
+				tacticInput := readLine(reader)
+				if strings.EqualFold(tacticInput, "q") {
+					break
+				}
 
-				switch nextInput {
-				case "1":
-
-				case "2":
-					backToTactics = true
-				case "q":
-					fmt.Println("Exiting guided explorer.")
-					return
-				default:
+				tacticIndex, err := strconv.Atoi(tacticInput)
+				if err != nil || tacticIndex < 1 || tacticIndex > len(tactics) {
 					fmt.Println("Invalid selection.")
 					continue
 				}
-				break
+
+				selectedTactic := tactics[tacticIndex-1]
+				results := listByTactic(techniques, selectedTactic)
+				if len(results) == 0 {
+					fmt.Println("No techniques found for this tactic.")
+					continue
+				}
+
+				for {
+					fmt.Println(title("Techniques"))
+					fmt.Printf("%s %q (%d)\n", ok("Tactic:"), selectedTactic, len(results))
+					printTechniqueTable(results)
+					fmt.Println("  [b] Back to tactics")
+					fmt.Println("  [q] Return to guided menu")
+					fmt.Print("> ")
+
+					pickInput := readLine(reader)
+
+					if strings.EqualFold(pickInput, "q") {
+						goto guidedMenu
+					}
+					if strings.EqualFold(pickInput, "b") {
+						break
+					}
+
+					pick, err := strconv.Atoi(pickInput)
+					if err != nil || pick < 1 || pick > len(results) {
+						fmt.Println("Invalid selection.")
+						continue
+					}
+
+					selected := results[pick-1]
+					fmt.Println()
+					printTechniqueDetails(selected)
+				}
 			}
-			if backToTactics {
-				break
+		case "2":
+			if len(cache.Groups) == 0 {
+				fmt.Println("No groups found in cache.")
+				continue
 			}
+
+			groups := make([]Group, len(cache.Groups))
+			copy(groups, cache.Groups)
+			sort.Slice(groups, func(i, j int) bool { return groups[i].ID < groups[j].ID })
+
+			for {
+				fmt.Println(title("Groups"))
+				fmt.Printf("%s %d group(s)\n", ok("Found"), len(groups))
+				fmt.Printf("%-4s %-10s %s\n", "#", "ID", "Name")
+				fmt.Println(strings.Repeat("-", 64))
+				for i, g := range groups {
+					fmt.Printf("%-4d %-10s %s\n", i+1, g.ID, truncateText(g.Name, 48))
+				}
+				fmt.Println("  [q] Return to guided menu")
+				fmt.Print("> ")
+
+				input := readLine(reader)
+				if strings.EqualFold(input, "q") {
+					break
+				}
+
+				idx, err := strconv.Atoi(input)
+				if err != nil || idx < 1 || idx > len(groups) {
+					fmt.Println("Invalid selection.")
+					continue
+				}
+
+				g := groups[idx-1]
+				related := techniquesUsedByGroup(cache, g.ID)
+
+				fmt.Printf("%s %s\n", label("ID:"), g.ID)
+				fmt.Printf("%s %s\n", label("Name:"), g.Name)
+				fmt.Printf("%s %s\n", label("Aliases:"), strings.Join(g.Aliases, ", "))
+				fmt.Printf("%s %d\n", label("Mapped techniques:"), len(related))
+				fmt.Printf("%s %s\n", label("Description:"), g.Description)
+
+				viewedMapped := false
+
+				for {
+					fmt.Println("\nNext:")
+					if !viewedMapped {
+						fmt.Println("  [1] View mapped techniques")
+					}
+					fmt.Println("  [b] Back to groups")
+					fmt.Println("  [q] Return to guided menu")
+					fmt.Print("> ")
+
+					next := strings.ToLower(readLine(reader))
+					switch next {
+					case "1":
+						if viewedMapped {
+							fmt.Println("Invalid selection.")
+							continue
+						}
+						if len(related) == 0 {
+							fmt.Println("No mapped techniques for this group.")
+						} else {
+							printTechniqueTable(related)
+						}
+						viewedMapped = true
+
+					case "b":
+						fmt.Println()
+						goto groupList
+					case "q":
+						goto guidedMenu
+					default:
+						fmt.Println("Invalid selection.")
+					}
+				}
+			groupList:
+			}
+
+		case "3":
+			if len(cache.Mitigations) == 0 {
+				fmt.Println("No mitigations found in cache.")
+				continue
+			}
+
+			mitigations := make([]Mitigation, len(cache.Mitigations))
+			copy(mitigations, cache.Mitigations)
+			sort.Slice(mitigations, func(i, j int) bool { return mitigations[i].ID < mitigations[j].ID })
+
+			for {
+				fmt.Println(title("Mitigations"))
+				fmt.Printf("%s %d mitigation(s)\n", ok("Found"), len(mitigations))
+				fmt.Printf("%-4s %-10s %s\n", "#", "ID", "Name")
+				fmt.Println(strings.Repeat("-", 64))
+				for i, m := range mitigations {
+					fmt.Printf("%-4d %-10s %s\n", i+1, m.ID, truncateText(m.Name, 48))
+				}
+				fmt.Println("  [q] Return to guided menu")
+				fmt.Print("> ")
+
+				input := readLine(reader)
+				if strings.EqualFold(input, "q") {
+					break
+				}
+
+				idx, err := strconv.Atoi(input)
+				if err != nil || idx < 1 || idx > len(mitigations) {
+					fmt.Println("Invalid selection.")
+					continue
+				}
+
+				m := mitigations[idx-1]
+				related := techniquesMitigatedBy(cache, m.ID)
+
+				fmt.Println()
+				fmt.Printf("%s %s\n", label("ID:"), m.ID)
+				fmt.Printf("%s %s\n", label("Name:"), m.Name)
+				fmt.Printf("%s %d\n", label("Mapped techniques:"), len(related))
+				fmt.Printf("%s %s\n", label("Description:"), m.Description)
+
+				viewedMapped := false
+
+				for {
+					fmt.Println("\nNext:")
+					if !viewedMapped {
+						fmt.Println("  [1] View mapped techniques")
+					}
+					fmt.Println("  [b] Back to mitigations")
+					fmt.Println("  [q] Return to guided menu")
+					fmt.Print("> ")
+
+					next := strings.ToLower(readLine(reader))
+					switch next {
+					case "1":
+						if viewedMapped {
+							fmt.Println("Invalid selection.")
+							continue
+						}
+						if len(related) == 0 {
+							fmt.Println("No mapped techniques for this mitigation.")
+						} else {
+							printTechniqueTable(related)
+						}
+						viewedMapped = true
+
+					case "b":
+						fmt.Println()
+						goto mitigationList
+					case "q":
+						goto guidedMenu
+					default:
+						fmt.Println("Invalid selection.")
+					}
+				}
+				mitigationList:
+				}
+
+		case "q":
+			fmt.Println("Exiting guided explorer.")
+			return
+		default:
+			fmt.Println("Invalid selection.")
 		}
+
+	guidedMenu:
 	}
 }
 
@@ -273,13 +420,13 @@ func runCommand(args []string) {
 			dl.Bytes = info.Size()
 		}
 
-		techniques, err := buildTechniquesFromSTIX(rawPath)
+		cache, err := buildCacheDataFromSTIX(rawPath)
 		if err != nil {
 			fmt.Printf("Parse failed: %v\n", err)
 			return
 		}
 
-		if err := saveTechniques(cachePath, techniques); err != nil {
+		if err := saveCacheData(cachePath, cache); err != nil {
 			fmt.Printf("Cache write failed: %v\n", err)
 			return
 		}
@@ -296,7 +443,11 @@ func runCommand(args []string) {
 		fmt.Printf("Saved: %s\n", rawPath)
 		fmt.Printf("Size: %s (%d bytes)\n", humanSize(dl.Bytes), dl.Bytes)
 		fmt.Printf("Cache: %s\n", cachePath)
-		fmt.Printf("Parsed techniques: %d\n", len(techniques))
+		fmt.Printf("Parsed techniques: %d\n", len(cache.Techniques))
+		fmt.Printf("Parsed groups: %d\n", len(cache.Groups))
+		fmt.Printf("Parsed mitigations: %d\n", len(cache.Mitigations))
+		fmt.Printf("Parsed relationships: %d\n", len(cache.Relationships))
+
 		if dl.Downloaded {
 			fmt.Println("Download status: downloaded new dataset")
 		} else {
@@ -308,7 +459,7 @@ func runCommand(args []string) {
 			fmt.Println("Usage: go run . search <term> [--name-only] [--limit N] [--detailed] [--plain]")
 			return
 		}
-		techniques, err := loadTechniques(cachePath)
+		cache, err := loadCacheData(cachePath)
 		if err != nil {
 			if os.IsNotExist(err) {
 				fmt.Println(errText("Cache not found. Run: go run . update"))
@@ -317,6 +468,7 @@ func runCommand(args []string) {
 			fmt.Printf("Error loading cache: %v\n", err)
 			return
 		}
+		techniques := cache.Techniques
 
 		term := args[1]
 		nameOnly := false
@@ -372,7 +524,7 @@ func runCommand(args []string) {
 			fmt.Println("Usage: go run . show <technique_id>")
 			return
 		}
-		techniques, err := loadTechniques(cachePath)
+		cache, err := loadCacheData(cachePath)
 		if err != nil {
 			if os.IsNotExist(err) {
 				fmt.Println("Cache not found. Run: go run . update")
@@ -381,6 +533,7 @@ func runCommand(args []string) {
 			fmt.Printf("Error loading cache: %v\n", err)
 			return
 		}
+		techniques := cache.Techniques
 
 		id := args[1]
 		technique, found := findTechniqueByID(techniques, id)
@@ -406,7 +559,7 @@ func runCommand(args []string) {
 			return
 		}
 
-		techniques, err := loadTechniques(cachePath)
+		cache, err := loadCacheData(cachePath)
 		if err != nil {
 			if os.IsNotExist(err) {
 				fmt.Println(errText("Cache not found. Run: go run . update"))
@@ -415,6 +568,7 @@ func runCommand(args []string) {
 			fmt.Printf("Error loading cache: %v\n", err)
 			return
 		}
+		techniques := cache.Techniques
 
 		detailed := false
 		filtered := make([]string, 0, len(args))
@@ -457,6 +611,173 @@ func runCommand(args []string) {
 			}
 		} else {
 			printTechniqueTable(results)
+		}
+	case "group":
+		if len(args) < 3 {
+			fmt.Println("Usage:")
+			fmt.Println("  go run . group techniques <group_id_or_name> [--detailed] [--plain]")
+			return
+		}
+
+		cache, err := loadCacheData(cachePath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				fmt.Println(errText("Cache not found. Run: go run . update"))
+				return
+			}
+			fmt.Printf("Error loading cache: %v\n", err)
+			return
+		}
+
+		sub := strings.ToLower(args[1])
+
+		switch sub {
+		case "show":
+			if len(args) < 3 {
+				fmt.Println("Usage: go run . group show <group_id_or_name> [--plain]")
+				return
+			}
+
+			groupInput := args[2]
+			g, found := findGroup(cache, groupInput)
+			if !found {
+				fmt.Printf("Group %q not found in cache.\n", groupInput)
+				return
+			}
+
+			related := techniquesUsedByGroup(cache, g.ID)
+
+			fmt.Printf("%s %s\n", label("ID:"), g.ID)
+			fmt.Printf("%s %s\n", label("Name:"), g.Name)
+			fmt.Printf("%s %s\n", label("Aliases:"), strings.Join(g.Aliases, ", "))
+			fmt.Printf("%s %d\n", label("Mapped techniques:"), len(related))
+			fmt.Printf("%s %s\n", label("Description:"), g.Description)
+
+		case "techniques":
+			detailed := false
+			filtered := make([]string, 0, len(args))
+			filtered = append(filtered, args[0], args[1])
+
+			for _, a := range args[2:] {
+				if a == "--detailed" {
+					detailed = true
+					continue
+				}
+				if strings.HasPrefix(a, "-") {
+					fmt.Println("Usage: go run . group techniques <group_id_or_name> [--detailed] [--plain]")
+					return
+				}
+				filtered = append(filtered, a)
+			}
+			args = filtered
+
+			if len(args) != 3 {
+				fmt.Println("Usage: go run . group techniques <group_id_or_name> [--detailed] [--plain]")
+				return
+			}
+
+			groupInput := args[2]
+			g, found := findGroup(cache, groupInput)
+			if !found {
+				fmt.Printf("Group %q not found in cache.\n", groupInput)
+				return
+			}
+
+			results := techniquesUsedByGroup(cache, g.ID)
+			if len(results) == 0 {
+				fmt.Printf("No techniques mapped for group %s (%s).\n", g.Name, g.ID)
+				return
+			}
+
+			fmt.Printf("%s %s (%s)\n", label("Group:"), g.Name, g.ID)
+			fmt.Printf("%s %d technique(s)\n", ok("Found"), len(results))
+
+			if detailed {
+				for i, t := range results {
+					fmt.Printf("\n[%d] %s | %s\n", i+1, t.ID, t.Name)
+					fmt.Printf("    Tactics: %s\n", strings.Join(t.Tactics, ", "))
+					fmt.Printf("    Platforms: %s\n", strings.Join(t.Platforms, ", "))
+				}
+			} else {
+				printTechniqueTable(results)
+			}
+		default:
+			fmt.Printf("Unknown group subcommand: %s\n", sub)
+			fmt.Println("Use: group techniques <group_id_or_name>")
+		}
+	case "mitigation":
+		if len(args) < 3 {
+			fmt.Println("Usage:")
+			fmt.Println("  go run . mitigation techniques <mitigation_id_or_name> [--detailed] [--plain]")
+			return
+		}
+
+		cache, err := loadCacheData(cachePath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				fmt.Println(errText("Cache not found. Run: go run . update"))
+				return
+			}
+			fmt.Printf("Error loading cache: %v\n", err)
+			return
+		}
+
+		sub := strings.ToLower(args[1])
+
+		switch sub {
+		case "techniques":
+			detailed := false
+			filtered := make([]string, 0, len(args))
+			filtered = append(filtered, args[0], args[1])
+
+			for _, a := range args[2:] {
+				if a == "--detailed" {
+					detailed = true
+					continue
+				}
+				if strings.HasPrefix(a, "-") {
+					fmt.Println("Usage: go run . mitigation techniques <mitigation_id_or_name> [--detailed] [--plain]")
+					return
+				}
+				filtered = append(filtered, a)
+			}
+			args = filtered
+
+			if len(args) != 3 {
+				fmt.Println("Usage: go run . mitigation techniques <mitigation_id_or_name> [--detailed] [--plain]")
+				return
+			}
+
+			mitInput := args[2]
+			m, found := findMitigation(cache, mitInput)
+
+			if !found {
+				fmt.Printf("Mitigation %q not found in cache.\n", mitInput)
+				return
+			}
+
+			results := techniquesMitigatedBy(cache, m.ID)
+
+			if len(results) == 0 {
+				fmt.Printf("No techniques mapped for mitigation %s (%s).\n", m.Name, m.ID)
+				return
+			}
+
+			fmt.Printf("%s %s (%s)\n", label("Mitigation:"), m.Name, m.ID)
+			fmt.Printf("%s %d technique(s)\n", ok("Found"), len(results))
+
+			if detailed {
+				for i, t := range results {
+					fmt.Printf("\n[%d] %s | %s\n", i+1, t.ID, t.Name)
+					fmt.Printf("    Tactics: %s\n", strings.Join(t.Tactics, ", "))
+					fmt.Printf("    Platforms: %s\n", strings.Join(t.Platforms, ", "))
+				}
+			} else {
+				printTechniqueTable(results)
+			}
+		default:
+			fmt.Printf("Unknown mitigation subcommand: %s\n", sub)
+			fmt.Println("Use: mitigation techniques <mitigation_id_or_name>")
 		}
 
 	default:

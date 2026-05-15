@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 )
 
 type DownloadResult struct {
@@ -182,4 +183,197 @@ func saveUpdateMeta(path string, m UpdateMeta) error {
 		return err
 	}
 	return os.WriteFile(path, data, 0o644)
+}
+
+func buildCacheDataFromSTIX(path string) (CacheData, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return CacheData{}, err
+	}
+
+	var bundle STIXBundle
+	if err := json.Unmarshal(data, &bundle); err != nil {
+		return CacheData{}, err
+	}
+
+	stixToExternal := make(map[string]string, len(bundle.Objects))
+	stixToType := make(map[string]string, len(bundle.Objects))
+
+	for _, obj := range bundle.Objects {
+		extID := extractExternalID(obj.ExternalReferences)
+		if extID != "" {
+			stixToExternal[obj.ID] = extID
+		}
+
+		if obj.XMitreDeprecated || obj.Revoked {
+			continue
+		}
+
+		switch obj.Type {
+		case "attack-pattern":
+			stixToType[obj.ID] = "technique"
+		case "intrusion-set":
+			stixToType[obj.ID] = "group"
+		case "course-of-action":
+			stixToType[obj.ID] = "mitigation"
+		}
+	}
+	techniques := make([]Technique, 0)
+	groups := make([]Group, 0)
+	mitigations := make([]Mitigation, 0)
+	relationships := make([]Relationship, 0)
+
+	for _, obj := range bundle.Objects {
+		if obj.XMitreDeprecated || obj.Revoked {
+			continue
+		}
+
+		switch obj.Type {
+		case "attack-pattern":
+			tid := stixToExternal[obj.ID]
+			if tid == "" || !hasIDPrefix(tid, "T") {
+				continue
+			}
+
+			var tactics []string
+			for _, p := range obj.KillChainPhases {
+				if p.PhaseName != "" {
+					tactics = append(tactics, p.PhaseName)
+				}
+			}
+
+			techniques = append(techniques, Technique{
+				ID: tid,
+				Name: obj.Name,
+				Description: obj.Description,
+				Tactics: tactics,
+				Platforms: obj.XMitrePlatforms,
+				DataSources: obj.XMitreDataSources,
+				DetectionNotes: obj.XMitreDetection,
+			})
+
+		case "intrusion-set":
+			gid := stixToExternal[obj.ID]
+			if gid == "" || !hasIDPrefix(gid, "G") {
+				continue
+			}
+			groups = append(groups, Group{
+				ID: gid,
+				Name: obj.Name,
+				Description: obj.Description,
+				Aliases: obj.XMitreAliases,
+			})
+
+		case "course-of-action":
+			mid := stixToExternal[obj.ID]
+			if mid == "" || !hasIDPrefix(mid, "M"){
+				continue
+			}
+
+			mitigations = append(mitigations, Mitigation{
+				ID: mid,
+				Name: obj.Name,
+				Description: obj.Description,
+			})
+		case "relationship":
+			sourceID := stixToExternal[obj.SourceRef]
+			targetID := stixToExternal[obj.TargetRef]
+			sourceType := stixToType[obj.SourceRef]
+			targetType := stixToType[obj.TargetRef]
+
+			if sourceID == "" || targetID == "" || sourceType == "" || targetType == "" {
+				continue
+			}
+
+			switch sourceType {
+			case "technique":
+				if !hasIDPrefix(sourceID, "T") {
+					continue
+				}
+			case "group":
+				if !hasIDPrefix(sourceID, "G") {
+					continue
+				}
+			case "mitigation":
+				if !hasIDPrefix(sourceID, "M") {
+					continue
+				}
+			}
+
+			switch targetType {
+			case "technique":
+				if !hasIDPrefix(targetID, "T") {
+					continue
+				}
+			case "group":
+				if !hasIDPrefix(targetID, "G") {
+					continue
+				}
+			case "mitigation":
+				if !hasIDPrefix(targetID, "M") {
+					continue
+				}
+			}
+
+			relationships = append(relationships, Relationship{
+				Type: obj.RelationshipType,
+				SourceType: sourceType,
+				SourceID: sourceID,
+				TargetType: targetType,
+				TargetID: targetID,
+			})
+		}
+	}
+
+	return CacheData{
+		Techniques: techniques,
+		Groups: groups,
+		Mitigations: mitigations,
+		Relationships: relationships,
+	}, nil
+}
+
+func extractExternalID(refs []struct {
+	SourceName string `json:"source_name"`
+	ExternalID string `json:"external_id"`
+}) string {
+	for _, r := range refs {
+		if r.SourceName == "mitre-attack" && r.ExternalID != "" {
+			return r.ExternalID
+		}
+	}
+	return ""
+}
+
+func hasIDPrefix(id, prefix string) bool {
+	id = strings.ToUpper(strings.TrimSpace(id))
+	prefix = strings.ToUpper(strings.TrimSpace(prefix))
+	return strings.HasPrefix(id, prefix)
+}
+
+func saveCacheData(path string, cache CacheData) error {
+	data, err := json.MarshalIndent(cache, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll("data", 0o755); err != nil {
+		return err
+	}
+
+	return os.WriteFile(path, data, 0o644)
+}
+
+func loadCacheData(path string) (CacheData, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return CacheData{}, err
+	}
+
+	var cache CacheData
+	if err := json.Unmarshal(data, &cache); err != nil {
+		return CacheData{}, err
+	}
+
+	return cache, nil
 }

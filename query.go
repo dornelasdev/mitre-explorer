@@ -75,12 +75,29 @@ func containsSliceIgnoreCase(values []string, target string) bool {
 func listByTactic(techniques []Technique, tactic string) []Technique {
 	var out []Technique
 	for _, t := range techniques {
-		if containsSliceIgnoreCase(t.Tactics, tactic) {
+		if containsTacticNormalized(t.Tactics, tactic) {
 			out = append(out, t)
 		}
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out
+}
+
+func normalizeTactic(s string) string {
+	s = strings.TrimSpace(strings.ToLower(s))
+	s = strings.ReplaceAll(s, "-", " ")
+	s = strings.ReplaceAll(s, "_", " ")
+	return s
+}
+
+func containsTacticNormalized(values []string, target string) bool {
+	targetKey := normalizeTactic(target)
+	for _, v := range values {
+		if normalizeTactic(v) == targetKey {
+			return true
+		}
+	}
+	return false
 }
 
 func listByPlatform(techniques []Technique, platform string) []Technique {
@@ -103,7 +120,8 @@ func collectUniqueTactics(techniques []Technique) []string {
 		"Execution",
 		"Persistence",
 		"Privilege Escalation",
-		"Defense Evasion",
+		"Stealth",
+		"Defense Impairment",
 		"Credential Access",
 		"Discovery",
 		"Lateral Movement",
@@ -113,17 +131,10 @@ func collectUniqueTactics(techniques []Technique) []string {
 		"Impact",
 	}
 
-	normalize := func(s string) string {
-		s = strings.TrimSpace(strings.ToLower(s))
-		s = strings.ReplaceAll(s, "-", " ")
-		s = strings.ReplaceAll(s, "_", " ")
-		return s
-	}
-
 	orderIndex := make(map[string]int, len(attackOrder))
 	displayName := make(map[string]string, len(attackOrder))
 	for i, t := range attackOrder {
-		k := normalize(t)
+		k := normalizeTactic(t)
 		orderIndex[k] = i
 		displayName[k] = t
 	}
@@ -137,7 +148,7 @@ func collectUniqueTactics(techniques []Technique) []string {
 
 	for _, tech := range techniques {
 		for _, t := range tech.Tactics {
-			key := normalize(t)
+			key := normalizeTactic(t)
 			if key == "" {
 				continue
 			}
@@ -175,5 +186,97 @@ func collectUniqueTactics(techniques []Technique) []string {
 	for _, it := range items {
 		out = append(out, it.display)
 	}
+	return out
+}
+
+func findGroup(cache CacheData, input string) (Group, bool) {
+	q := strings.TrimSpace(strings.ToLower(input))
+
+	for _, g := range cache.Groups {
+		if strings.ToLower(g.ID) == q || strings.ToLower(g.Name) == q {
+			return g, true
+		}
+		for _, a := range g.Aliases {
+			if strings.ToLower(a) == q {
+				return g, true
+			}
+		}
+	}
+	return Group{}, false
+}
+
+func techniquesUsedByGroup(cache CacheData, groupID string) []Technique {
+	techByID := make(map[string]Technique, len(cache.Techniques))
+	for _, t := range cache.Techniques {
+		techByID[t.ID] = t
+	}
+
+	seen := make(map[string]struct{})
+	var out []Technique
+
+	for _, rel := range cache.Relationships {
+		if rel.Type != "uses" {
+			continue
+		}
+		if rel.SourceType != "group" || rel.TargetType != "technique" {
+			continue
+		}
+		if !strings.EqualFold(rel.SourceID, groupID) {
+			continue
+		}
+		if _, ok := seen[rel.TargetID]; ok {
+			continue
+		}
+		seen[rel.TargetID] = struct{}{}
+
+		if t, ok := techByID[rel.TargetID]; ok {
+			out = append(out, t)
+		}
+	}
+
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	return out
+}
+
+func findMitigation(cache CacheData, input string) (Mitigation, bool) {
+	q := strings.TrimSpace(strings.ToLower(input))
+	for _, m := range cache.Mitigations {
+		if strings.ToLower(m.ID) == q || strings.ToLower(m.Name) == q {
+			return m, true
+		}
+	}
+	return Mitigation{}, false
+}
+
+func techniquesMitigatedBy(cache CacheData, mitigationID string) []Technique {
+	techByID := make(map[string]Technique, len(cache.Techniques))
+	for _, t := range cache.Techniques {
+		techByID[t.ID] = t
+	}
+
+	seen := make(map[string]struct{})
+	var out []Technique
+
+	for _, rel := range cache.Relationships {
+		if rel.Type != "mitigates" {
+			continue
+		}
+		if rel.SourceType != "mitigation" || rel.TargetType != "technique" {
+			continue
+		}
+		if !strings.EqualFold(rel.SourceID, mitigationID) {
+			continue
+		}
+		if _, ok := seen[rel.TargetID]; ok {
+			continue
+		}
+		seen[rel.TargetID] = struct{}{}
+
+		if t, ok := techByID[rel.TargetID]; ok {
+			out = append(out, t)
+		}
+	}
+
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out
 }
