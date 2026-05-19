@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	fmt.Println("MITRE Explorer v0.7")
+	fmt.Println("MITRE Explorer v0.7.2")
 
 	if len(os.Args) < 2 {
 		startInteractiveMode()
@@ -92,6 +92,7 @@ func runGuidedExplorer() {
 		fmt.Println("  [1] Explore Tactics")
 		fmt.Println("  [2] Explore Groups")
 		fmt.Println("  [3] Explore Mitigations")
+		fmt.Println("  [4] Explore Softwares")
 		fmt.Println("  [q] Exit guided mode")
 		fmt.Printf("> ")
 
@@ -314,6 +315,83 @@ func runGuidedExplorer() {
 				}
 				mitigationList:
 				}
+		case "4":
+			if len(cache.Softwares) == 0 {
+				fmt.Println("No software found in cache.")
+				continue
+			}
+
+			softwares := make([]Software, len(cache.Softwares))
+			copy(softwares, cache.Softwares)
+			sort.Slice(softwares, func(i, j int) bool { return softwares[i].ID < softwares[j].ID })
+			for {
+				fmt.Println(title("Software"))
+				fmt.Printf("%s %d software item(s)\n", ok("Found"), len(softwares))
+				fmt.Printf("%-4s %-10s %s\n", "#", "ID", "Name")
+				fmt.Println(strings.Repeat("-", 64))
+				for i, s := range softwares {
+					fmt.Printf("%-4d %-10s %s\n", i+1, s.ID, truncateText(s.Name, 40))
+				}
+				fmt.Println("  [q] Return to guided menu")
+				fmt.Print("> ")
+
+				input := readLine(reader)
+				if strings.EqualFold(input, "q") {
+					break
+				}
+
+				idx, err := strconv.Atoi(input)
+				if err != nil || idx < 1 || idx > len(softwares) {
+					fmt.Println("Invalid selection.")
+					continue
+				}
+
+				s := softwares[idx-1]
+				related := techniquesUsedBySoftware(cache, s.ID)
+
+				fmt.Println()
+				fmt.Printf("%s %s\n", label("ID:"), s.ID)
+				fmt.Printf("%s %s\n", label("Name:"), s.Name)
+				fmt.Printf("%s %s\n", label("Type:"), s.Type)
+				fmt.Printf("%s %s\n", label("Aliases:"), strings.Join(s.Aliases, ", "))
+				fmt.Printf("%s %d\n", label("Mapped techniques:"), len(related))
+				fmt.Printf("%s %s\n", label("Description:"), s.Description)
+
+				viewedMapped := false
+				for {
+					fmt.Println("\nNext:")
+					if !viewedMapped {
+						fmt.Println("  [1] View mapped techniques")
+					}
+					fmt.Println("  [b] Back to software techniques")
+					fmt.Println("  [q] Return to guided menu")
+					fmt.Print("> ")
+
+					next := strings.ToLower(readLine(reader))
+					switch next {
+					case "1":
+						if viewedMapped {
+							fmt.Println("Invalid selection.")
+							continue
+						}
+						if len(related) == 0 {
+							fmt.Println("No mapped techniques for this software.")
+						} else {
+							printTechniqueTable(related)
+						}
+						viewedMapped = true
+
+					case "b":
+						fmt.Println()
+						goto softwareList
+					case "q":
+						goto guidedMenu
+					default:
+						fmt.Println("Invalid selection.")
+					}
+				}
+			softwareList:
+			}
 
 		case "q":
 			fmt.Println("Exiting guided explorer.")
@@ -339,6 +417,17 @@ func printTechniqueDetails(t Technique) {
 func readLine(reader *bufio.Reader) string {
 	input, _ := reader.ReadString('\n')
 	return strings.TrimSpace(input)
+}
+
+func printMappedTechniquesWithMode(results []Technique, detailed bool) {
+	if detailed {
+		for i, t := range results {
+			fmt.Printf("\n[%d] %s | %s\n", i+1, t.ID, t.Name)
+			fmt.Printf("    Tactics: %s\n", strings.Join(t.Tactics, ", "))
+			fmt.Printf("    Platforms: %s\n", strings.Join(t.Platforms, ", "))
+		}
+		return
+	}
 }
 
 func runCommand(args []string) {
@@ -508,16 +597,7 @@ func runCommand(args []string) {
 		}
 
 		fmt.Printf("%s %d technique(s)\n", ok("Found"), len(results))
-		if detailed {
-			for i, r := range results {
-				fmt.Printf("\n[%d] %s | %s\n", i+1, r.ID, r.Name)
-				fmt.Printf("    Tactics: %s\n", strings.Join(r.Tactics, ", "))
-				fmt.Printf("    Platforms: %s\n", strings.Join(r.Platforms, ", "))
-			}
-		} else {
-			printTechniqueTable(results)
-		}
-
+		printMappedTechniquesWithMode(results, detailed)
 
 	case "show":
 		if len(args) < 2 {
@@ -603,15 +683,8 @@ func runCommand(args []string) {
 		}
 
 		fmt.Printf("%s %d technique(s)\n", ok("Found"), len(results))
-		if detailed {
-			for i, t := range results {
-				fmt.Printf("\n[%d] %s | %s\n", i+1, t.ID, t.Name)
-				fmt.Printf("    Tactics: %s\n", strings.Join(t.Tactics, ", "))
-				fmt.Printf("    Platforms: %s\n", strings.Join(t.Platforms, ", "))
-			}
-		} else {
-			printTechniqueTable(results)
-		}
+		printMappedTechniquesWithMode(results, detailed)
+
 	case "group":
 		if len(args) < 3 {
 			fmt.Println("Usage:")
@@ -692,15 +765,8 @@ func runCommand(args []string) {
 			fmt.Printf("%s %s (%s)\n", label("Group:"), g.Name, g.ID)
 			fmt.Printf("%s %d technique(s)\n", ok("Found"), len(results))
 
-			if detailed {
-				for i, t := range results {
-					fmt.Printf("\n[%d] %s | %s\n", i+1, t.ID, t.Name)
-					fmt.Printf("    Tactics: %s\n", strings.Join(t.Tactics, ", "))
-					fmt.Printf("    Platforms: %s\n", strings.Join(t.Platforms, ", "))
-				}
-			} else {
-				printTechniqueTable(results)
-			}
+			printMappedTechniquesWithMode(results, detailed)
+
 		default:
 			fmt.Printf("Unknown group subcommand: %s\n", sub)
 			fmt.Println("Use: group techniques <group_id_or_name>")
@@ -766,15 +832,8 @@ func runCommand(args []string) {
 			fmt.Printf("%s %s (%s)\n", label("Mitigation:"), m.Name, m.ID)
 			fmt.Printf("%s %d technique(s)\n", ok("Found"), len(results))
 
-			if detailed {
-				for i, t := range results {
-					fmt.Printf("\n[%d] %s | %s\n", i+1, t.ID, t.Name)
-					fmt.Printf("    Tactics: %s\n", strings.Join(t.Tactics, ", "))
-					fmt.Printf("    Platforms: %s\n", strings.Join(t.Platforms, ", "))
-				}
-			} else {
-				printTechniqueTable(results)
-			}
+			printMappedTechniquesWithMode(results, detailed)
+
 		default:
 			fmt.Printf("Unknown mitigation subcommand: %s\n", sub)
 			fmt.Println("Use: mitigation techniques <mitigation_id_or_name>")
@@ -860,15 +919,8 @@ func runCommand(args []string) {
 			fmt.Printf("%s %s (%s)\n", label("Software:"), s.Name, s.ID)
 			fmt.Printf("%s %d technique(s)\n", ok("Found"), len(results))
 
-			if detailed {
-				for i, t := range results {
-					fmt.Printf("\n[%d] %s | %s\n", i+1, t.ID, t.Name)
-					fmt.Printf("    Tactics: %s\n", strings.Join(t.Tactics, ", "))
-					fmt.Printf("    Platforms: %s\n", strings.Join(t.Platforms, ", "))
-				}
-			} else {
-				printTechniqueTable(results)
-			}
+			printMappedTechniquesWithMode(results, detailed)
+
 		default:
 			fmt.Printf("Unknown software subcommand: %s\n", sub)
 			fmt.Println("Use: software show <software_id_or_name> or software techniques <software_id_or_name>")
