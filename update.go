@@ -216,12 +216,16 @@ func buildCacheDataFromSTIX(path string) (CacheData, error) {
 			stixToType[obj.ID] = "group"
 		case "course-of-action":
 			stixToType[obj.ID] = "mitigation"
+		case "malware", "tool":
+			stixToType[obj.ID] = "software"
 		}
+
 	}
 	techniques := make([]Technique, 0)
 	groups := make([]Group, 0)
 	mitigations := make([]Mitigation, 0)
 	relationships := make([]Relationship, 0)
+	softwares := make([]Software, 0)
 
 	for _, obj := range bundle.Objects {
 		if obj.XMitreDeprecated || obj.Revoked {
@@ -298,6 +302,10 @@ func buildCacheDataFromSTIX(path string) (CacheData, error) {
 				if !hasIDPrefix(sourceID, "M") {
 					continue
 				}
+			case "software":
+				if !hasIDPrefix(sourceID, "S") {
+					continue
+				}
 			}
 
 			switch targetType {
@@ -313,6 +321,10 @@ func buildCacheDataFromSTIX(path string) (CacheData, error) {
 				if !hasIDPrefix(targetID, "M") {
 					continue
 				}
+			case "software":
+				if !hasIDPrefix(targetID, "S") {
+					continue
+				}
 			}
 
 			relationships = append(relationships, Relationship{
@@ -322,6 +334,19 @@ func buildCacheDataFromSTIX(path string) (CacheData, error) {
 				TargetType: targetType,
 				TargetID: targetID,
 			})
+		case "malware", "tool":
+			sid := stixToExternal[obj.ID]
+			if sid == "" || !hasIDPrefix(sid, "S") {
+				continue
+			}
+
+			softwares = append(softwares, Software{
+				ID: sid,
+				Name: obj.Name,
+				Type: obj.Type,
+				Description: obj.Description,
+				Aliases: obj.XMitreAliases,
+			})
 		}
 	}
 
@@ -330,6 +355,7 @@ func buildCacheDataFromSTIX(path string) (CacheData, error) {
 		Groups: groups,
 		Mitigations: mitigations,
 		Relationships: relationships,
+		Softwares: softwares,
 	}, nil
 }
 

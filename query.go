@@ -280,3 +280,52 @@ func techniquesMitigatedBy(cache CacheData, mitigationID string) []Technique {
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out
 }
+
+func findSoftware(cache CacheData, input string) (Software, bool) {
+	q := strings.TrimSpace(strings.ToLower(input))
+
+	for _, s := range cache.Softwares {
+		if strings.ToLower(s.ID) == q || strings.ToLower(s.Name) == q {
+			return s, true
+		}
+		for _, a := range s.Aliases {
+			if strings.ToLower(a) == q {
+				return s, true
+			}
+		}
+	}
+	return Software{}, false
+}
+
+func techniquesUsedBySoftware(cache CacheData, softwareID string) []Technique {
+	techByID := make(map[string]Technique, len(cache.Techniques))
+	for _, t := range cache.Techniques {
+		techByID[t.ID] = t
+	}
+
+	seen := make(map[string]struct{})
+	var out []Technique
+
+	for _, rel := range cache.Relationships {
+		if rel.Type != "uses" {
+			continue
+		}
+		if rel.SourceType != "software" || rel.TargetType != "technique" {
+			continue
+		}
+		if !strings.EqualFold(rel.SourceID, softwareID) {
+			continue
+		}
+		if _, ok := seen[rel.TargetID]; ok {
+			continue
+		}
+		seen[rel.TargetID] = struct{}{}
+
+		if t, ok := techByID[rel.TargetID]; ok {
+			out = append(out, t)
+		}
+	}
+
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	return out
+}

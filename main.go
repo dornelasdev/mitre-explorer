@@ -779,6 +779,100 @@ func runCommand(args []string) {
 			fmt.Printf("Unknown mitigation subcommand: %s\n", sub)
 			fmt.Println("Use: mitigation techniques <mitigation_id_or_name>")
 		}
+	case "software":
+		if len(args) < 3 {
+			fmt.Println("Usage:")
+			fmt.Println("  go run . software show <software_id_or_name> [--plain]")
+			fmt.Println("  go run . software techniques <software_id_or_name> [--detailed] [--plain]")
+			return
+		}
+
+		cache, err := loadCacheData(cachePath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				fmt.Println(errText("Cache not found. Run: go run . update"))
+				return
+			}
+			fmt.Printf("Error loading cache: %v\n", err)
+			return
+		}
+
+		sub := strings.ToLower(args[1])
+
+		switch sub {
+		case "show":
+			if len(args) != 3 {
+				fmt.Println("Usage: go run . software show <software_id_or_name> [--plain]")
+				return
+			}
+
+			softwareInput := args[2]
+			s, found := findSoftware(cache, softwareInput)
+			if !found {
+				fmt.Printf("Software %q not found in cache.\n", softwareInput)
+				return
+			}
+
+			related := techniquesUsedBySoftware(cache, s.ID)
+			fmt.Printf("%s %s\n", label("ID:"), s.ID)
+			fmt.Printf("%s %s\n", label("Name:"), s.Name)
+			fmt.Printf("%s %s\n", label("Type:"), s.Type)
+			fmt.Printf("%s %s\n", label("Aliases:"), strings.Join(s.Aliases, ", "))
+			fmt.Printf("%s %d\n", label("Mapped techniques:"), len(related))
+			fmt.Printf("%s %s\n", label("Description:"), s.Description)
+
+		case "techniques":
+			detailed := false
+			filtered := make([]string, 0, len(args))
+			filtered = append(filtered, args[0], args[1])
+
+			for _, a := range args[2:] {
+				if a == "--detailed" {
+					detailed = true
+					continue
+				}
+				if strings.HasPrefix(a, "-") {
+					fmt.Println("Usage: go run . software techniques <software_id_or_name> [--detailed] [--plain]")
+					return
+				}
+				filtered = append(filtered, a)
+			}
+			args = filtered
+
+			if len(args) != 3 {
+				fmt.Println("Usage: go run . software techniques <software_id_or_name> [--detailed] [--plain]")
+				return
+			}
+
+			softwareInput := args[2]
+			s, found := findSoftware(cache, softwareInput)
+			if !found {
+				fmt.Printf("Software %q not found in cache.\n", softwareInput)
+				return
+			}
+
+			results := techniquesUsedBySoftware(cache, s.ID)
+			if len(results) == 0 {
+				fmt.Printf("No techniques mapped for software %s (%s).\n", s.Name, s.ID)
+				return
+			}
+
+			fmt.Printf("%s %s (%s)\n", label("Software:"), s.Name, s.ID)
+			fmt.Printf("%s %d technique(s)\n", ok("Found"), len(results))
+
+			if detailed {
+				for i, t := range results {
+					fmt.Printf("\n[%d] %s | %s\n", i+1, t.ID, t.Name)
+					fmt.Printf("    Tactics: %s\n", strings.Join(t.Tactics, ", "))
+					fmt.Printf("    Platforms: %s\n", strings.Join(t.Platforms, ", "))
+				}
+			} else {
+				printTechniqueTable(results)
+			}
+		default:
+			fmt.Printf("Unknown software subcommand: %s\n", sub)
+			fmt.Println("Use: software show <software_id_or_name> or software techniques <software_id_or_name>")
+		}
 
 	default:
 		fmt.Printf("Unknown command: %s\n", command)

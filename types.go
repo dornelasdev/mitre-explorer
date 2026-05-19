@@ -62,10 +62,19 @@ type Relationship struct {
 	TargetID string `json:"target_id"`
 }
 
+type Software struct {
+	ID string `json:"id"`
+	Name string `json:"name"`
+	Type string `json:"type"`
+	Description string `json:"description"`
+	Aliases []string `json:"aliases"`
+}
+
 type CacheData struct {
 	Techniques []Technique `json:"techniques"`
 	Groups []Group `json:"groups"`
 	Mitigations []Mitigation `json:"mitigations"`
+	Softwares []Software `json:"softwares"`
 	Relationships []Relationship `json:"relationships"`
 }
 
