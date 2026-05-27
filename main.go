@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	fmt.Println("MITRE Explorer v0.7.2")
+	fmt.Println("MITRE Explorer v0.7.3")
 
 	if len(os.Args) < 2 {
 		startInteractiveMode()
@@ -428,6 +428,7 @@ func printMappedTechniquesWithMode(results []Technique, detailed bool) {
 		}
 		return
 	}
+	printTechniqueTable(results)
 }
 
 func runCommand(args []string) {
@@ -535,7 +536,9 @@ func runCommand(args []string) {
 		fmt.Printf("Parsed techniques: %d\n", len(cache.Techniques))
 		fmt.Printf("Parsed groups: %d\n", len(cache.Groups))
 		fmt.Printf("Parsed mitigations: %d\n", len(cache.Mitigations))
+		fmt.Printf("Parsed campaigns: %d\n", len(cache.Campaigns))
 		fmt.Printf("Parsed relationships: %d\n", len(cache.Relationships))
+
 
 		if dl.Downloaded {
 			fmt.Println("Download status: downloaded new dataset")
@@ -924,6 +927,89 @@ func runCommand(args []string) {
 		default:
 			fmt.Printf("Unknown software subcommand: %s\n", sub)
 			fmt.Println("Use: software show <software_id_or_name> or software techniques <software_id_or_name>")
+		}
+	case "campaign":
+		if len(args) < 3 {
+			fmt.Println("Usage:")
+			fmt.Println("  go run . campaign show <campaign_id_or_name> [--plain]")
+			fmt.Println("  go run . campaign techniques <campaign_id_or_name> [--detailed] [--plain]")
+			return
+		}
+
+		cache, err := loadCacheData(cachePath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				fmt.Println(errText("Cache not found. Run: go run . update"))
+				return
+			}
+			fmt.Printf("Error loading cache: %v\n", err)
+			return
+		}
+
+		sub := strings.ToLower(args[1])
+
+		switch sub {
+		case "show":
+			if len(args) != 3 {
+				fmt.Println("Usage: go run . campaign show <campaign_id_or_name> [--plain]")
+				return
+			}
+			campaignInput := args[2]
+			c, found := findCampaign(cache, campaignInput)
+			if !found {
+				fmt.Printf("Campaign %q not found in cache.\n", campaignInput)
+				return
+			}
+
+			related := techniquesUsedByCampaign(cache, c.ID)
+			fmt.Printf("%s %s\n", label("ID:"), c.ID)
+			fmt.Printf("%s %s\n", label("Name:"), c.Name)
+			fmt.Printf("%s %s\n", label("Aliases:"), strings.Join(c.Aliases, ", "))
+			fmt.Printf("%s %d\n", label("Mapped techniques:"), len(related))
+			fmt.Printf("%s %s\n", label("Description:"), c.Description)
+
+		case "techniques":
+			detailed := false
+			filtered := make([]string, 0, len(args))
+			filtered = append(filtered, args[0], args[1])
+
+			for _, a := range args[2:] {
+				if a == "--detailed" {
+					detailed = true
+					continue
+				}
+				if strings.HasPrefix(a, "-") {
+					fmt.Println("Usage: go run . campaign techniques <campaign_id_or_name> [--detailed] [--plain]")
+					return
+				}
+				filtered = append(filtered, a)
+			}
+			args = filtered
+
+			if len(args) != 3 {
+				fmt.Println("Usage: go run . campaign techniques <campaign_id_or_name> [--detailed] [--plain]")
+				return
+			}
+			campaignInput := args[2]
+			c, found := findCampaign(cache, campaignInput)
+			if !found {
+				fmt.Printf("Campaign %q not found in cache.\n", campaignInput)
+				return
+			}
+
+			results := techniquesUsedByCampaign(cache, c.ID)
+			if len(results) == 0 {
+				fmt.Printf("No techniques mapped for campaign %s (%s).\n", c.Name, c.ID)
+				return
+			}
+
+			fmt.Printf("%s %s (%s)\n", label("Campaign:"), c.Name, c.ID)
+			fmt.Printf("%s %d technique(s)\n", ok("Found"), len(results))
+			printMappedTechniquesWithMode(results, detailed)
+
+		default:
+			fmt.Printf("Unknown campaign subcommand: %s\n", sub)
+			fmt.Println("Use: campaign show <campaign_id_or_name> or campaign techniques <campaign_id_or_name>")
 		}
 
 	default:

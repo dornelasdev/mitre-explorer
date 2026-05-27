@@ -10,10 +10,10 @@ CLI tool written in Go to explore MITRE ATT&CK techniques offline.
 A CLI for exploring MITRE ATT&CK data offline in a simple, learning-friendly workflow.
 It supports quick lookup, guided navigation, and local cache-based querying without needing live web requests for every command.
 
-## Current Features (v0.7.1)
+## Current Features (v0.7.3)
 - Offline cache + update pipeline.
 - Technique search/show/list.
-- Group/mitigation/software mappings.
+- Group/mitigation/software/campaign mappings.
 - Interactive guided/manual modes.
 - Plain/detailed output modes.
 
@@ -48,6 +48,12 @@ It supports quick lookup, guided navigation, and local cache-based querying with
 - `software show <software_id_or_name>`
   - Show software details.
 
+- `campaign show <campaign_id_or_name>`
+  - Show campaign details.
+
+- `campaign techniques <campaign_id_or_name>`
+  - List techniques mapped to that campaign.
+
 ### Interactive Mode
 - Launches when running `go run .` with no command arguments.
 - **GUIDED EXPLORER**: navigate tactic -> technique -> details with in-terminal prompts.
@@ -61,6 +67,7 @@ It supports quick lookup, guided navigation, and local cache-based querying with
 - `query.go`: search and filter logic.
 - `ui.go`: terminal UX (spinner and human-readable size formatting), color/theme, and table/truncation helpers.
 - `data/mitre-cache.json`: normalized local cache used by `search`, `show`, and `list`.
+  - `group/mitigation/software/campaign`
 - `data/enterprise-attack.json`: raw Enterprise ATT&CK dataset downloaded by `update`.
 - `data/update-meta.json`: stores ETag/Last-Modified identifiers for update checks.
 
@@ -74,6 +81,8 @@ go run . list --platform <name>
 go run . group techniques <group_id_or_name>
 go run . mitigation techniques <mitigation_id_or_name>
 ```
+
+- See Core Commands above for complete command variants (group/software/campaign show + techniques).
 
 - `go run .` starts interactive mode
 

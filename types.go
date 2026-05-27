@@ -70,11 +70,19 @@ type Software struct {
 	Aliases []string `json:"aliases"`
 }
 
+type Campaign struct {
+	ID string `json:"id"`
+	Name string `json:"name"`
+	Description string `json:"description"`
+	Aliases []string `json:"aliases"`
+}
+
 type CacheData struct {
 	Techniques []Technique `json:"techniques"`
 	Groups []Group `json:"groups"`
 	Mitigations []Mitigation `json:"mitigations"`
 	Softwares []Software `json:"softwares"`
+	Campaigns []Campaign `json:"campaigns"`
 	Relationships []Relationship `json:"relationships"`
 }
 

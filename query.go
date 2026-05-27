@@ -329,3 +329,52 @@ func techniquesUsedBySoftware(cache CacheData, softwareID string) []Technique {
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out
 }
+
+func findCampaign(cache CacheData, input string) (Campaign, bool) {
+	q := strings.TrimSpace(strings.ToLower(input))
+
+	for _, c := range cache.Campaigns {
+		if strings.ToLower(c.ID) == q || strings.ToLower(c.Name) == q {
+			return c, true
+		}
+		for _, a := range c.Aliases {
+			if strings.ToLower(a) == q {
+				return c, true
+			}
+		}
+	}
+	return Campaign{}, false
+}
+
+func techniquesUsedByCampaign(cache CacheData, campaignID string) []Technique {
+	techByID := make(map[string]Technique, len(cache.Techniques))
+	for _, t := range cache.Techniques {
+		techByID[t.ID] = t
+	}
+
+	seen := make(map[string]struct{})
+	var out []Technique
+
+	for _, rel := range cache.Relationships {
+		if rel.Type != "uses" {
+			continue
+		}
+		if rel.SourceType != "campaign" || rel.TargetType != "technique" {
+			continue
+		}
+		if !strings.EqualFold(rel.SourceID, campaignID) {
+			continue
+		}
+		if _, ok := seen[rel.TargetID]; ok {
+			continue
+		}
+		seen[rel.TargetID] = struct{}{}
+
+		if t, ok := techByID[rel.TargetID]; ok {
+			out = append(out, t)
+		}
+	}
+
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	return out
+}
