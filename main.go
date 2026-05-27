@@ -93,6 +93,7 @@ func runGuidedExplorer() {
 		fmt.Println("  [2] Explore Groups")
 		fmt.Println("  [3] Explore Mitigations")
 		fmt.Println("  [4] Explore Softwares")
+		fmt.Println("  [5] Explore Campaigns")
 		fmt.Println("  [q] Exit guided mode")
 		fmt.Printf("> ")
 
@@ -391,6 +392,82 @@ func runGuidedExplorer() {
 					}
 				}
 			softwareList:
+			}
+		case "5":
+			if len(cache.Campaigns) == 0 {
+				fmt.Println("No campaigns found in cache.")
+				continue
+			}
+
+			campaigns := make([]Campaign, len(cache.Campaigns))
+			copy(campaigns, cache.Campaigns)
+			sort.Slice(campaigns, func(i, j int) bool { return campaigns[i].ID < campaigns[j].ID })
+
+			for {
+				fmt.Println(title("Campaigns"))
+				fmt.Printf("%s %d campaign(s)\n", ok("Found"), len(campaigns))
+				fmt.Printf("%-4s %-10s %s\n", "#", "ID", "Name")
+				fmt.Println(strings.Repeat("-", 64))
+				for i, c := range campaigns {
+					fmt.Printf("%-4d %-10s %s\n", i+1, c.ID, truncateText(c.Name, 48))
+				}
+				fmt.Println("  [q] Return to guided menu")
+				fmt.Print("> ")
+
+				input := readLine(reader)
+				if strings.EqualFold(input, "q") {
+					break
+				}
+
+				idx, err := strconv.Atoi(input)
+				if err != nil || idx < 1 || idx > len(campaigns) {
+					fmt.Println("Invalid selection.")
+					continue
+				}
+
+				c := campaigns[idx-1]
+				related := techniquesUsedByCampaign(cache, c.ID)
+
+				fmt.Println()
+				fmt.Printf("%s %s\n", label("ID:"), c.ID)
+				fmt.Printf("%s %s\n", label("Name:"), c.Name)
+				fmt.Printf("%s %s\n", label("Aliases:"), strings.Join(c.Aliases, ", "))
+				fmt.Printf("%s %d\n", label("Mapped techniques:"), len(related))
+				fmt.Printf("%s %s\n", label("Description:"), c.Description)
+
+				viewedMapped := false
+				for {
+					fmt.Println("\nNext:")
+					if !viewedMapped {
+						fmt.Println("  [1] View mapped techniques")
+					}
+					fmt.Println("  [b] Back to campaigns")
+					fmt.Println("  [q] Return to guided menu")
+					fmt.Print("> ")
+
+					next := strings.ToLower(readLine(reader))
+					switch next {
+					case "1":
+						if viewedMapped {
+							fmt.Println("Invalid selection.")
+							continue
+						}
+						if len(related) == 0 {
+							fmt.Println("No mapped techniques for this campaign.")
+						} else {
+							printTechniqueTable(related)
+						}
+						viewedMapped = true
+					case "b":
+						fmt.Println()
+						goto campaignList
+					case "q":
+						goto guidedMenu
+					default:
+						fmt.Println("Invalid selection.")
+					}
+				}
+			campaignList:
 			}
 
 		case "q":
