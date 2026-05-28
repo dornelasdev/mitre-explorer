@@ -10,7 +10,7 @@ CLI tool written in Go to explore MITRE ATT&CK techniques offline.
 A CLI for exploring MITRE ATT&CK data offline in a simple, learning-friendly workflow.
 It supports quick lookup, guided navigation, and local cache-based querying without needing live web requests for every command.
 
-## Current Features (v0.7.3)
+## Current Features (v0.7.5)
 - Offline cache + update pipeline.
 - Technique search/show/list.
 - Group/mitigation/software/campaign mappings.
@@ -61,11 +61,16 @@ It supports quick lookup, guided navigation, and local cache-based querying with
 - Navigation shortcuts: `q` to quit, `back`/`b` where applicable.
 
 ## Structure
-- `main.go`: entry point of the program and command routing.
+- `main.go`: app entrypoint, interactive mode bootstrap, shared line-reader/output helper.
 - `types.go`: core data models (STIX bundle/object structs, cache path constant).
 - `update.go`: update pipeline (download raw ATT&CK data, parse STIX, build/write and load cache).
 - `query.go`: search and filter logic.
 - `ui.go`: terminal UX (spinner and human-readable size formatting), color/theme, and table/truncation helpers.
+- `cmd_router.go`: central CLI comamnd routing and global flag preprocessing.
+- `cmd_update.go`: `update` command handler (download/meta/cache rebuild flow).
+- `cmd_core.go`: core technique handlers (`search`, `show`, `list`).
+- `cmd_map.go`: mapping handlers (`group`, `mitigation`, `software`, `campaign`).
+- `guided_mode.go`: guided explorer flow and guided-specific detail rendering.
 - `data/mitre-cache.json`: normalized local cache used by `search`, `show`, and `list`.
   - `group/mitigation/software/campaign`
 - `data/enterprise-attack.json`: raw Enterprise ATT&CK dataset downloaded by `update`.
