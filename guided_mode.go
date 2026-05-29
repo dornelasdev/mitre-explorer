@@ -249,8 +249,8 @@ func runGuidedExplorer() {
 						fmt.Println("Invalid selection.")
 					}
 				}
-				mitigationList:
-				}
+			mitigationList:
+			}
 		case "4":
 			if len(cache.Softwares) == 0 {
 				fmt.Println("No software found in cache.")

@@ -10,10 +10,10 @@ import (
 )
 
 type DownloadResult struct {
-	Downloaded bool
-	NotModified bool
-	Bytes int64
-	ETag string
+	Downloaded   bool
+	NotModified  bool
+	Bytes        int64
+	ETag         string
 	LastModified string
 }
 
@@ -40,8 +40,8 @@ func downloadFileConditional(url, outputPath string, prev UpdateMeta, force bool
 
 	if resp.StatusCode == http.StatusNotModified {
 		return DownloadResult{
-			NotModified: true,
-			ETag: prev.ETag,
+			NotModified:  true,
+			ETag:         prev.ETag,
 			LastModified: prev.LastModified,
 		}, nil
 	}
@@ -76,11 +76,11 @@ func downloadFileConditional(url, outputPath string, prev UpdateMeta, force bool
 	}
 
 	return DownloadResult{
-		Downloaded: true,
-		Bytes: n,
-		ETag: etag,
+		Downloaded:   true,
+		Bytes:        n,
+		ETag:         etag,
 		LastModified: lastMod,
-	}  , nil
+	}, nil
 }
 
 func buildTechniquesFromSTIX(path string) ([]Technique, error) {
@@ -120,13 +120,14 @@ func buildTechniquesFromSTIX(path string) ([]Technique, error) {
 		}
 
 		techniques = append(techniques, Technique{
-			ID: id,
-			Name: obj.Name,
-			Description: obj.Description,
-			Tactics: tactics,
-			Platforms: obj.XMitrePlatforms,
-			DataSources: obj.XMitreDataSources,
+			ID:             id,
+			Name:           obj.Name,
+			Description:    obj.Description,
+			Tactics:        tactics,
+			Platforms:      obj.XMitrePlatforms,
+			DataSources:    obj.XMitreDataSources,
 			DetectionNotes: obj.XMitreDetection,
+			DataComponents: obj.XMitreDataComponents,
 		})
 	}
 
@@ -220,6 +221,10 @@ func buildCacheDataFromSTIX(path string) (CacheData, error) {
 			stixToType[obj.ID] = "software"
 		case "campaign":
 			stixToType[obj.ID] = "campaign"
+		case "x-mitre-data-component":
+			stixToType[obj.ID] = "data_component"
+		case "x-mitre-detection-strategy":
+			stixToType[obj.ID] = "detection_strategy"
 		}
 
 	}
@@ -229,6 +234,54 @@ func buildCacheDataFromSTIX(path string) (CacheData, error) {
 	relationships := make([]Relationship, 0)
 	softwares := make([]Software, 0)
 	campaigns := make([]Campaign, 0)
+	dataComponents := make([]DataComponent, 0)
+	dsToComponentRefs := make(map[string][]string)
+	analyticToComponentRefs := make(map[string][]string)
+	dsToAnalyticRefs := make(map[string][]string)
+
+	for _, obj := range bundle.Objects {
+		if obj.XMitreDeprecated || obj.Revoked {
+			continue
+		}
+		if obj.Type != "x-mitre-analytic" {
+			continue
+		}
+
+		for _, ls := range obj.XMitreLogSourceReferences {
+			ref := strings.TrimSpace(ls.XMitreDataComponentRef)
+			if ref == "" || !strings.HasPrefix(ref, "x-mitre-data-component--") {
+				continue
+			}
+			analyticToComponentRefs[obj.ID] = append(analyticToComponentRefs[obj.ID], ref)
+		}
+	}
+
+	for _, obj := range bundle.Objects {
+		if obj.XMitreDeprecated || obj.Revoked {
+			continue
+		}
+		if obj.Type != "x-mitre-detection-strategy" {
+			continue
+		}
+
+		for _, ref := range obj.XMitreAnalyticRefs {
+			if strings.HasPrefix(ref, "x-mitre-analytic--") {
+				dsToAnalyticRefs[obj.ID] = append(dsToAnalyticRefs[obj.ID], ref)
+			}
+		}
+
+		for _, ref := range obj.ObjectRefs {
+			if strings.HasPrefix(ref, "x-mitre-data-component--") {
+				dsToComponentRefs[obj.ID] = append(dsToComponentRefs[obj.ID], ref)
+			}
+		}
+
+		for _, analyticRef := range dsToAnalyticRefs[obj.ID] {
+			for _, dcRef := range analyticToComponentRefs[analyticRef] {
+				dsToComponentRefs[obj.ID] = append(dsToComponentRefs[obj.ID], dcRef)
+			}
+		}
+	}
 
 	for _, obj := range bundle.Objects {
 		if obj.XMitreDeprecated || obj.Revoked {
@@ -250,14 +303,34 @@ func buildCacheDataFromSTIX(path string) (CacheData, error) {
 			}
 
 			techniques = append(techniques, Technique{
-				ID: tid,
-				Name: obj.Name,
-				Description: obj.Description,
-				Tactics: tactics,
-				Platforms: obj.XMitrePlatforms,
-				DataSources: obj.XMitreDataSources,
+				ID:             tid,
+				Name:           obj.Name,
+				Description:    obj.Description,
+				Tactics:        tactics,
+				Platforms:      obj.XMitrePlatforms,
+				DataSources:    obj.XMitreDataSources,
 				DetectionNotes: obj.XMitreDetection,
+				DataComponents: obj.XMitreDataComponents,
 			})
+
+			for _, ref := range obj.ObjectRefs {
+				if !strings.HasPrefix(ref, "x-mitre-data-component--") {
+					continue
+				}
+
+				targetID := stixToExternal[ref]
+				if targetID == "" {
+					targetID = ref
+				}
+
+				relationships = append(relationships, Relationship{
+					Type:       "has_data_component",
+					SourceType: "technique",
+					SourceID:   tid,
+					TargetType: "data_component",
+					TargetID:   targetID,
+				})
+			}
 
 		case "intrusion-set":
 			gid := stixToExternal[obj.ID]
@@ -265,21 +338,21 @@ func buildCacheDataFromSTIX(path string) (CacheData, error) {
 				continue
 			}
 			groups = append(groups, Group{
-				ID: gid,
-				Name: obj.Name,
+				ID:          gid,
+				Name:        obj.Name,
 				Description: obj.Description,
-				Aliases: obj.XMitreAliases,
+				Aliases:     obj.XMitreAliases,
 			})
 
 		case "course-of-action":
 			mid := stixToExternal[obj.ID]
-			if mid == "" || !hasIDPrefix(mid, "M"){
+			if mid == "" || !hasIDPrefix(mid, "M") {
 				continue
 			}
 
 			mitigations = append(mitigations, Mitigation{
-				ID: mid,
-				Name: obj.Name,
+				ID:          mid,
+				Name:        obj.Name,
 				Description: obj.Description,
 			})
 		case "relationship":
@@ -288,7 +361,7 @@ func buildCacheDataFromSTIX(path string) (CacheData, error) {
 			sourceType := stixToType[obj.SourceRef]
 			targetType := stixToType[obj.TargetRef]
 
-			if sourceID == "" || targetID == "" || sourceType == "" || targetType == "" {
+			if targetID == "" || sourceType == "" || targetType == "" {
 				continue
 			}
 
@@ -313,6 +386,10 @@ func buildCacheDataFromSTIX(path string) (CacheData, error) {
 				if !hasIDPrefix(sourceID, "C") {
 					continue
 				}
+			case "data_component":
+
+			case "detection_strategy":
+
 			}
 
 			switch targetType {
@@ -336,14 +413,16 @@ func buildCacheDataFromSTIX(path string) (CacheData, error) {
 				if !hasIDPrefix(targetID, "C") {
 					continue
 				}
+			case "data_component":
+
 			}
 
 			relationships = append(relationships, Relationship{
-				Type: obj.RelationshipType,
+				Type:       obj.RelationshipType,
 				SourceType: sourceType,
-				SourceID: sourceID,
+				SourceID:   sourceID,
 				TargetType: targetType,
-				TargetID: targetID,
+				TargetID:   targetID,
 			})
 		case "malware", "tool":
 			sid := stixToExternal[obj.ID]
@@ -352,11 +431,11 @@ func buildCacheDataFromSTIX(path string) (CacheData, error) {
 			}
 
 			softwares = append(softwares, Software{
-				ID: sid,
-				Name: obj.Name,
-				Type: obj.Type,
+				ID:          sid,
+				Name:        obj.Name,
+				Type:        obj.Type,
 				Description: obj.Description,
-				Aliases: obj.XMitreAliases,
+				Aliases:     obj.XMitreAliases,
 			})
 		case "campaign":
 			cid := stixToExternal[obj.ID]
@@ -365,21 +444,81 @@ func buildCacheDataFromSTIX(path string) (CacheData, error) {
 			}
 
 			campaigns = append(campaigns, Campaign{
-				ID: cid,
-				Name: obj.Name,
+				ID:          cid,
+				Name:        obj.Name,
 				Description: obj.Description,
-				Aliases: obj.XMitreAliases,
+				Aliases:     obj.XMitreAliases,
+			})
+		case "x-mitre-data-component":
+			dcid := stixToExternal[obj.ID]
+			if dcid == "" {
+				dcid = obj.ID
+			}
+
+			dataComponents = append(dataComponents, DataComponent{
+				ID:          dcid,
+				StixID:      obj.ID,
+				Name:        obj.Name,
+				Description: obj.Description,
+			})
+		}
+	}
+
+	derivedSeen := make(map[string]struct{})
+
+	for _, obj := range bundle.Objects {
+		if obj.XMitreDeprecated || obj.Revoked {
+			continue
+		}
+		if obj.Type != "relationship" || obj.RelationshipType != "detects" {
+			continue
+		}
+
+		dsRef := obj.SourceRef
+		techRef := obj.TargetRef
+
+		if !strings.HasPrefix(dsRef, "x-mitre-detection-strategy--") {
+			continue
+		}
+		if !strings.HasPrefix(techRef, "attack-pattern--") {
+			continue
+		}
+		techID := stixToExternal[techRef]
+		if techID == "" || !hasIDPrefix(techID, "T") {
+			continue
+		}
+
+		componentRefs := dsToComponentRefs[dsRef]
+		for _, dcRef := range componentRefs {
+			dcID := stixToExternal[dcRef]
+			if dcID == "" {
+				dcID = dcRef
+			}
+
+			key := techID + "|" + dcID
+			if _, ok := derivedSeen[key]; ok {
+				continue
+			}
+			derivedSeen[key] = struct{}{}
+
+			relationships = append(relationships, Relationship{
+				Type:       "has_data_component",
+				SourceType: "technique",
+				SourceID:   techID,
+				TargetType: "data_component",
+				TargetID:   dcID,
 			})
 		}
 	}
 
 	return CacheData{
-		Techniques: techniques,
-		Groups: groups,
-		Mitigations: mitigations,
-		Relationships: relationships,
-		Softwares: softwares,
-		Campaigns: campaigns,
+		Techniques:     techniques,
+		Groups:         groups,
+		Mitigations:    mitigations,
+		Relationships:  relationships,
+		Softwares:      softwares,
+		Campaigns:      campaigns,
+		DataComponents: dataComponents,
 	}, nil
 }
 

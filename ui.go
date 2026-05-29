@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"time"
 	"strings"
+	"time"
 )
 
 func startSpinner(message string) func() {
@@ -43,12 +43,12 @@ func humanSize(n int64) string {
 }
 
 const (
-	cReset = "\033[0m"
-	cBold = "\033[1m"
-	cCyan = "\033[36m"
-	cGreen = "\033[32m"
+	cReset  = "\033[0m"
+	cBold   = "\033[1m"
+	cCyan   = "\033[36m"
+	cGreen  = "\033[32m"
 	cYellow = "\033[33m"
-	cRed = "\033[31m"
+	cRed    = "\033[31m"
 )
 
 var useColor = true
@@ -73,7 +73,6 @@ func warn(text string) string {
 	}
 	return cYellow + text + cReset
 }
-
 
 func errText(text string) string {
 	if !useColor {

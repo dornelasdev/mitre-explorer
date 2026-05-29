@@ -5,7 +5,6 @@ import (
 	"os"
 )
 
-
 func handleUpdate(args []string) {
 	const sourceURL = "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json"
 	const rawPath = "data/enterprise-attack.json"
@@ -74,7 +73,7 @@ func handleUpdate(args []string) {
 	}
 
 	if err := saveUpdateMeta(metaPath, UpdateMeta{
-		ETag: dl.ETag,
+		ETag:         dl.ETag,
 		LastModified: dl.LastModified,
 	}); err != nil {
 		fmt.Printf("Warning: failed to save update metadata: %v\n", err)
@@ -90,7 +89,7 @@ func handleUpdate(args []string) {
 	fmt.Printf("Parsed mitigations: %d\n", len(cache.Mitigations))
 	fmt.Printf("Parsed campaigns: %d\n", len(cache.Campaigns))
 	fmt.Printf("Parsed relationships: %d\n", len(cache.Relationships))
-
+	fmt.Printf("Parsed data components: %d\n", len(cache.DataComponents))
 
 	if dl.Downloaded {
 		fmt.Println("Download status: downloaded new dataset")
@@ -98,4 +97,3 @@ func handleUpdate(args []string) {
 		fmt.Println("Download status: reused local raw dataset")
 	}
 }
-

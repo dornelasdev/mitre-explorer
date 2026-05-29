@@ -12,7 +12,7 @@ func containsIgnoreCase(text, term string) bool {
 func searchTechniques(techniques []Technique, term string, nameOnly bool, limit int) []Technique {
 	type searchHit struct {
 		technique Technique
-		score int
+		score     int
 	}
 
 	var hits []searchHit
@@ -142,7 +142,7 @@ func collectUniqueTactics(techniques []Technique) []string {
 	seen := make(map[string]struct{})
 	type tacticItem struct {
 		display string
-		key string
+		key     string
 	}
 	var items []tacticItem
 
@@ -164,7 +164,7 @@ func collectUniqueTactics(techniques []Technique) []string {
 
 			items = append(items, tacticItem{
 				display: display,
-				key: key,
+				key:     key,
 			})
 		}
 	}
@@ -372,6 +372,105 @@ func techniquesUsedByCampaign(cache CacheData, campaignID string) []Technique {
 
 		if t, ok := techByID[rel.TargetID]; ok {
 			out = append(out, t)
+		}
+	}
+
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	return out
+}
+
+func listByDataComponent(techniques []Technique, component string) []Technique {
+	var out []Technique
+	for _, t := range techniques {
+		if containsSliceIgnoreCase(t.DataComponents, component) {
+			out = append(out, t)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	return out
+}
+
+func searchDetectionNotes(techniques []Technique, term string, limit int) []Technique {
+	var out []Technique
+	term = strings.ToLower(strings.TrimSpace(term))
+	if term == "" {
+		return out
+	}
+
+	for _, t := range techniques {
+		if strings.Contains(strings.ToLower(t.DetectionNotes), term) {
+			out = append(out, t)
+		}
+	}
+
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+
+	if limit > 0 && len(out) > limit {
+		out = out[:limit]
+	}
+	return out
+}
+
+func techniquesByDataComponent(cache CacheData, componentInput string) []Technique {
+	q := strings.TrimSpace(strings.ToLower(componentInput))
+	if q == "" {
+		return nil
+	}
+
+	componentIDs := make(map[string]struct{})
+	for _, dc := range cache.DataComponents {
+		if strings.Contains(strings.ToLower(dc.Name), q) || strings.EqualFold(dc.ID, componentInput) || strings.EqualFold(dc.StixID, componentInput) {
+			componentIDs[dc.ID] = struct{}{}
+			componentIDs[dc.StixID] = struct{}{}
+		}
+	}
+
+	techByID := make(map[string]Technique, len(cache.Techniques))
+	for _, t := range cache.Techniques {
+		techByID[t.ID] = t
+	}
+
+	seen := make(map[string]struct{})
+	var out []Technique
+
+	for _, rel := range cache.Relationships {
+		if rel.Type != "has_data_component" || rel.SourceType != "technique" || rel.TargetType != "data_component" {
+			continue
+		}
+		if _, ok := componentIDs[rel.TargetID]; !ok {
+			continue
+		}
+		if _, ok := seen[rel.SourceID]; ok {
+			continue
+		}
+		seen[rel.SourceID] = struct{}{}
+
+		if t, ok := techByID[rel.SourceID]; ok {
+			out = append(out, t)
+		}
+	}
+	if len(out) == 0 {
+		for _, t := range cache.Techniques {
+			matched := false
+
+			for _, dc := range t.DataComponents {
+				if strings.Contains(strings.ToLower(dc), q) {
+					matched = true
+					break
+				}
+			}
+			if !matched {
+				for _, ds := range t.DataSources {
+					if strings.Contains(strings.ToLower(ds), q) {
+						matched = true
+						break
+					}
+				}
+			}
+
+			if matched {
+				out = append(out, t)
+			}
 		}
 	}
 

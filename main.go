@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	fmt.Println("MITRE Explorer v0.7.4")
+	fmt.Println("MITRE Explorer v0.7.6")
 
 	if len(os.Args) < 2 {
 		startInteractiveMode()
@@ -88,4 +88,3 @@ func printMappedTechniquesWithMode(results []Technique, detailed bool) {
 	}
 	printTechniqueTable(results)
 }
-
