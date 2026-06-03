@@ -238,6 +238,9 @@ func buildCacheDataFromSTIX(path string) (CacheData, error) {
 	dsToComponentRefs := make(map[string][]string)
 	analyticToComponentRefs := make(map[string][]string)
 	dsToAnalyticRefs := make(map[string][]string)
+	dsDetectionText := make(map[string][]string)
+	analyticDetectionText := make(map[string][]string)
+	techDetectionText := make(map[string][]string)
 
 	for _, obj := range bundle.Objects {
 		if obj.XMitreDeprecated || obj.Revoked {
@@ -254,6 +257,8 @@ func buildCacheDataFromSTIX(path string) (CacheData, error) {
 			}
 			analyticToComponentRefs[obj.ID] = append(analyticToComponentRefs[obj.ID], ref)
 		}
+		analyticDetectionText[obj.ID] = appendUniqueText(analyticDetectionText[obj.ID], obj.Name)
+		analyticDetectionText[obj.ID] = appendUniqueText(analyticDetectionText[obj.ID], obj.Description)
 	}
 
 	for _, obj := range bundle.Objects {
@@ -263,6 +268,9 @@ func buildCacheDataFromSTIX(path string) (CacheData, error) {
 		if obj.Type != "x-mitre-detection-strategy" {
 			continue
 		}
+
+		dsDetectionText[obj.ID] = appendUniqueText(dsDetectionText[obj.ID], obj.Name)
+		dsDetectionText[obj.ID] = appendUniqueText(dsDetectionText[obj.ID], obj.Description)
 
 		for _, ref := range obj.XMitreAnalyticRefs {
 			if strings.HasPrefix(ref, "x-mitre-analytic--") {
@@ -488,6 +496,16 @@ func buildCacheDataFromSTIX(path string) (CacheData, error) {
 			continue
 		}
 
+		for _, text := range dsDetectionText[dsRef] {
+			techDetectionText[techID] = appendUniqueText(techDetectionText[techID], text)
+		}
+
+		for _, analyticRef := range dsToAnalyticRefs[dsRef] {
+			for _, text := range analyticDetectionText[analyticRef] {
+				techDetectionText[techID] = appendUniqueText(techDetectionText[techID], text)
+			}
+		}
+
 		componentRefs := dsToComponentRefs[dsRef]
 		for _, dcRef := range componentRefs {
 			dcID := stixToExternal[dcRef]
@@ -508,6 +526,20 @@ func buildCacheDataFromSTIX(path string) (CacheData, error) {
 				TargetType: "data_component",
 				TargetID:   dcID,
 			})
+		}
+	}
+
+	for i := range techniques {
+		parts := techDetectionText[techniques[i].ID]
+		if len(parts) == 0 {
+			continue
+		}
+
+		enriched := strings.Join(parts, "\n\n")
+		if strings.TrimSpace(techniques[i].DetectionNotes) == "" {
+			techniques[i].DetectionNotes = enriched
+		} else {
+			techniques[i].DetectionNotes += "\n\n" + enriched
 		}
 	}
 
@@ -538,6 +570,21 @@ func hasIDPrefix(id, prefix string) bool {
 	id = strings.ToUpper(strings.TrimSpace(id))
 	prefix = strings.ToUpper(strings.TrimSpace(prefix))
 	return strings.HasPrefix(id, prefix)
+}
+
+func appendUniqueText(parts []string, text string) []string {
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return parts
+	}
+
+	for _, p := range parts {
+		if p == text {
+			return parts
+		}
+	}
+
+	return append(parts, text)
 }
 
 func saveCacheData(path string, cache CacheData) error {
