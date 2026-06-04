@@ -10,7 +10,7 @@ CLI tool written in Go to explore MITRE ATT&CK techniques offline.
 A CLI for exploring MITRE ATT&CK data offline in a simple, learning-friendly workflow.
 It supports quick lookup, guided navigation, and local cache-based querying without needing live web requests for every command.
 
-## Current Features (v0.7.6)
+## Current Features (v0.7.7)
 - Offline cache + update pipeline.
 - Technique search/show/list.
 - Group/mitigation/software/campaign mappings.
@@ -54,6 +54,12 @@ It supports quick lookup, guided navigation, and local cache-based querying with
 - `campaign techniques <campaign_id_or_name>`
   - List techniques mapped to that campaign.
 
+- `detection show <det_id_or_name>`
+  - Show detection details.
+
+- `detection techniques <det_id_or_name>`
+  - List techniques mapped to that detection strategy.
+
 ### Interactive Mode
 - Launches when running `go run .` with no command arguments.
 - **GUIDED EXPLORER**: navigate tactic -> technique -> details with in-terminal prompts.
@@ -92,7 +98,6 @@ go run . mitigation techniques <mitigation_id_or_name>
 - `go run .` starts interactive mode
 
 ## Roadmap
-- **v0.7.6**: add matrix support groundwork (structure ready for mobile/ICS).
 - **v0.7.7**: add campaign branch polish in guided mode.
 - **v0.7.8**: add export flags for results.
 - **v0.7.9**: pre-v0.8 cleanup pass.
