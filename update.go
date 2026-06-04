@@ -241,6 +241,7 @@ func buildCacheDataFromSTIX(path string) (CacheData, error) {
 	dsDetectionText := make(map[string][]string)
 	analyticDetectionText := make(map[string][]string)
 	techDetectionText := make(map[string][]string)
+	detectionStrategies := make([]DetectionStrategy, 0)
 
 	for _, obj := range bundle.Objects {
 		if obj.XMitreDeprecated || obj.Revoked {
@@ -369,6 +370,10 @@ func buildCacheDataFromSTIX(path string) (CacheData, error) {
 			sourceType := stixToType[obj.SourceRef]
 			targetType := stixToType[obj.TargetRef]
 
+			if sourceType == "detection_strategy" && sourceID == "" {
+				sourceID = obj.SourceRef
+			}
+
 			if targetID == "" || sourceType == "" || targetType == "" {
 				continue
 			}
@@ -469,6 +474,19 @@ func buildCacheDataFromSTIX(path string) (CacheData, error) {
 				Name:        obj.Name,
 				Description: obj.Description,
 			})
+		case "x-mitre-detection-strategy":
+			detID := stixToExternal[obj.ID]
+			if detID == "" {
+				detID = obj.ID
+			}
+
+			detectionStrategies = append(detectionStrategies, DetectionStrategy{
+				ID: detID,
+				StixID: obj.ID,
+				Name: obj.Name,
+				Description: obj.Description,
+				Analytics: obj.XMitreAnalyticRefs,
+			})
 		}
 	}
 
@@ -551,6 +569,7 @@ func buildCacheDataFromSTIX(path string) (CacheData, error) {
 		Softwares:      softwares,
 		Campaigns:      campaigns,
 		DataComponents: dataComponents,
+		DetectionStrategies: detectionStrategies,
 	}, nil
 }
 

@@ -90,6 +90,7 @@ func handleUpdate(args []string) {
 	fmt.Printf("Parsed campaigns: %d\n", len(cache.Campaigns))
 	fmt.Printf("Parsed relationships: %d\n", len(cache.Relationships))
 	fmt.Printf("Parsed data components: %d\n", len(cache.DataComponents))
+	fmt.Printf("Parsed detection strategies: %d\n", len(cache.DetectionStrategies))
 
 	if dl.Downloaded {
 		fmt.Println("Download status: downloaded new dataset")

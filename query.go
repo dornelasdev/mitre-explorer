@@ -477,3 +477,47 @@ func techniquesByDataComponent(cache CacheData, componentInput string) []Techniq
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out
 }
+
+func findDetectionStrategy(cache CacheData, input string) (DetectionStrategy, bool) {
+	q := strings.TrimSpace(strings.ToLower(input))
+
+	for _, d := range cache.DetectionStrategies {
+		if strings.ToLower(d.ID) == q || strings.ToLower(d.StixID) == q || strings.ToLower(d.Name) == q {
+			return d, true
+		}
+	}
+	return DetectionStrategy{}, false
+}
+
+func techniquesDetectedByStrategy(cache CacheData, detectionID string) []Technique {
+	techByID := make(map[string]Technique, len(cache.Techniques))
+	for _, t := range cache.Techniques {
+		techByID[t.ID] = t
+	}
+
+	seen := make(map[string]struct{})
+	var out []Technique
+
+	for _, rel := range cache.Relationships {
+		if rel.Type != "detects" {
+			continue
+		}
+		if rel.SourceType != "detection_strategy" || rel.TargetType != "technique" {
+			continue
+		}
+		if !strings.EqualFold(rel.SourceID, detectionID) {
+			continue
+		}
+		if _, ok := seen[rel.TargetID]; ok {
+			continue
+		}
+		seen[rel.TargetID] = struct{}{}
+
+		if t, ok := techByID[rel.TargetID]; ok {
+			out = append(out, t)
+		}
+	}
+
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	return out
+}

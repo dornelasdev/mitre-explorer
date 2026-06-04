@@ -336,3 +336,83 @@ func handleCampaign(args []string) {
 		fmt.Println("Use: campaign show <campaign_id_or_name> or campaign techniques <campaign_id_or_name>")
 	}
 }
+
+func handleDetection(args []string) {
+	if len(args) < 3 {
+		fmt.Println("Usage:")
+		fmt.Println("  go run . detection show <det_id_or_name> [--plain]")
+		fmt.Println("  go run . detection techniques <det_id_or_name> [--detailed] [--plain]")
+		return
+	}
+
+	cache, err := loadCacheData(cachePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			fmt.Println(errText("Cache not found. Run: go run . update"))
+			return
+		}
+		fmt.Printf("Error loading cache: %v\n", err)
+		return
+	}
+
+	sub := strings.ToLower(args[1])
+
+	switch sub {
+	case "show":
+		d, found := findDetectionStrategy(cache, args[2])
+		if !found {
+			fmt.Printf("Detection strategy %q not found in cache.\n", args[2])
+			return
+		}
+
+		related := techniquesDetectedByStrategy(cache, d.ID)
+		fmt.Printf("%s %s\n", label("ID:"), d.ID)
+		fmt.Printf("%s %s\n", label("Name:"), d.Name)
+		fmt.Printf("%s %d\n", label("Mapped techniques:"), len(related))
+		fmt.Printf("%s %d\n", label("Analytics:"), len(d.Analytics))
+		fmt.Printf("%s %s\n", label("Description:"), d.Description)
+
+	case "techniques":
+		detailed := false
+		filtered := make([]string, 0, len(args))
+		filtered = append(filtered, args[0], args[1])
+
+		for _, a := range args[2:] {
+			if a == "--detailed" {
+				detailed = true
+				continue
+			}
+			if strings.HasPrefix(a, "-") {
+				fmt.Println("Usage: go run . detection techniques <det_id_or_name> [--detailed] [--plain]")
+				return
+			}
+			filtered = append(filtered, a)
+		}
+		args = filtered
+
+		if len(args) != 3 {
+			fmt.Println("Usage: go run . detection techniques <det_id_or_name> [--detailed] [--plain]")
+			return
+		}
+
+		d, found := findDetectionStrategy(cache, args[2])
+		if !found {
+			fmt.Printf("Detection strategy %q not found in cache.\n", args[2])
+			return
+		}
+
+		results := techniquesDetectedByStrategy(cache, d.ID)
+		if len(results) == 0 {
+			fmt.Printf("No techniques mapped for detection strategy %s (%s).\n", d.Name, d.ID)
+			return
+		}
+
+		fmt.Printf("%s %s (%s)", label("Detection:"), d.Name, d.ID)
+		fmt.Printf("%s %d technique(s)\n", ok("Found"), len(results))
+		printMappedTechniquesWithMode(results, detailed)
+
+	default:
+		fmt.Printf("Unknow detection subcommand: %s\n", sub)
+		fmt.Println("Use: detection show <det_id_or_name> or detection techniques <det_id_or_name>")
+	}
+}
