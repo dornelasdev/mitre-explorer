@@ -521,3 +521,46 @@ func techniquesDetectedByStrategy(cache CacheData, detectionID string) []Techniq
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out
 }
+func findAnalytic(cache CacheData, input string) (Analytic, bool) {
+	q := strings.TrimSpace(strings.ToLower(input))
+
+	for _, a := range cache.Analytics {
+		if strings.ToLower(a.ID) == q || strings.ToLower(a.StixID) == q || strings.ToLower(a.Name) == q {
+			return a, true
+		}
+	}
+
+	return Analytic{}, false
+}
+
+func analyticsByDetectionStrategy(cache CacheData, detectionID string) []Analytic {
+	d, found := findDetectionStrategy(cache, detectionID)
+	if !found {
+		return nil
+	}
+
+	analyticByID := make(map[string]Analytic, len(cache.Analytics))
+	for _, a := range cache.Analytics {
+		analyticByID[a.ID] = a
+		analyticByID[a.StixID] = a
+	}
+
+	seen := make(map[string]struct{})
+	var out []Analytic
+
+	for _, ref := range d.Analytics {
+		a, ok := analyticByID[ref]
+		if !ok {
+			continue
+		}
+		if _, exists := seen[a.StixID]; exists {
+			continue
+		}
+
+		seen[a.StixID] = struct{}{}
+		out = append(out, a)
+	}
+
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	return out
+}

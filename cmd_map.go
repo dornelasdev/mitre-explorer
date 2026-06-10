@@ -342,6 +342,7 @@ func handleDetection(args []string) {
 		fmt.Println("Usage:")
 		fmt.Println("  go run . detection show <det_id_or_name> [--plain]")
 		fmt.Println("  go run . detection techniques <det_id_or_name> [--detailed] [--plain]")
+		fmt.Println("  go run . detection analytics <det_id_or_name> [--plain]")
 		return
 	}
 
@@ -411,8 +412,33 @@ func handleDetection(args []string) {
 		fmt.Printf("%s %d technique(s)\n", ok("Found"), len(results))
 		printMappedTechniquesWithMode(results, detailed)
 
+	case "analytics":
+		if len(args) != 3 {
+			fmt.Println("Usage: go run . detection analysis <det_id_or_name> [--plain]")
+			return
+		}
+
+		d, found := findDetectionStrategy(cache, args[2])
+		if !found {
+			fmt.Printf("Detection strategy %q not found in cache.\n", args[2])
+			return
+		}
+
+		results := analyticsByDetectionStrategy(cache, d.ID)
+		if len(results) == 0 {
+			fmt.Printf("No analytics mapped for detection strategy %s (%s).\n", d.Name, d.ID)
+			return
+		}
+
+		fmt.Printf("%s %s (%s)\n", label("Detection:"), d.Name, d.ID)
+		fmt.Printf("%s %d analytic(s)\n", ok("Found"), len(results))
+
+		for i, a := range results {
+			fmt.Printf("%d. %s\n", i+1, a.ID)
+		}
+
 	default:
 		fmt.Printf("Unknow detection subcommand: %s\n", sub)
-		fmt.Println("Use: detection show <det_id_or_name> or detection techniques <det_id_or_name>")
+		fmt.Println("Use: detection show <det_id_or_name>, detection techniques <det_id_or_name>, or detection analytics <det_id_or_name>")
 	}
 }

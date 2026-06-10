@@ -99,6 +99,13 @@ type DetectionStrategy struct {
 	Analytics []string `json:"analytics"`
 }
 
+type Analytic struct {
+	ID string `json:"id"`
+	StixID string `json:"stix_id"`
+	Name string `json:"name"`
+	Description string `json:"description"`
+}
+
 type CacheData struct {
 	Techniques     []Technique     `json:"techniques"`
 	Groups         []Group         `json:"groups"`
@@ -108,6 +115,7 @@ type CacheData struct {
 	Relationships  []Relationship  `json:"relationships"`
 	DataComponents []DataComponent `json:"data_components"`
 	DetectionStrategies []DetectionStrategy `json:"detection_strategies"`
+	Analytics []Analytic `json:"analytics"`
 }
 
 const (
