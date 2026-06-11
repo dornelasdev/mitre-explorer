@@ -342,6 +342,7 @@ func handleDetection(args []string) {
 		fmt.Println("Usage:")
 		fmt.Println("  go run . detection show <det_id_or_name> [--plain]")
 		fmt.Println("  go run . detection techniques <det_id_or_name> [--detailed] [--plain]")
+		fmt.Println("  go run . detection components <det_id_or_name> [--plain]")
 		fmt.Println("  go run . detection analytics <det_id_or_name> [--plain]")
 		return
 	}
@@ -414,7 +415,7 @@ func handleDetection(args []string) {
 
 	case "analytics":
 		if len(args) != 3 {
-			fmt.Println("Usage: go run . detection analysis <det_id_or_name> [--plain]")
+			fmt.Println("Usage: go run . detection analytics <det_id_or_name> [--plain]")
 			return
 		}
 
@@ -437,8 +438,103 @@ func handleDetection(args []string) {
 			fmt.Printf("%d. %s\n", i+1, a.ID)
 		}
 
+	case "components":
+		if len(args) != 3 {
+			fmt.Println("Usage: go run . detection components <det_id_or_name> [--plain]")
+		}
+
+		d, found := findDetectionStrategy(cache, args[2])
+		if !found {
+			fmt.Printf("Detection strategy %q not found in cache.\n", args[2])
+			return
+		}
+
+		results := dataComponentsByDetectionStrategy(cache, d.ID)
+		if len(results) == 0 {
+			fmt.Printf("No data components mapped for detection strategy %s (%s).\n", d.Name, d.ID)
+			return
+		}
+
+		fmt.Printf("%s %s (%s)\n", label("Detection:"), d.Name, d.ID)
+		fmt.Printf("%s %d data component(s)\n", ok("Found"), len(results))
+
+		for i, dc := range results {
+			fmt.Printf("%d. %s\n", i+1, dc.Name)
+		}
+
 	default:
 		fmt.Printf("Unknow detection subcommand: %s\n", sub)
 		fmt.Println("Use: detection show <det_id_or_name>, detection techniques <det_id_or_name>, or detection analytics <det_id_or_name>")
+	}
+}
+
+func handleAnalytic(args []string) {
+	if len(args) < 3 {
+		fmt.Println("Usage:")
+		fmt.Println("  go run . analytic show <analytic_id_or_name> [--plain]")
+		fmt.Println("  go run . analytic components <analytic_id_or_name> [--plain]")
+		return
+	}
+
+	cache, err := loadCacheData(cachePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			fmt.Println(errText("Cache not found. Run: go run . update"))
+			return
+		}
+		fmt.Printf("Error loading cache: %v\n", err)
+		return
+	}
+
+	sub := strings.ToLower(args[1])
+
+	switch sub {
+	case "show":
+		if len(args) != 3 {
+			fmt.Println("Usage: go run . analytic show <analytic_id_or_name> [--plain]")
+			return
+		}
+
+		a, found := findAnalytic(cache, args[2])
+		if !found {
+			fmt.Printf("Analytic %q not found in cache.\n", args[2])
+			return
+		}
+
+		components := dataComponentsByAnalytic(cache, a.ID)
+
+		fmt.Printf("%s %s\n", label("ID:"), a.ID)
+		fmt.Printf("%s %s\n", label("Name:"), a.Name)
+		fmt.Printf("%s %d\n", label("Data Components:"), len(components))
+		fmt.Printf("%s %s\n", label("Description:"), a.Description)
+
+	case "components":
+		if len(args) != 3 {
+			fmt.Println("Usage: go run . analytic components <analytic_id_or_name> [--plain]")
+			return
+		}
+
+		a, found := findAnalytic(cache, args[2])
+		if !found {
+			fmt.Printf("Analytic %q not found in cache.\n", args[2])
+			return
+		}
+
+		results := dataComponentsByAnalytic(cache, a.ID)
+		if len(results) == 0 {
+			fmt.Printf("No data components mapped for analytic %s (%s).\n", a.Name, a.ID)
+			return
+		}
+
+		fmt.Printf("%s %s (%s)\n", label("Analytic:"), a.Name, a.ID)
+		fmt.Printf("%s %d data component(s)\n", ok("Found"), len(results))
+
+		for i, dc := range results {
+			fmt.Printf("%d. %s\n", i+1, dc.Name)
+		}
+
+	default:
+		fmt.Printf("Unknown analytic subcommand: %s\n", sub)
+		fmt.Println("Use: analytic show <analytic_id_or_name> or analytic components <analytic_id_or_name>")
 	}
 }

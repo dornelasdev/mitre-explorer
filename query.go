@@ -564,3 +564,59 @@ func analyticsByDetectionStrategy(cache CacheData, detectionID string) []Analyti
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out
 }
+
+func dataComponentsByAnalytic(cache CacheData, analyticID string) []DataComponent {
+	a, found := findAnalytic(cache, analyticID)
+	if !found {
+		return nil
+	}
+
+	componentByID := make(map[string]DataComponent, len(cache.DataComponents))
+	for _, dc := range cache.DataComponents {
+		componentByID[dc.ID] = dc
+		componentByID[dc.StixID] = dc
+	}
+
+	seen := make(map[string]struct{})
+	var out []DataComponent
+
+	for _, ref := range a.DataComponents {
+		dc, ok := componentByID[ref]
+		if !ok {
+			continue
+		}
+
+		if _, exists := seen[dc.StixID]; exists {
+			continue
+		}
+
+		seen[dc.StixID] = struct{}{}
+		out = append(out, dc)
+	}
+
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	return out
+}
+
+func dataComponentsByDetectionStrategy(cache CacheData, detectionID string) []DataComponent {
+	analytics := analyticsByDetectionStrategy(cache, detectionID)
+
+	seen := make(map[string]struct{})
+	var out []DataComponent
+
+	for _, a := range analytics {
+		components := dataComponentsByAnalytic(cache, a.ID)
+
+		for _, dc := range components {
+			if _, exists := seen[dc.StixID]; exists {
+				continue
+			}
+
+			seen[dc.StixID] = struct{}{}
+			out = append(out, dc)
+		}
+	}
+
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	return out
+}

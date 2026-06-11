@@ -496,11 +496,29 @@ func buildCacheDataFromSTIX(path string) (CacheData, error) {
 				analyticID = obj.ID
 			}
 
+			componentIDs := make([]string, 0)
+			seenComponents := make(map[string]struct{})
+
+			for _, ref := range analyticToComponentRefs[obj.ID] {
+				componentID := stixToExternal[ref]
+				if componentID == "" {
+					componentID = ref
+				}
+
+				if _, exists := seenComponents[componentID]; exists {
+					continue
+				}
+
+				seenComponents[componentID] = struct{}{}
+				componentIDs = append(componentIDs, componentID)
+			}
+
 			analytics = append(analytics, Analytic{
 				ID: analyticID,
 				StixID: obj.ID,
 				Name: obj.Name,
 				Description: obj.Description,
+				DataComponents: componentIDs,
 			})
 		}
 	}

@@ -47,6 +47,8 @@ func runCommand(args []string) {
 		handleCampaign(args)
 	case "detection":
 		handleDetection(args)
+	case "analytic":
+		handleAnalytic(args)
 
 	default:
 		fmt.Printf("Unknown command: %s\n", command)

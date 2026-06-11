@@ -104,6 +104,7 @@ type Analytic struct {
 	StixID string `json:"stix_id"`
 	Name string `json:"name"`
 	Description string `json:"description"`
+	DataComponents []string `json:"data_components"`
 }
 
 type CacheData struct {
