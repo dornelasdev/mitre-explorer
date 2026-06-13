@@ -29,6 +29,9 @@ func runGuidedExplorer() {
 		fmt.Println("  [3] Explore Mitigations")
 		fmt.Println("  [4] Explore Software")
 		fmt.Println("  [5] Explore Campaigns")
+		fmt.Println("  [6] Explore Data Components")
+		fmt.Println("  [7] Explore Detection Strategies")
+		fmt.Println("  [8] Explore Analytics")
 		fmt.Println("  [q] Exit guided mode")
 		fmt.Printf("> ")
 
@@ -404,6 +407,14 @@ func runGuidedExplorer() {
 				}
 			campaignList:
 			}
+		case "6":
+			runGuidedDataComponents(cache, reader)
+
+		case "7":
+			runGuidedDetections(cache, reader)
+
+		case "8":
+			runGuidedAnalytics(cache, reader)
 
 		case "q":
 			fmt.Println("Exiting guided explorer.")
@@ -413,6 +424,305 @@ func runGuidedExplorer() {
 		}
 
 	guidedMenu:
+	}
+}
+
+func runGuidedDataComponents(cache CacheData, reader *bufio.Reader) {
+	if len(cache.DataComponents) == 0 {
+		fmt.Println("No data components found in cache.")
+		return
+	}
+
+	components := make([]DataComponent, len(cache.DataComponents))
+	copy(components, cache.DataComponents)
+	sort.Slice(components, func(i, j int) bool { return components[i].Name < components[j].Name })
+
+	for {
+		fmt.Println(title("Data Components"))
+		fmt.Printf("%s %d data component(s)\n", ok("Found"), len(components))
+		fmt.Printf("%-4s %s\n", "#", "Name")
+		fmt.Println(strings.Repeat("-", 64))
+
+		for i, dc := range components {
+			fmt.Printf("%-4d %s\n", i+1, truncateText(dc.Name, 56))
+		}
+
+		fmt.Println("  [q] Return to guided menu")
+		fmt.Print("> ")
+
+		input := readLine(reader)
+		if strings.EqualFold(input, "q") {
+			return
+		}
+
+		idx, err := strconv.Atoi(input)
+		if err != nil || idx < 1 || idx > len(components) {
+			fmt.Println("Invalid selection.")
+			continue
+		}
+
+		dc := components[idx-1]
+		related := techniquesByDataComponent(cache, dc.Name)
+
+		fmt.Println()
+		fmt.Printf("%s %s\n", label("Name:"), dc.Name)
+		fmt.Printf("%s %d\n", label("Mapped techniques:"), len(related))
+		fmt.Printf("%s %s\n", label("Description:"), dc.Description)
+
+		viewedMapped := false
+
+		for {
+			fmt.Println("\nNext:")
+			if !viewedMapped {
+				fmt.Println("  [1] View mapped techniques")
+			}
+			fmt.Println("  [b] Back to data components")
+			fmt.Println("  [q] Return to guided menu")
+			fmt.Print("> ")
+
+			next := strings.ToLower(readLine(reader))
+
+			switch next {
+			case "1":
+				if viewedMapped {
+					fmt.Println("Invalid selection.")
+					continue
+				}
+				if len(related) == 0 {
+					fmt.Println("No mapped techniques for this data component.")
+				} else {
+					printTechniqueTable(related)
+				}
+				viewedMapped = true
+			case "b":
+				fmt.Println()
+				goto componentList
+			case "q":
+				return
+			default:
+				fmt.Println("Invalid selection.")
+			}
+		}
+	componentList:
+	}
+
+}
+
+func runGuidedDetections(cache CacheData, reader *bufio.Reader) {
+	if len(cache.DetectionStrategies) == 0 {
+		fmt.Println("No detection strategies found in cache.")
+		return
+	}
+
+	detections := make([]DetectionStrategy, len(cache.DetectionStrategies))
+	copy(detections, cache.DetectionStrategies)
+	sort.Slice(detections, func(i, j int) bool { return detections[i].Name < detections[j].Name })
+
+	for {
+		fmt.Println(title("Detection Strategies"))
+		fmt.Printf("%s %d detection strategy item(s)\n", ok("Found"), len(detections))
+		fmt.Printf("%-4s %-12s %s\n", "#", "ID", "Name")
+		fmt.Println(strings.Repeat("-", 76))
+
+		for i, d := range detections {
+			fmt.Printf("%-4d %-12s %s\n", i+1, d.ID, truncateText(d.Name, 56))
+		}
+
+		fmt.Println("  [q] Return to guided menu")
+		fmt.Print("> ")
+
+		input := readLine(reader)
+		if strings.EqualFold(input, "q") {
+			return
+		}
+
+		idx, err := strconv.Atoi(input)
+		if err != nil || idx < 1 || idx > len(detections) {
+			fmt.Println("Invalid selection.")
+			continue
+		}
+
+		d := detections[idx-1]
+		techniques := techniquesDetectedByStrategy(cache, d.ID)
+		analytics := analyticsByDetectionStrategy(cache, d.ID)
+		components := dataComponentsByDetectionStrategy(cache, d.ID)
+
+		fmt.Println()
+		fmt.Printf("%s %s\n", label("ID:"), d.ID)
+		fmt.Printf("%s %s\n", label("Name:"), d.Name)
+		fmt.Printf("%s %d\n", label("Mapped techniques:"), len(techniques))
+		fmt.Printf("%s %d\n", label("Analytics:"), len(analytics))
+		fmt.Printf("%s %d\n", label("Data components:"), len(components))
+		fmt.Printf("%s %s\n", label("Description:"), d.Description)
+
+		viewedAnalytics := false
+		viewedTechniques := false
+		viewedComponents := false
+
+		for {
+			fmt.Println("\nNext:")
+			if !viewedTechniques {
+				fmt.Println("  [1] View mapped techniques")
+			}
+			if !viewedAnalytics {
+				fmt.Println("  [2] View analytics")
+			}
+			if !viewedComponents {
+				fmt.Println("  [3] View data components")
+			}
+			fmt.Println("  [b] Back to detections")
+			fmt.Println("  [q] Return to guided menu")
+			fmt.Print("> ")
+
+			next := strings.ToLower(readLine(reader))
+
+			switch next {
+			case "1":
+				if viewedTechniques {
+					fmt.Println("Invalid selection.")
+					continue
+				}
+				if len(techniques) == 0 {
+					fmt.Println("No mapped techniques for this detection strategy.")
+				} else {
+					printTechniqueTable(techniques)
+				}
+				viewedTechniques = true
+
+			case "2":
+				if viewedAnalytics {
+					fmt.Println("Invalid selection.")
+					continue
+				}
+				if len(analytics) == 0 {
+					fmt.Println("No analytics mapped for this detection strategy.")
+				} else {
+					printAnalyticList(analytics)
+				}
+				viewedAnalytics = true
+
+			case "3":
+				if viewedComponents {
+					fmt.Println("Invalid selection.")
+					continue
+				}
+				if len(components) == 0 {
+					fmt.Println("No data components mapped for this detection strategy.")
+				} else {
+					printDataComponentList(components)
+				}
+				viewedComponents = true
+			case "b":
+				fmt.Println()
+				goto detectionList
+			case "q":
+				return
+			default:
+				fmt.Println("Invalid selection.")
+			}
+		}
+	detectionList:
+	}
+
+}
+
+func runGuidedAnalytics(cache CacheData, reader *bufio.Reader) {
+	if len(cache.Analytics) == 0 {
+		fmt.Println("No analytics found in cache.")
+		return
+	}
+
+	analytics := make([]Analytic, len(cache.Analytics))
+	copy(analytics, cache.Analytics)
+	sort.Slice(analytics, func(i, j int) bool { return analytics[i].ID < analytics[j].ID })
+
+	for {
+		fmt.Println(title("Analytics"))
+		fmt.Printf("%s %d analytic(s)\n", ok("Found"), len(analytics))
+		fmt.Printf("%-4s %-12s %s\n", "#", "ID", "Name")
+		fmt.Println(strings.Repeat("-", 76))
+
+		for i, a := range analytics {
+			fmt.Printf("%-4d %-12s %s\n", i+1, a.ID, truncateText(a.Name, 56))
+		}
+
+		fmt.Println("  [q] Return to guided menu")
+		fmt.Print("> ")
+
+		input := readLine(reader)
+		if strings.EqualFold(input, "q") {
+			return
+		}
+
+		idx, err := strconv.Atoi(input)
+		if err != nil || idx < 1 || idx > len(analytics) {
+			fmt.Println("Invalid selection.")
+			continue
+		}
+
+		a := analytics[idx-1]
+		components := dataComponentsByAnalytic(cache, a.ID)
+
+		fmt.Println()
+		fmt.Printf("%s %s\n", label("ID:"), a.ID)
+		fmt.Printf("%s %s\n", label("Name:"), a.Name)
+		fmt.Printf("%s %d\n", label("Data components:"), len(components))
+		fmt.Printf("%s %s\n", label("Description:"), a.Description)
+
+		viewedComponents := false
+
+		for {
+			fmt.Println("\nNext:")
+			if !viewedComponents {
+				fmt.Println("  [1] View data components")
+			}
+			fmt.Println("  [b] Back to analytics")
+			fmt.Println("  [q] Return to guided menu")
+			fmt.Print("> ")
+
+			next := strings.ToLower(readLine(reader))
+
+			switch next {
+			case "1":
+				if viewedComponents {
+					fmt.Println("Invalid selection.")
+					continue
+				}
+				if len(components) == 0 {
+					fmt.Println("No data components mapped for this analytic.")
+				} else {
+					printDataComponentList(components)
+				}
+				viewedComponents = true
+			case "b":
+				fmt.Println()
+				goto analyticList
+			case "q":
+				return
+			default:
+				fmt.Println("Invalid selection.")
+			}
+		}
+	analyticList:
+	}
+
+}
+
+func printAnalyticList(analytics []Analytic) {
+	fmt.Printf("%-4s %-12s %s\n", "#", "ID", "Name")
+	fmt.Println(strings.Repeat("-", 76))
+
+	for i, a := range analytics {
+		fmt.Printf("%-4d %-12s %s\n", i+1, a.ID, truncateText(a.Name, 56))
+	}
+}
+
+func printDataComponentList(components []DataComponent) {
+	fmt.Printf("%-4s %s\n", "#", "Name")
+	fmt.Println(strings.Repeat("-", 64))
+
+	for i, dc := range components {
+		fmt.Printf("%-4d %s\n", i+1, truncateText(dc.Name, 56))
 	}
 }
 
