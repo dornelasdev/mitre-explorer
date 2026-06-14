@@ -42,7 +42,7 @@ func runGuidedExplorer() {
 			techniques := cache.Techniques
 			tactics := collectUniqueTactics(techniques)
 			if len(tactics) == 0 {
-				fmt.Println("No tactics found in cache.")
+				printNoResults("tactics")
 				continue
 			}
 
@@ -60,7 +60,7 @@ func runGuidedExplorer() {
 
 				tacticIndex, err := strconv.Atoi(tacticInput)
 				if err != nil || tacticIndex < 1 || tacticIndex > len(tactics) {
-					fmt.Println("Invalid selection.")
+					printInvalidSelection()
 					continue
 				}
 
@@ -90,18 +90,24 @@ func runGuidedExplorer() {
 
 					pick, err := strconv.Atoi(pickInput)
 					if err != nil || pick < 1 || pick > len(results) {
-						fmt.Println("Invalid selection.")
+						printInvalidSelection()
 						continue
 					}
 
 					selected := results[pick-1]
-					fmt.Println()
+					printSection("Technique Details")
 					printTechniqueDetails(selected)
+
+					fmt.Println()
+					fmt.Println("Press Enter to return to the technique list.")
+					fmt.Print("> ")
+					readLine(reader)
+
 				}
 			}
 		case "2":
 			if len(cache.Groups) == 0 {
-				fmt.Println("No groups found in cache.")
+				printNoResults("groups")
 				continue
 			}
 
@@ -112,11 +118,7 @@ func runGuidedExplorer() {
 			for {
 				fmt.Println(title("Groups"))
 				fmt.Printf("%s %d group(s)\n", ok("Found"), len(groups))
-				fmt.Printf("%-4s %-10s %s\n", "#", "ID", "Name")
-				fmt.Println(strings.Repeat("-", 64))
-				for i, g := range groups {
-					fmt.Printf("%-4d %-10s %s\n", i+1, g.ID, truncateText(g.Name, 48))
-				}
+				printGroupTable(groups)
 				fmt.Println("  [q] Return to guided menu")
 				fmt.Print("> ")
 
@@ -127,18 +129,21 @@ func runGuidedExplorer() {
 
 				idx, err := strconv.Atoi(input)
 				if err != nil || idx < 1 || idx > len(groups) {
-					fmt.Println("Invalid selection.")
+					printInvalidSelection()
 					continue
 				}
 
 				g := groups[idx-1]
 				related := techniquesUsedByGroup(cache, g.ID)
 
-				fmt.Printf("%s %s\n", label("ID:"), g.ID)
-				fmt.Printf("%s %s\n", label("Name:"), g.Name)
-				fmt.Printf("%s %s\n", label("Aliases:"), strings.Join(g.Aliases, ", "))
-				fmt.Printf("%s %d\n", label("Mapped techniques:"), len(related))
-				fmt.Printf("%s %s\n", label("Description:"), g.Description)
+				printSection("Group Details")
+				printDetails([]DetailField{
+					{"ID:", g.ID},
+					{"Name:", g.Name},
+					{"Aliases:", strings.Join(g.Aliases, ", ")},
+					{"Mapped techniques:", strconv.Itoa(len(related))},
+					{"Description:", g.Description},
+				})
 
 				viewedMapped := false
 
@@ -155,12 +160,13 @@ func runGuidedExplorer() {
 					switch next {
 					case "1":
 						if viewedMapped {
-							fmt.Println("Invalid selection.")
+							printInvalidSelection()
 							continue
 						}
 						if len(related) == 0 {
-							fmt.Println("No mapped techniques for this group.")
+							printNoMappedResults("techniques", "group")
 						} else {
+							printSubsection("Mapped Techniques")
 							printTechniqueTable(related)
 						}
 						viewedMapped = true
@@ -171,7 +177,7 @@ func runGuidedExplorer() {
 					case "q":
 						goto guidedMenu
 					default:
-						fmt.Println("Invalid selection.")
+						printInvalidSelection()
 					}
 				}
 			groupList:
@@ -179,7 +185,7 @@ func runGuidedExplorer() {
 
 		case "3":
 			if len(cache.Mitigations) == 0 {
-				fmt.Println("No mitigations found in cache.")
+				printNoResults("mitigations")
 				continue
 			}
 
@@ -190,11 +196,7 @@ func runGuidedExplorer() {
 			for {
 				fmt.Println(title("Mitigations"))
 				fmt.Printf("%s %d mitigation(s)\n", ok("Found"), len(mitigations))
-				fmt.Printf("%-4s %-10s %s\n", "#", "ID", "Name")
-				fmt.Println(strings.Repeat("-", 64))
-				for i, m := range mitigations {
-					fmt.Printf("%-4d %-10s %s\n", i+1, m.ID, truncateText(m.Name, 48))
-				}
+				printMitigationTable(mitigations)
 				fmt.Println("  [q] Return to guided menu")
 				fmt.Print("> ")
 
@@ -205,18 +207,20 @@ func runGuidedExplorer() {
 
 				idx, err := strconv.Atoi(input)
 				if err != nil || idx < 1 || idx > len(mitigations) {
-					fmt.Println("Invalid selection.")
+					printInvalidSelection()
 					continue
 				}
 
 				m := mitigations[idx-1]
 				related := techniquesMitigatedBy(cache, m.ID)
 
-				fmt.Println()
-				fmt.Printf("%s %s\n", label("ID:"), m.ID)
-				fmt.Printf("%s %s\n", label("Name:"), m.Name)
-				fmt.Printf("%s %d\n", label("Mapped techniques:"), len(related))
-				fmt.Printf("%s %s\n", label("Description:"), m.Description)
+				printSection("Mitigation Details")
+				printDetails([]DetailField{
+					{"ID:", m.ID},
+					{"Name:", m.Name},
+					{"Mapped techniques:", strconv.Itoa(len(related))},
+					{"Description:", m.Description},
+				})
 
 				viewedMapped := false
 
@@ -233,12 +237,13 @@ func runGuidedExplorer() {
 					switch next {
 					case "1":
 						if viewedMapped {
-							fmt.Println("Invalid selection.")
+							printInvalidSelection()
 							continue
 						}
 						if len(related) == 0 {
-							fmt.Println("No mapped techniques for this mitigation.")
+							printNoMappedResults("techniques", "mitigation")
 						} else {
+							printSubsection("Mapped techniques")
 							printTechniqueTable(related)
 						}
 						viewedMapped = true
@@ -249,14 +254,14 @@ func runGuidedExplorer() {
 					case "q":
 						goto guidedMenu
 					default:
-						fmt.Println("Invalid selection.")
+						printInvalidSelection()
 					}
 				}
 			mitigationList:
 			}
 		case "4":
 			if len(cache.Softwares) == 0 {
-				fmt.Println("No software found in cache.")
+				printNoResults("softwares")
 				continue
 			}
 
@@ -266,11 +271,7 @@ func runGuidedExplorer() {
 			for {
 				fmt.Println(title("Software"))
 				fmt.Printf("%s %d software item(s)\n", ok("Found"), len(softwares))
-				fmt.Printf("%-4s %-10s %s\n", "#", "ID", "Name")
-				fmt.Println(strings.Repeat("-", 64))
-				for i, s := range softwares {
-					fmt.Printf("%-4d %-10s %s\n", i+1, s.ID, truncateText(s.Name, 40))
-				}
+				printSoftwareTable(softwares)
 				fmt.Println("  [q] Return to guided menu")
 				fmt.Print("> ")
 
@@ -281,20 +282,22 @@ func runGuidedExplorer() {
 
 				idx, err := strconv.Atoi(input)
 				if err != nil || idx < 1 || idx > len(softwares) {
-					fmt.Println("Invalid selection.")
+					printInvalidSelection()
 					continue
 				}
 
 				s := softwares[idx-1]
 				related := techniquesUsedBySoftware(cache, s.ID)
 
-				fmt.Println()
-				fmt.Printf("%s %s\n", label("ID:"), s.ID)
-				fmt.Printf("%s %s\n", label("Name:"), s.Name)
-				fmt.Printf("%s %s\n", label("Type:"), s.Type)
-				fmt.Printf("%s %s\n", label("Aliases:"), strings.Join(s.Aliases, ", "))
-				fmt.Printf("%s %d\n", label("Mapped techniques:"), len(related))
-				fmt.Printf("%s %s\n", label("Description:"), s.Description)
+				printSection("Software Details")
+				printDetails([]DetailField{
+					{"ID:", s.ID},
+					{"Name:", s.Name},
+					{"Type:", s.Type},
+					{"Aliases:", strings.Join(s.Aliases, ", ")},
+					{"Mapped techniques:", strconv.Itoa(len(related))},
+					{"Description:", s.Description},
+				})
 
 				viewedMapped := false
 				for {
@@ -310,12 +313,13 @@ func runGuidedExplorer() {
 					switch next {
 					case "1":
 						if viewedMapped {
-							fmt.Println("Invalid selection.")
+							printInvalidSelection()
 							continue
 						}
 						if len(related) == 0 {
-							fmt.Println("No mapped techniques for this software.")
+							printNoMappedResults("techniques", "software")
 						} else {
+							printSubsection("Mapped Techniques")
 							printTechniqueTable(related)
 						}
 						viewedMapped = true
@@ -326,14 +330,14 @@ func runGuidedExplorer() {
 					case "q":
 						goto guidedMenu
 					default:
-						fmt.Println("Invalid selection.")
+						printInvalidSelection()
 					}
 				}
 			softwareList:
 			}
 		case "5":
 			if len(cache.Campaigns) == 0 {
-				fmt.Println("No campaigns found in cache.")
+				printNoResults("campaigns")
 				continue
 			}
 
@@ -344,11 +348,7 @@ func runGuidedExplorer() {
 			for {
 				fmt.Println(title("Campaigns"))
 				fmt.Printf("%s %d campaign(s)\n", ok("Found"), len(campaigns))
-				fmt.Printf("%-4s %-10s %s\n", "#", "ID", "Name")
-				fmt.Println(strings.Repeat("-", 64))
-				for i, c := range campaigns {
-					fmt.Printf("%-4d %-10s %s\n", i+1, c.ID, truncateText(c.Name, 48))
-				}
+				printCampaignTable(campaigns)
 				fmt.Println("  [q] Return to guided menu")
 				fmt.Print("> ")
 
@@ -359,19 +359,21 @@ func runGuidedExplorer() {
 
 				idx, err := strconv.Atoi(input)
 				if err != nil || idx < 1 || idx > len(campaigns) {
-					fmt.Println("Invalid selection.")
+					printInvalidSelection()
 					continue
 				}
 
 				c := campaigns[idx-1]
 				related := techniquesUsedByCampaign(cache, c.ID)
 
-				fmt.Println()
-				fmt.Printf("%s %s\n", label("ID:"), c.ID)
-				fmt.Printf("%s %s\n", label("Name:"), c.Name)
-				fmt.Printf("%s %s\n", label("Aliases:"), strings.Join(c.Aliases, ", "))
-				fmt.Printf("%s %d\n", label("Mapped techniques:"), len(related))
-				fmt.Printf("%s %s\n", label("Description:"), c.Description)
+				printSection("Campaign Details")
+				printDetails([]DetailField{
+					{"ID:", c.ID},
+					{"Name:", c.Name},
+					{"Aliases:", strings.Join(c.Aliases, ", ")},
+					{"Mapped techniques:", strconv.Itoa(len(related))},
+					{"Description:", c.Description},
+				})
 
 				viewedMapped := false
 				for {
@@ -387,12 +389,13 @@ func runGuidedExplorer() {
 					switch next {
 					case "1":
 						if viewedMapped {
-							fmt.Println("Invalid selection.")
+							printInvalidSelection()
 							continue
 						}
 						if len(related) == 0 {
-							fmt.Println("No mapped techniques for this campaign.")
+							printNoMappedResults("techniques", "campaign")
 						} else {
+							printSubsection("Mapped Techniques")
 							printTechniqueTable(related)
 						}
 						viewedMapped = true
@@ -402,7 +405,7 @@ func runGuidedExplorer() {
 					case "q":
 						goto guidedMenu
 					default:
-						fmt.Println("Invalid selection.")
+						printInvalidSelection()
 					}
 				}
 			campaignList:
@@ -420,7 +423,7 @@ func runGuidedExplorer() {
 			fmt.Println("Exiting guided explorer.")
 			return
 		default:
-			fmt.Println("Invalid selection.")
+			printInvalidSelection()
 		}
 
 	guidedMenu:
@@ -429,7 +432,7 @@ func runGuidedExplorer() {
 
 func runGuidedDataComponents(cache CacheData, reader *bufio.Reader) {
 	if len(cache.DataComponents) == 0 {
-		fmt.Println("No data components found in cache.")
+		printNoResults("data components")
 		return
 	}
 
@@ -440,12 +443,7 @@ func runGuidedDataComponents(cache CacheData, reader *bufio.Reader) {
 	for {
 		fmt.Println(title("Data Components"))
 		fmt.Printf("%s %d data component(s)\n", ok("Found"), len(components))
-		fmt.Printf("%-4s %s\n", "#", "Name")
-		fmt.Println(strings.Repeat("-", 64))
-
-		for i, dc := range components {
-			fmt.Printf("%-4d %s\n", i+1, truncateText(dc.Name, 56))
-		}
+		printDataComponentList(components)
 
 		fmt.Println("  [q] Return to guided menu")
 		fmt.Print("> ")
@@ -457,17 +455,19 @@ func runGuidedDataComponents(cache CacheData, reader *bufio.Reader) {
 
 		idx, err := strconv.Atoi(input)
 		if err != nil || idx < 1 || idx > len(components) {
-			fmt.Println("Invalid selection.")
+			printInvalidSelection()
 			continue
 		}
 
 		dc := components[idx-1]
 		related := techniquesByDataComponent(cache, dc.Name)
 
-		fmt.Println()
-		fmt.Printf("%s %s\n", label("Name:"), dc.Name)
-		fmt.Printf("%s %d\n", label("Mapped techniques:"), len(related))
-		fmt.Printf("%s %s\n", label("Description:"), dc.Description)
+		printSection("Data Component Details")
+		printDetails([]DetailField{
+			{"Name:", dc.Name},
+			{"Mapped techniques:", strconv.Itoa(len(related))},
+			{"Description:", dc.Description},
+		})
 
 		viewedMapped := false
 
@@ -485,12 +485,13 @@ func runGuidedDataComponents(cache CacheData, reader *bufio.Reader) {
 			switch next {
 			case "1":
 				if viewedMapped {
-					fmt.Println("Invalid selection.")
+					printInvalidSelection()
 					continue
 				}
 				if len(related) == 0 {
-					fmt.Println("No mapped techniques for this data component.")
+					printNoMappedResults("techniques", "data component")
 				} else {
+					printSubsection("Mapped Techniques")
 					printTechniqueTable(related)
 				}
 				viewedMapped = true
@@ -500,7 +501,7 @@ func runGuidedDataComponents(cache CacheData, reader *bufio.Reader) {
 			case "q":
 				return
 			default:
-				fmt.Println("Invalid selection.")
+				printInvalidSelection()
 			}
 		}
 	componentList:
@@ -510,7 +511,7 @@ func runGuidedDataComponents(cache CacheData, reader *bufio.Reader) {
 
 func runGuidedDetections(cache CacheData, reader *bufio.Reader) {
 	if len(cache.DetectionStrategies) == 0 {
-		fmt.Println("No detection strategies found in cache.")
+		printNoResults("detection strategies")
 		return
 	}
 
@@ -521,13 +522,7 @@ func runGuidedDetections(cache CacheData, reader *bufio.Reader) {
 	for {
 		fmt.Println(title("Detection Strategies"))
 		fmt.Printf("%s %d detection strategy item(s)\n", ok("Found"), len(detections))
-		fmt.Printf("%-4s %-12s %s\n", "#", "ID", "Name")
-		fmt.Println(strings.Repeat("-", 76))
-
-		for i, d := range detections {
-			fmt.Printf("%-4d %-12s %s\n", i+1, d.ID, truncateText(d.Name, 56))
-		}
-
+		printDetectionTable(detections)
 		fmt.Println("  [q] Return to guided menu")
 		fmt.Print("> ")
 
@@ -538,7 +533,7 @@ func runGuidedDetections(cache CacheData, reader *bufio.Reader) {
 
 		idx, err := strconv.Atoi(input)
 		if err != nil || idx < 1 || idx > len(detections) {
-			fmt.Println("Invalid selection.")
+			printInvalidSelection()
 			continue
 		}
 
@@ -547,13 +542,15 @@ func runGuidedDetections(cache CacheData, reader *bufio.Reader) {
 		analytics := analyticsByDetectionStrategy(cache, d.ID)
 		components := dataComponentsByDetectionStrategy(cache, d.ID)
 
-		fmt.Println()
-		fmt.Printf("%s %s\n", label("ID:"), d.ID)
-		fmt.Printf("%s %s\n", label("Name:"), d.Name)
-		fmt.Printf("%s %d\n", label("Mapped techniques:"), len(techniques))
-		fmt.Printf("%s %d\n", label("Analytics:"), len(analytics))
-		fmt.Printf("%s %d\n", label("Data components:"), len(components))
-		fmt.Printf("%s %s\n", label("Description:"), d.Description)
+		printSection("Detection Strategy Details")
+		printDetails([]DetailField{
+			{"ID:", d.ID},
+			{"Name:", d.Name},
+			{"Mapped techniques:", strconv.Itoa(len(techniques))},
+			{"Analytics:", strconv.Itoa(len(analytics))},
+			{"Data Components:", strconv.Itoa(len(components))},
+			{"Description:", d.Description},
+		})
 
 		viewedAnalytics := false
 		viewedTechniques := false
@@ -579,36 +576,39 @@ func runGuidedDetections(cache CacheData, reader *bufio.Reader) {
 			switch next {
 			case "1":
 				if viewedTechniques {
-					fmt.Println("Invalid selection.")
+					printInvalidSelection()
 					continue
 				}
 				if len(techniques) == 0 {
-					fmt.Println("No mapped techniques for this detection strategy.")
+					printNoMappedResults("techniques", "detection strategy")
 				} else {
+					printSubsection("Mapped Techniques")
 					printTechniqueTable(techniques)
 				}
 				viewedTechniques = true
 
 			case "2":
 				if viewedAnalytics {
-					fmt.Println("Invalid selection.")
+					printInvalidSelection()
 					continue
 				}
 				if len(analytics) == 0 {
-					fmt.Println("No analytics mapped for this detection strategy.")
+					printNoMappedResults("analytics", "detection strategy")
 				} else {
+					printSubsection("Mapped Analytics")
 					printAnalyticList(analytics)
 				}
 				viewedAnalytics = true
 
 			case "3":
 				if viewedComponents {
-					fmt.Println("Invalid selection.")
+					printInvalidSelection()
 					continue
 				}
 				if len(components) == 0 {
-					fmt.Println("No data components mapped for this detection strategy.")
+					printNoMappedResults("data components", "detection strategy")
 				} else {
+					printSubsection("Mapped Data Components")
 					printDataComponentList(components)
 				}
 				viewedComponents = true
@@ -618,7 +618,7 @@ func runGuidedDetections(cache CacheData, reader *bufio.Reader) {
 			case "q":
 				return
 			default:
-				fmt.Println("Invalid selection.")
+				printInvalidSelection()
 			}
 		}
 	detectionList:
@@ -628,7 +628,7 @@ func runGuidedDetections(cache CacheData, reader *bufio.Reader) {
 
 func runGuidedAnalytics(cache CacheData, reader *bufio.Reader) {
 	if len(cache.Analytics) == 0 {
-		fmt.Println("No analytics found in cache.")
+		printNoResults("analytics")
 		return
 	}
 
@@ -639,12 +639,7 @@ func runGuidedAnalytics(cache CacheData, reader *bufio.Reader) {
 	for {
 		fmt.Println(title("Analytics"))
 		fmt.Printf("%s %d analytic(s)\n", ok("Found"), len(analytics))
-		fmt.Printf("%-4s %-12s %s\n", "#", "ID", "Name")
-		fmt.Println(strings.Repeat("-", 76))
-
-		for i, a := range analytics {
-			fmt.Printf("%-4d %-12s %s\n", i+1, a.ID, truncateText(a.Name, 56))
-		}
+		printAnalyticList(analytics)
 
 		fmt.Println("  [q] Return to guided menu")
 		fmt.Print("> ")
@@ -656,18 +651,20 @@ func runGuidedAnalytics(cache CacheData, reader *bufio.Reader) {
 
 		idx, err := strconv.Atoi(input)
 		if err != nil || idx < 1 || idx > len(analytics) {
-			fmt.Println("Invalid selection.")
+			printInvalidSelection()
 			continue
 		}
 
 		a := analytics[idx-1]
 		components := dataComponentsByAnalytic(cache, a.ID)
 
-		fmt.Println()
-		fmt.Printf("%s %s\n", label("ID:"), a.ID)
-		fmt.Printf("%s %s\n", label("Name:"), a.Name)
-		fmt.Printf("%s %d\n", label("Data components:"), len(components))
-		fmt.Printf("%s %s\n", label("Description:"), a.Description)
+		printSection("Analytic Details")
+		printDetails([]DetailField{
+			{"ID:", a.ID},
+			{"Name:", a.Name},
+			{"Data Components:", strconv.Itoa(len(components))},
+			{"Description:", a.Description},
+		})
 
 		viewedComponents := false
 
@@ -685,12 +682,13 @@ func runGuidedAnalytics(cache CacheData, reader *bufio.Reader) {
 			switch next {
 			case "1":
 				if viewedComponents {
-					fmt.Println("Invalid selection.")
+					printInvalidSelection()
 					continue
 				}
 				if len(components) == 0 {
-					fmt.Println("No data components mapped for this analytic.")
+					printNoMappedResults("data components", "analytic")
 				} else {
+					printSubsection("Mapped Data Components")
 					printDataComponentList(components)
 				}
 				viewedComponents = true
@@ -700,30 +698,12 @@ func runGuidedAnalytics(cache CacheData, reader *bufio.Reader) {
 			case "q":
 				return
 			default:
-				fmt.Println("Invalid selection.")
+				printInvalidSelection()
 			}
 		}
 	analyticList:
 	}
 
-}
-
-func printAnalyticList(analytics []Analytic) {
-	fmt.Printf("%-4s %-12s %s\n", "#", "ID", "Name")
-	fmt.Println(strings.Repeat("-", 76))
-
-	for i, a := range analytics {
-		fmt.Printf("%-4d %-12s %s\n", i+1, a.ID, truncateText(a.Name, 56))
-	}
-}
-
-func printDataComponentList(components []DataComponent) {
-	fmt.Printf("%-4s %s\n", "#", "Name")
-	fmt.Println(strings.Repeat("-", 64))
-
-	for i, dc := range components {
-		fmt.Printf("%-4d %s\n", i+1, truncateText(dc.Name, 56))
-	}
 }
 
 func printTechniqueDetails(t Technique) {

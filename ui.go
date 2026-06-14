@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -91,12 +92,20 @@ func label(text string) string {
 func printTechniqueTable(techniques []Technique) {
 	const nameWidth = 72
 
-	fmt.Printf("%-4s %-12s %s\n", "#", "ID", "Name")
-	fmt.Println(strings.Repeat("-", 4+1+12+1+nameWidth))
+	rows := make([][]string, 0, len(techniques))
 	for i, t := range techniques {
-		name := truncateText(t.Name, nameWidth)
-		fmt.Printf("%-4d %-12s %s\n", i+1, t.ID, name)
+		rows = append(rows, []string{
+			strconv.Itoa(i + 1),
+			t.ID,
+			truncateText(t.Name, nameWidth),
+		})
 	}
+
+	printEntityTable(
+		[]string{"#", "ID", "Name"},
+		rows,
+		[]int{4, 12, nameWidth},
+	)
 }
 
 func truncateText(s string, max int) string {
@@ -111,4 +120,190 @@ func truncateText(s string, max int) string {
 		return "..."
 	}
 	return string(r[:max-1]) + "..."
+}
+
+func printDivider(width int) {
+	fmt.Println(strings.Repeat("-", width))
+}
+
+func printEntityTable(headers []string, rows [][]string, widths []int) {
+	for i, h := range headers {
+		if i == len(headers)-1 {
+			fmt.Printf("%s", h)
+			continue
+		}
+		fmt.Printf("%-*s ", widths[i], h)
+	}
+	fmt.Println()
+
+	totalWidth := 0
+	for _, w := range widths {
+		totalWidth += w + 1
+	}
+	printDivider(totalWidth)
+
+	for _, row := range rows {
+		for i, cell := range row {
+			if i == len(row)-1 {
+				fmt.Printf("%s", cell)
+				continue
+			}
+			fmt.Printf("%-*s ", widths[i], cell)
+		}
+		fmt.Println()
+	}
+}
+
+func printGroupTable(groups []Group) {
+	rows := make([][]string, 0, len(groups))
+	for i, g := range groups {
+		rows = append(rows, []string{
+			strconv.Itoa(i + 1),
+			g.ID,
+			truncateText(g.Name, 48),
+		})
+	}
+
+	printEntityTable(
+		[]string{"#", "ID", "Name"},
+		rows,
+		[]int{4, 10, 48},
+	)
+}
+
+
+func printMitigationTable(mitigations []Mitigation) {
+	rows := make([][]string, 0, len(mitigations))
+	for i, m := range mitigations {
+		rows = append(rows, []string{
+			strconv.Itoa(i + 1),
+			m.ID,
+			truncateText(m.Name, 48),
+		})
+	}
+
+	printEntityTable(
+		[]string{"#", "ID", "Name"},
+		rows,
+		[]int{4, 10, 48},
+	)
+}
+
+func printSoftwareTable(softwares []Software) {
+	rows := make([][]string, 0, len(softwares))
+	for i, s := range softwares {
+		rows = append(rows, []string{
+			strconv.Itoa(i + 1),
+			s.ID,
+			truncateText(s.Name, 48),
+		})
+	}
+
+	printEntityTable(
+		[]string{"#", "ID", "Name"},
+		rows,
+		[]int{4, 10, 48},
+	)
+}
+
+func printCampaignTable(campaigns []Campaign) {
+	rows := make([][]string, 0, len(campaigns))
+	for i, c := range campaigns {
+		rows = append(rows, []string{
+			strconv.Itoa(i + 1),
+			c.ID,
+			truncateText(c.Name, 48),
+		})
+	}
+
+	printEntityTable(
+		[]string{"#", "ID", "Name"},
+		rows,
+		[]int{4, 10, 48},
+	)
+}
+
+func printDataComponentList(components []DataComponent) {
+	rows := make([][]string, 0, len(components))
+	for i, dc := range components {
+		rows = append(rows, []string{
+			strconv.Itoa(i + 1),
+			truncateText(dc.Name, 56),
+		})
+	}
+
+	printEntityTable(
+		[]string{"#", "Name"},
+		rows,
+		[]int{4, 56},
+	)
+}
+
+func printDetectionTable(detections []DetectionStrategy) {
+	rows := make([][]string, 0, len(detections))
+	for i, d := range detections {
+		rows = append(rows, []string{
+			strconv.Itoa(i + 1),
+			d.ID,
+			truncateText(d.Name, 56),
+		})
+	}
+
+	printEntityTable(
+		[]string{"#", "ID", "Name"},
+		rows,
+		[]int{4, 12, 56},
+	)
+}
+
+func printAnalyticList(analytics []Analytic) {
+	rows := make([][]string, 0, len(analytics))
+	for i, d := range analytics {
+		rows = append(rows, []string{
+			strconv.Itoa(i + 1),
+			d.ID,
+			truncateText(d.Name, 56),
+		})
+	}
+
+	printEntityTable(
+		[]string{"#", "ID", "Name"},
+		rows,
+		[]int{4, 12, 56},
+	)
+}
+
+type DetailField struct {
+	Label string
+	Value string
+}
+
+func printDetails(fields []DetailField) {
+	for _, f := range fields {
+		fmt.Printf("%s %s\n", label(f.Label), f.Value)
+	}
+}
+
+func printInvalidSelection() {
+	fmt.Println("Invalid selection.")
+}
+
+func printNoResults(item string) {
+	fmt.Printf("No %s found.\n", item)
+}
+
+func printNoMappedResults(item string, source string) {
+	fmt.Printf("No %s mapped for this %s.\n", item, source)
+}
+
+func printSection(text string) {
+	fmt.Println()
+	fmt.Println(title(text))
+	printDivider(64)
+}
+
+func printSubsection(text string) {
+	fmt.Println()
+	fmt.Println(label(text))
+	printDivider(40)
 }
