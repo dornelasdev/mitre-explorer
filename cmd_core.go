@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -128,11 +129,9 @@ func handleShow(args []string) {
 }
 
 func handleList(args []string) {
-	if len(args) < 3 {
-		fmt.Println("Usage:")
-		fmt.Println("  go run . list --tactic <name> [--detailed] [--plain]")
-		fmt.Println("  go run . list --platform <name> [--detailed] [--plain]")
-		fmt.Println("  go run . list --data-component <name> [--detailed] [--plain]")
+	if len(args) < 2 {
+		fmt.Println("Usage: go run . list <target>")
+		fmt.Println("Targets: techniques | groups | mitigations | software | campaigns | detections | analytics | data-components | tactics | platforms")
 		return
 	}
 
@@ -145,42 +144,194 @@ func handleList(args []string) {
 		fmt.Printf("Error loading cache: %v\n", err)
 		return
 	}
-	techniques := cache.Techniques
 
-	detailed := false
-	filtered := make([]string, 0, len(args))
-	filtered = append(filtered, args[0])
+	entity := strings.ToLower(args[1])
+	const pageSize = 25
 
-	for _, a := range args[1:] {
-		if a == "--detailed" {
-			detailed = true
-			continue
+	switch entity {
+	case "techniques":
+		rows := make([][]string, 0, len(cache.Techniques))
+		for _, t := range cache.Techniques {
+			rows = append(rows, []string{
+				t.ID,
+				truncateText(t.Name, 72),
+			})
 		}
-		filtered = append(filtered, a)
-	}
-	args = filtered
-	flag := args[1]
-	value := args[2]
 
-	var results []Technique
-	switch flag {
-	case "--tactic":
-		results = listByTactic(techniques, value)
-	case "--platform":
-		results = listByPlatform(techniques, value)
-	case "--data-component":
-		results = techniquesByDataComponent(cache, value)
+		printPaginatedTable(
+			"Techniques",
+			[]string{"ID", "Name"},
+			rows,
+			[]int{12, 72},
+			pageSize,
+		)
+
+	case "groups":
+		rows := make([][]string, 0, len(cache.Groups))
+		for _, g := range cache.Groups {
+			rows = append(rows, []string{
+				g.ID,
+				truncateText(g.Name, 60),
+			})
+		}
+
+		printPaginatedTable(
+			"Groups",
+			[]string{"ID", "Name"},
+			rows,
+			[]int{10, 60},
+			pageSize,
+		)
+	
+	case "mitigations":
+		rows := make([][]string, 0, len(cache.Mitigations))
+		for _, m := range cache.Mitigations {
+			rows = append(rows, []string{
+				m.ID,
+				truncateText(m.Name, 60),
+			})
+		}
+
+		printPaginatedTable(
+			"Mitigations",
+			[]string{"ID", "Name"},
+			rows,
+			[]int{10, 60},
+			pageSize,
+		)
+	
+	case "software":
+		rows := make([][]string, 0, len(cache.Softwares))
+		for _, s := range cache.Softwares {
+			rows = append(rows, []string{
+				s.ID,
+				truncateText(s.Name, 60),
+			})
+		}
+
+		printPaginatedTable(
+			"Software",
+			[]string{"ID", "Name"},
+			rows,
+			[]int{10, 60},
+			pageSize,
+		)
+	
+	case "campaigns":
+		rows := make([][]string, 0, len(cache.Campaigns))
+		for _, c := range cache.Campaigns {
+			rows = append(rows, []string{
+				c.ID,
+				truncateText(c.Name, 60),
+			})
+		}
+
+		printPaginatedTable(
+			"Campaigns",
+			[]string{"ID", "Name"},
+			rows,
+			[]int{10, 60},
+			pageSize,
+		)
+	
+	case "detections":
+		rows := make([][]string, 0, len(cache.DetectionStrategies))
+		for _, d := range cache.DetectionStrategies {
+			rows = append(rows, []string{
+				d.ID,
+				truncateText(d.Name, 60),
+			})
+		}
+
+		printPaginatedTable(
+			"Detection Strategies",
+			[]string{"ID", "Name"},
+			rows,
+			[]int{12, 60},
+			pageSize,
+		)
+	
+	case "analytics":
+		rows := make([][]string, 0, len(cache.Analytics))
+		for _, a := range cache.Analytics {
+			rows = append(rows, []string{
+				a.ID,
+				truncateText(a.Name, 60),
+			})
+		}
+
+		printPaginatedTable(
+			"Analytics",
+			[]string{"ID", "Name"},
+			rows,
+			[]int{12, 60},
+			pageSize,
+		)
+	
+	case "data-components":
+		rows := make([][]string, 0, len(cache.DataComponents))
+		for _, dc := range cache.DataComponents {
+			rows = append(rows, []string{
+				truncateText(dc.Name, 72),
+			})
+		}
+
+		printPaginatedTable(
+			"Data Components",
+			[]string{"Name"},
+			rows,
+			[]int{72},
+			pageSize,
+		)
+	
+	case "tactics":
+		tactics := collectUniqueTactics(cache.Techniques)
+		rows := make([][]string, 0, len(tactics))
+		for _, tactic := range tactics {
+			rows = append(rows, []string{
+				tactic,
+			})
+		}
+
+		printPaginatedTable(
+			"Tactics",
+			[]string{"Tactic"},
+			rows,
+			[]int{72},
+			pageSize,
+		)
+	
+	case "platforms":
+		seen := make(map[string]bool)
+		var platforms []string
+		for _, t := range cache.Techniques {
+			for _, p := range t.Platforms {
+				if _, ok := seen[p]; ok {
+					continue
+				}
+				seen[p] = true
+				platforms = append(platforms, p)
+			}
+		}
+
+		sort.Strings(platforms)
+
+		rows := make([][]string, 0, len(platforms))
+		for _, platform := range platforms {
+			rows = append(rows, []string{
+				platform,
+			})
+		}
+
+		printPaginatedTable(
+			"Platforms",
+			[]string{"Name"},
+			rows,
+			[]int{72},
+			pageSize,
+		)
 	default:
-		fmt.Printf("Unknown list option: %s\n", flag)
-		fmt.Println("Use --tactic, --platform, or --data-component")
-		return
+		fmt.Printf("Unknown list target: %s\n", entity)
+		fmt.Println("Targets: techniques | groups | mitigations | software | campaigns | detections | analytics | data-components | tactics | platforms")
 	}
-
-	if len(results) == 0 {
-		fmt.Println("No techniques found.")
-		return
-	}
-
-	fmt.Printf("%s %d technique(s)\n", ok("Found"), len(results))
-	printMappedTechniquesWithMode(results, detailed)
 }

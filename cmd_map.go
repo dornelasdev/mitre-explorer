@@ -6,535 +6,334 @@ import (
 	"strings"
 )
 
-func handleGroup(args []string) {
-	if len(args) < 3 {
-		fmt.Println("Usage:")
-		fmt.Println("  go run . group techniques <group_id_or_name> [--detailed] [--plain]")
-		return
-	}
+type EntityFlags struct {
+	Techniques bool
+	Analytics bool
+	Components bool
+	Detailed bool
+}
 
+func parseEntityFlags(args []string) (EntityFlags, error) {
+	var flags EntityFlags
+
+	for _, arg := range args {
+		switch arg {
+		case "-t", "--techniques":
+			flags.Techniques = true
+		case "-a", "--analytics":
+			flags.Analytics = true
+		case "-c", "--components":
+			flags.Components = true
+		case "-d", "--detailed":
+			flags.Detailed = true
+		default:
+			return EntityFlags{}, fmt.Errorf("unknown option: %s", arg)
+		}
+	}
+	return flags, nil
+}
+
+func loadCacheForCommand() (CacheData, bool) {
 	cache, err := loadCacheData(cachePath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			fmt.Println(errText("Cache not found. Run: go run . update"))
-			return
+			return CacheData{}, false
 		}
 		fmt.Printf("Error loading cache: %v\n", err)
+		return CacheData{}, false
+	}
+
+	return cache, true
+}
+
+func printTechniqueMapping(titleText string, results []Technique, detailed bool) {
+	if len(results) == 0 {
+		printNoMappedResults("techniques", titleText)
 		return
 	}
 
-	sub := strings.ToLower(args[1])
+	fmt.Printf("%s %d technique(s)\n", ok("Found"), len(results))
+	printMappedTechniquesWithMode(results, detailed)
+}
 
-	switch sub {
-	case "show":
-		if len(args) < 3 {
-			fmt.Println("Usage: go run . group show <group_id_or_name> [--plain]")
-			return
-		}
+func printAnalyticMapping(results []Analytic) {
+	if len(results) == 0 {
+		printNoMappedResults("analytics", "detection strategy")
+		return
+	}
 
-		groupInput := args[2]
-		g, found := findGroup(cache, groupInput)
-		if !found {
-			fmt.Printf("Group %q not found in cache.\n", groupInput)
-			return
-		}
+	fmt.Printf("%s %d analytic(s)\n", ok("Found"), len(results))
+	printAnalyticList(results)
+}
 
-		related := techniquesUsedByGroup(cache, g.ID)
+func printComponentMapping(source string, results []DataComponent) {
+	if len(results) == 0 {
+		printNoMappedResults("data components", source)
+		return
+	}
 
-		fmt.Printf("%s %s\n", label("ID:"), g.ID)
-		fmt.Printf("%s %s\n", label("Name:"), g.Name)
-		fmt.Printf("%s %s\n", label("Aliases:"), strings.Join(g.Aliases, ", "))
-		fmt.Printf("%s %d\n", label("Mapped techniques:"), len(related))
-		fmt.Printf("%s %s\n", label("Description:"), g.Description)
+	fmt.Printf("%s %d data component(s)\n", ok("Found"), len(results))
+	printDataComponentList(results)
+}
 
-	case "techniques":
-		detailed := false
-		filtered := make([]string, 0, len(args))
-		filtered = append(filtered, args[0], args[1])
+func handleGroup(args []string) {
+	if len(args) < 2 {
+		fmt.Println("Usage: go run . group <group_id>")
+		return
+	}
 
-		for _, a := range args[2:] {
-			if a == "--detailed" {
-				detailed = true
-				continue
-			}
-			if strings.HasPrefix(a, "-") {
-				fmt.Println("Usage: go run . group techniques <group_id_or_name> [--detailed] [--plain]")
-				return
-			}
-			filtered = append(filtered, a)
-		}
-		args = filtered
+	cache, ok := loadCacheForCommand()
+	if !ok {
+		return
+	}
 
-		if len(args) != 3 {
-			fmt.Println("Usage: go run . group techniques <group_id_or_name> [--detailed] [--plain]")
-			return
-		}
+	groupInput := args[1]
+	flags, err := parseEntityFlags(args[2:])
+	if err != nil {
+		fmt.Println(errText(err.Error()))
+		fmt.Println("Usage: go run . group <group_id> [-t|--techniques] [-d|--detailed] [--plain]")
+		return
+	}
+	g, found := findGroup(cache, groupInput)
+	if !found {
+		fmt.Printf("Group %q not found in cache.\n", groupInput)
+		return
+	}
 
-		groupInput := args[2]
-		g, found := findGroup(cache, groupInput)
-		if !found {
-			fmt.Printf("Group %q not found in cache.\n", groupInput)
-			return
-		}
+	related := techniquesUsedByGroup(cache, g.ID)
 
-		results := techniquesUsedByGroup(cache, g.ID)
-		if len(results) == 0 {
-			fmt.Printf("No techniques mapped for group %s (%s).\n", g.Name, g.ID)
-			return
-		}
+	printSection("Group Details")
+	printDetails([]DetailField{
+		{"ID:", g.ID},
+		{"Name:", g.Name},
+		{"Aliases:", strings.Join(g.Aliases, ", ")},
+		{"Mapped techniques:", fmt.Sprintf("%d", len(related))},
+		{"Description:", g.Description},
+	})
 
-		fmt.Printf("%s %s (%s)\n", label("Group:"), g.Name, g.ID)
-		fmt.Printf("%s %d technique(s)\n", ok("Found"), len(results))
-
-		printMappedTechniquesWithMode(results, detailed)
-
-	default:
-		fmt.Printf("Unknown group subcommand: %s\n", sub)
-		fmt.Println("Use: group techniques <group_id_or_name>")
+	if flags.Techniques {
+		printSubsection("Mapped Techniques")
+		printTechniqueMapping("group", related, flags.Detailed)
 	}
 }
 
 func handleMitigation(args []string) {
-	if len(args) < 3 {
-		fmt.Println("Usage:")
-		fmt.Println("  go run . mitigation techniques <mitigation_id_or_name> [--detailed] [--plain]")
+	if len(args) < 2 {
+		fmt.Println("Usage: go run . mitigation <mitigation_id> [-t|--techniques] [-d|--detailed] [--plain]")
 		return
 	}
 
-	cache, err := loadCacheData(cachePath)
+	cache, ok := loadCacheForCommand()
+	if !ok {
+		return
+	}
+
+	mitigationInput := args[1]
+	flags, err := parseEntityFlags(args[2:])
 	if err != nil {
-		if os.IsNotExist(err) {
-			fmt.Println(errText("Cache not found. Run: go run . update"))
-			return
-		}
-		fmt.Printf("Error loading cache: %v\n", err)
+		fmt.Println(errText(err.Error()))
+		fmt.Println("Usage: go run . mitigation <mitigation_id> [-t|--techniques] [-d|--detailed] [--plain]")
+		return
+	}
+	m, found := findMitigation(cache, mitigationInput)
+	if !found {
+		fmt.Printf("Mitigation %q not found in cache.\n", mitigationInput)
 		return
 	}
 
-	sub := strings.ToLower(args[1])
+	related := techniquesMitigatedBy(cache, m.ID)
 
-	switch sub {
-	case "techniques":
-		detailed := false
-		filtered := make([]string, 0, len(args))
-		filtered = append(filtered, args[0], args[1])
+	printSection("Mitigation Details")
+	printDetails([]DetailField{
+		{"ID:", m.ID},
+		{"Name:", m.Name},
+		{"Mapped techniques:", fmt.Sprintf("%d", len(related))},
+		{"Description:", m.Description},
+	})
 
-		for _, a := range args[2:] {
-			if a == "--detailed" {
-				detailed = true
-				continue
-			}
-			if strings.HasPrefix(a, "-") {
-				fmt.Println("Usage: go run . mitigation techniques <mitigation_id_or_name> [--detailed] [--plain]")
-				return
-			}
-			filtered = append(filtered, a)
-		}
-		args = filtered
-
-		if len(args) != 3 {
-			fmt.Println("Usage: go run . mitigation techniques <mitigation_id_or_name> [--detailed] [--plain]")
-			return
-		}
-
-		mitInput := args[2]
-		m, found := findMitigation(cache, mitInput)
-
-		if !found {
-			fmt.Printf("Mitigation %q not found in cache.\n", mitInput)
-			return
-		}
-
-		results := techniquesMitigatedBy(cache, m.ID)
-
-		if len(results) == 0 {
-			fmt.Printf("No techniques mapped for mitigation %s (%s).\n", m.Name, m.ID)
-			return
-		}
-
-		fmt.Printf("%s %s (%s)\n", label("Mitigation:"), m.Name, m.ID)
-		fmt.Printf("%s %d technique(s)\n", ok("Found"), len(results))
-
-		printMappedTechniquesWithMode(results, detailed)
-
-	default:
-		fmt.Printf("Unknown mitigation subcommand: %s\n", sub)
-		fmt.Println("Use: mitigation techniques <mitigation_id_or_name>")
+	if flags.Techniques {
+		printSubsection("Mapped Techniques")
+		printTechniqueMapping("mitigation", related, flags.Detailed)
 	}
 }
 
 func handleSoftware(args []string) {
-	if len(args) < 3 {
-		fmt.Println("Usage:")
-		fmt.Println("  go run . software show <software_id_or_name> [--plain]")
-		fmt.Println("  go run . software techniques <software_id_or_name> [--detailed] [--plain]")
+	if len(args) < 2 {
+		fmt.Println("Usage: go run . software <software_id> [-t|--techniques] [-d|--detailed] [--plain]")
 		return
 	}
 
-	cache, err := loadCacheData(cachePath)
+	cache, ok := loadCacheForCommand()
+	if !ok {
+		return
+	}
+
+	softwareInput := args[1]
+	flags, err := parseEntityFlags(args[2:])
 	if err != nil {
-		if os.IsNotExist(err) {
-			fmt.Println(errText("Cache not found. Run: go run . update"))
-			return
-		}
-		fmt.Printf("Error loading cache: %v\n", err)
+		fmt.Println(errText(err.Error()))
+		fmt.Println("Usage: go run . software <software_id> [-t|--techniques] [-d|--detailed] [--plain]")
+		return
+	}
+	s, found := findSoftware(cache, softwareInput)
+	if !found {
+		fmt.Printf("Software %q not found in cache.\n", softwareInput)
 		return
 	}
 
-	sub := strings.ToLower(args[1])
+	related := techniquesUsedBySoftware(cache, s.ID)
 
-	switch sub {
-	case "show":
-		if len(args) != 3 {
-			fmt.Println("Usage: go run . software show <software_id_or_name> [--plain]")
-			return
-		}
+	printSection("Software Details")
+	printDetails([]DetailField{
+		{"ID:", s.ID},
+		{"Name:", s.Name},
+		{"Type:", s.Type},
+		{"Aliases:", strings.Join(s.Aliases, ", ")},
+		{"Mapped techniques:", fmt.Sprintf("%d", len(related))},
+		{"Description:", s.Description},
+	})
 
-		softwareInput := args[2]
-		s, found := findSoftware(cache, softwareInput)
-		if !found {
-			fmt.Printf("Software %q not found in cache.\n", softwareInput)
-			return
-		}
-
-		related := techniquesUsedBySoftware(cache, s.ID)
-		fmt.Printf("%s %s\n", label("ID:"), s.ID)
-		fmt.Printf("%s %s\n", label("Name:"), s.Name)
-		fmt.Printf("%s %s\n", label("Type:"), s.Type)
-		fmt.Printf("%s %s\n", label("Aliases:"), strings.Join(s.Aliases, ", "))
-		fmt.Printf("%s %d\n", label("Mapped techniques:"), len(related))
-		fmt.Printf("%s %s\n", label("Description:"), s.Description)
-
-	case "techniques":
-		detailed := false
-		filtered := make([]string, 0, len(args))
-		filtered = append(filtered, args[0], args[1])
-
-		for _, a := range args[2:] {
-			if a == "--detailed" {
-				detailed = true
-				continue
-			}
-			if strings.HasPrefix(a, "-") {
-				fmt.Println("Usage: go run . software techniques <software_id_or_name> [--detailed] [--plain]")
-				return
-			}
-			filtered = append(filtered, a)
-		}
-		args = filtered
-
-		if len(args) != 3 {
-			fmt.Println("Usage: go run . software techniques <software_id_or_name> [--detailed] [--plain]")
-			return
-		}
-
-		softwareInput := args[2]
-		s, found := findSoftware(cache, softwareInput)
-		if !found {
-			fmt.Printf("Software %q not found in cache.\n", softwareInput)
-			return
-		}
-
-		results := techniquesUsedBySoftware(cache, s.ID)
-		if len(results) == 0 {
-			fmt.Printf("No techniques mapped for software %s (%s).\n", s.Name, s.ID)
-			return
-		}
-
-		fmt.Printf("%s %s (%s)\n", label("Software:"), s.Name, s.ID)
-		fmt.Printf("%s %d technique(s)\n", ok("Found"), len(results))
-
-		printMappedTechniquesWithMode(results, detailed)
-
-	default:
-		fmt.Printf("Unknown software subcommand: %s\n", sub)
-		fmt.Println("Use: software show <software_id_or_name> or software techniques <software_id_or_name>")
+	if flags.Techniques {
+		printSubsection("Mapped Techniques")
+		printTechniqueMapping("software", related, flags.Detailed)
 	}
 }
 
 func handleCampaign(args []string) {
-	if len(args) < 3 {
-		fmt.Println("Usage:")
-		fmt.Println("  go run . campaign show <campaign_id_or_name> [--plain]")
-		fmt.Println("  go run . campaign techniques <campaign_id_or_name> [--detailed] [--plain]")
+	if len(args) < 2 {
+		fmt.Println("Usage: go run . campaign <campaign_id> [-t|--techniques] [-d|--detailed] [--plain]")
 		return
 	}
 
-	cache, err := loadCacheData(cachePath)
+	cache, ok := loadCacheForCommand()
+	if !ok {
+		return
+	}
+
+	campaignInput := args[1]
+	flags, err := parseEntityFlags(args[2:])
 	if err != nil {
-		if os.IsNotExist(err) {
-			fmt.Println(errText("Cache not found. Run: go run . update"))
-			return
-		}
-		fmt.Printf("Error loading cache: %v\n", err)
+		fmt.Println(errText(err.Error()))
+		fmt.Println("Usage: go run . campaign <campaign_id> [-t|--techniques] [-d|--detailed] [--plain]")
 		return
 	}
 
-	sub := strings.ToLower(args[1])
+	c, found := findCampaign(cache, campaignInput)
+	if !found {
+		fmt.Printf("Campaign %q not found in cache.\n", campaignInput)
+		return
+	}
 
-	switch sub {
-	case "show":
-		if len(args) != 3 {
-			fmt.Println("Usage: go run . campaign show <campaign_id_or_name> [--plain]")
-			return
-		}
-		campaignInput := args[2]
-		c, found := findCampaign(cache, campaignInput)
-		if !found {
-			fmt.Printf("Campaign %q not found in cache.\n", campaignInput)
-			return
-		}
+	related := techniquesUsedByCampaign(cache, c.ID)
 
-		related := techniquesUsedByCampaign(cache, c.ID)
-		fmt.Printf("%s %s\n", label("ID:"), c.ID)
-		fmt.Printf("%s %s\n", label("Name:"), c.Name)
-		fmt.Printf("%s %s\n", label("Aliases:"), strings.Join(c.Aliases, ", "))
-		fmt.Printf("%s %d\n", label("Mapped techniques:"), len(related))
-		fmt.Printf("%s %s\n", label("Description:"), c.Description)
+	printSection("Campaign Details")
+	printDetails([]DetailField{
+		{"ID:", c.ID},
+		{"Name:", c.Name},
+		{"Aliases:", strings.Join(c.Aliases, ", ")},
+		{"Mapped techniques:", fmt.Sprintf("%d", len(related))},
+		{"Description:", c.Description},
+	})
 
-	case "techniques":
-		detailed := false
-		filtered := make([]string, 0, len(args))
-		filtered = append(filtered, args[0], args[1])
-
-		for _, a := range args[2:] {
-			if a == "--detailed" {
-				detailed = true
-				continue
-			}
-			if strings.HasPrefix(a, "-") {
-				fmt.Println("Usage: go run . campaign techniques <campaign_id_or_name> [--detailed] [--plain]")
-				return
-			}
-			filtered = append(filtered, a)
-		}
-		args = filtered
-
-		if len(args) != 3 {
-			fmt.Println("Usage: go run . campaign techniques <campaign_id_or_name> [--detailed] [--plain]")
-			return
-		}
-		campaignInput := args[2]
-		c, found := findCampaign(cache, campaignInput)
-		if !found {
-			fmt.Printf("Campaign %q not found in cache.\n", campaignInput)
-			return
-		}
-
-		results := techniquesUsedByCampaign(cache, c.ID)
-		if len(results) == 0 {
-			fmt.Printf("No techniques mapped for campaign %s (%s).\n", c.Name, c.ID)
-			return
-		}
-
-		fmt.Printf("%s %s (%s)\n", label("Campaign:"), c.Name, c.ID)
-		fmt.Printf("%s %d technique(s)\n", ok("Found"), len(results))
-		printMappedTechniquesWithMode(results, detailed)
-
-	default:
-		fmt.Printf("Unknown campaign subcommand: %s\n", sub)
-		fmt.Println("Use: campaign show <campaign_id_or_name> or campaign techniques <campaign_id_or_name>")
+	if flags.Techniques {
+		printSubsection("Mapped Techniques")
+		printTechniqueMapping("campaign", related, flags.Detailed)
 	}
 }
 
 func handleDetection(args []string) {
-	if len(args) < 3 {
-		fmt.Println("Usage:")
-		fmt.Println("  go run . detection show <det_id_or_name> [--plain]")
-		fmt.Println("  go run . detection techniques <det_id_or_name> [--detailed] [--plain]")
-		fmt.Println("  go run . detection components <det_id_or_name> [--plain]")
-		fmt.Println("  go run . detection analytics <det_id_or_name> [--plain]")
+	if len(args) < 2 {
+		fmt.Println("Usage: go run . detection <detection_id> [-t|--techniques] [-a|--analytics] [-c|--components] [-d|--detailed] [--plain]")
 		return
 	}
 
-	cache, err := loadCacheData(cachePath)
+	cache, ok := loadCacheForCommand()
+	if !ok {
+		return
+	}
+
+	detectionInput := args[1]
+	flags, err := parseEntityFlags(args[2:])
 	if err != nil {
-		if os.IsNotExist(err) {
-			fmt.Println(errText("Cache not found. Run: go run . update"))
-			return
-		}
-		fmt.Printf("Error loading cache: %v\n", err)
+		fmt.Println(errText(err.Error()))
+		fmt.Println("Usage: go run . detection <detection_id> [-t|--techniques] [-a|--analytics] [-c|--components] [-d|--detailed] [--plain]")
 		return
 	}
 
-	sub := strings.ToLower(args[1])
+	d, found := findDetectionStrategy(cache, detectionInput)
+	if !found {
+		fmt.Printf("Detection strategy %q not found in cache.\n", detectionInput)
+		return
+	}
 
-	switch sub {
-	case "show":
-		d, found := findDetectionStrategy(cache, args[2])
-		if !found {
-			fmt.Printf("Detection strategy %q not found in cache.\n", args[2])
-			return
-		}
+	techniques := techniquesDetectedByStrategy(cache, d.ID)
+	analytics := analyticsByDetectionStrategy(cache, d.ID)
+	components := dataComponentsByDetectionStrategy(cache, d.ID)
 
-		related := techniquesDetectedByStrategy(cache, d.ID)
-		fmt.Printf("%s %s\n", label("ID:"), d.ID)
-		fmt.Printf("%s %s\n", label("Name:"), d.Name)
-		fmt.Printf("%s %d\n", label("Mapped techniques:"), len(related))
-		fmt.Printf("%s %d\n", label("Analytics:"), len(d.Analytics))
-		fmt.Printf("%s %s\n", label("Description:"), d.Description)
+	printSection("Detection Strategy Details")
+	printDetails([]DetailField{
+		{"ID:", d.ID},
+		{"Name:", d.Name},
+		{"Mapped techniques:", fmt.Sprintf("%d", len(techniques))},
+		{"Analytics:", fmt.Sprintf("%d", len(analytics))},
+		{"Data Components:", fmt.Sprintf("%d", len(components))},
+		{"Description:", d.Description},
+	})
 
-	case "techniques":
-		detailed := false
-		filtered := make([]string, 0, len(args))
-		filtered = append(filtered, args[0], args[1])
+	if flags.Techniques {
+		printSubsection("Mapped Techniques")
+		printTechniqueMapping("detection strategy", techniques, flags.Detailed)
+	}
 
-		for _, a := range args[2:] {
-			if a == "--detailed" {
-				detailed = true
-				continue
-			}
-			if strings.HasPrefix(a, "-") {
-				fmt.Println("Usage: go run . detection techniques <det_id_or_name> [--detailed] [--plain]")
-				return
-			}
-			filtered = append(filtered, a)
-		}
-		args = filtered
+	if flags.Analytics {
+		printSubsection("Analytics")
+		printAnalyticMapping(analytics)
+	}
 
-		if len(args) != 3 {
-			fmt.Println("Usage: go run . detection techniques <det_id_or_name> [--detailed] [--plain]")
-			return
-		}
-
-		d, found := findDetectionStrategy(cache, args[2])
-		if !found {
-			fmt.Printf("Detection strategy %q not found in cache.\n", args[2])
-			return
-		}
-
-		results := techniquesDetectedByStrategy(cache, d.ID)
-		if len(results) == 0 {
-			fmt.Printf("No techniques mapped for detection strategy %s (%s).\n", d.Name, d.ID)
-			return
-		}
-
-		fmt.Printf("%s %s (%s)", label("Detection:"), d.Name, d.ID)
-		fmt.Printf("%s %d technique(s)\n", ok("Found"), len(results))
-		printMappedTechniquesWithMode(results, detailed)
-
-	case "analytics":
-		if len(args) != 3 {
-			fmt.Println("Usage: go run . detection analytics <det_id_or_name> [--plain]")
-			return
-		}
-
-		d, found := findDetectionStrategy(cache, args[2])
-		if !found {
-			fmt.Printf("Detection strategy %q not found in cache.\n", args[2])
-			return
-		}
-
-		results := analyticsByDetectionStrategy(cache, d.ID)
-		if len(results) == 0 {
-			fmt.Printf("No analytics mapped for detection strategy %s (%s).\n", d.Name, d.ID)
-			return
-		}
-
-		fmt.Printf("%s %s (%s)\n", label("Detection:"), d.Name, d.ID)
-		fmt.Printf("%s %d analytic(s)\n", ok("Found"), len(results))
-
-		for i, a := range results {
-			fmt.Printf("%d. %s\n", i+1, a.ID)
-		}
-
-	case "components":
-		if len(args) != 3 {
-			fmt.Println("Usage: go run . detection components <det_id_or_name> [--plain]")
-		}
-
-		d, found := findDetectionStrategy(cache, args[2])
-		if !found {
-			fmt.Printf("Detection strategy %q not found in cache.\n", args[2])
-			return
-		}
-
-		results := dataComponentsByDetectionStrategy(cache, d.ID)
-		if len(results) == 0 {
-			fmt.Printf("No data components mapped for detection strategy %s (%s).\n", d.Name, d.ID)
-			return
-		}
-
-		fmt.Printf("%s %s (%s)\n", label("Detection:"), d.Name, d.ID)
-		fmt.Printf("%s %d data component(s)\n", ok("Found"), len(results))
-
-		for i, dc := range results {
-			fmt.Printf("%d. %s\n", i+1, dc.Name)
-		}
-
-	default:
-		fmt.Printf("Unknow detection subcommand: %s\n", sub)
-		fmt.Println("Use: detection show <det_id_or_name>, detection techniques <det_id_or_name>, or detection analytics <det_id_or_name>")
+	if flags.Components {
+		printSubsection("Data Components")
+		printComponentMapping("detection strategy", components)
 	}
 }
 
 func handleAnalytic(args []string) {
-	if len(args) < 3 {
-		fmt.Println("Usage:")
-		fmt.Println("  go run . analytic show <analytic_id_or_name> [--plain]")
-		fmt.Println("  go run . analytic components <analytic_id_or_name> [--plain]")
+	if len(args) < 2 {
+		fmt.Println("Usage: go run . analytic <analytic_id> [-c|--components] [--plain]")
 		return
 	}
 
-	cache, err := loadCacheData(cachePath)
+	cache, ok := loadCacheForCommand()
+	if !ok {
+		return
+	}
+
+	analyticInput := args[1]
+	flags, err := parseEntityFlags(args[2:])
 	if err != nil {
-		if os.IsNotExist(err) {
-			fmt.Println(errText("Cache not found. Run: go run . update"))
-			return
-		}
-		fmt.Printf("Error loading cache: %v\n", err)
+		fmt.Println(errText(err.Error()))
+		fmt.Println("Usage: go run . analytic <analytic_id> [-c|--components] [--plain]")
 		return
 	}
 
-	sub := strings.ToLower(args[1])
+	a, found := findAnalytic(cache, analyticInput)
+	if !found {
+		fmt.Printf("Analytic %q not found in cache.\n", analyticInput)
+		return
+	}
 
-	switch sub {
-	case "show":
-		if len(args) != 3 {
-			fmt.Println("Usage: go run . analytic show <analytic_id_or_name> [--plain]")
-			return
-		}
+	components := dataComponentsByAnalytic(cache, a.ID)
 
-		a, found := findAnalytic(cache, args[2])
-		if !found {
-			fmt.Printf("Analytic %q not found in cache.\n", args[2])
-			return
-		}
+	printSection("Analytic Details")
+	printDetails([]DetailField{
+		{"ID:", a.ID},
+		{"Name:", a.Name},
+		{"Data Components:", fmt.Sprintf("%d", len(components))},
+		{"Description:", a.Description},
+	})
 
-		components := dataComponentsByAnalytic(cache, a.ID)
-
-		fmt.Printf("%s %s\n", label("ID:"), a.ID)
-		fmt.Printf("%s %s\n", label("Name:"), a.Name)
-		fmt.Printf("%s %d\n", label("Data Components:"), len(components))
-		fmt.Printf("%s %s\n", label("Description:"), a.Description)
-
-	case "components":
-		if len(args) != 3 {
-			fmt.Println("Usage: go run . analytic components <analytic_id_or_name> [--plain]")
-			return
-		}
-
-		a, found := findAnalytic(cache, args[2])
-		if !found {
-			fmt.Printf("Analytic %q not found in cache.\n", args[2])
-			return
-		}
-
-		results := dataComponentsByAnalytic(cache, a.ID)
-		if len(results) == 0 {
-			fmt.Printf("No data components mapped for analytic %s (%s).\n", a.Name, a.ID)
-			return
-		}
-
-		fmt.Printf("%s %s (%s)\n", label("Analytic:"), a.Name, a.ID)
-		fmt.Printf("%s %d data component(s)\n", ok("Found"), len(results))
-
-		for i, dc := range results {
-			fmt.Printf("%d. %s\n", i+1, dc.Name)
-		}
-
-	default:
-		fmt.Printf("Unknown analytic subcommand: %s\n", sub)
-		fmt.Println("Use: analytic show <analytic_id_or_name> or analytic components <analytic_id_or_name>")
+	if flags.Components {
+		printSubsection("Data Components")
+		printComponentMapping("analytic", components)
 	}
 }

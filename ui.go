@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -171,7 +173,6 @@ func printGroupTable(groups []Group) {
 	)
 }
 
-
 func printMitigationTable(mitigations []Mitigation) {
 	rows := make([][]string, 0, len(mitigations))
 	for i, m := range mitigations {
@@ -306,4 +307,55 @@ func printSubsection(text string) {
 	fmt.Println()
 	fmt.Println(label(text))
 	printDivider(40)
+}
+
+func printPaginatedTable(titleText string, headers []string, rows [][]string, widths []int, pageSize int) {
+	if pageSize <= 0 {
+		pageSize = 25
+	}
+
+	if len(rows) == 0 {
+		printNoResults(strings.ToLower(titleText))
+		return
+	}
+
+	reader := bufio.NewReader(os.Stdin)
+	page := 0
+	totalPages := (len(rows) + pageSize - 1) / pageSize
+
+	for {
+		start := page * pageSize
+		end := start + pageSize
+		if end > len(rows) {
+			end = len(rows)
+		}
+
+		printSection(titleText)
+		fmt.Printf("Showing %d-%d of %d\n", start+1, end, len(rows))
+		printEntityTable(headers, rows[start:end], widths)
+		fmt.Println()
+		fmt.Println("[n] Next  [p] Previous  [q] Quit")
+		fmt.Print("> ")
+
+		input := strings.ToLower(strings.TrimSpace(readLine(reader)))
+
+		switch input {
+		case "n":
+			if page < totalPages-1 {
+				page++
+			} else {
+				fmt.Println("Already on last page.")
+			}
+		case "p":
+			if page > 0 {
+				page--
+			} else {
+				fmt.Println("Already on first page.")
+			}
+		case "q":
+			return
+		default:
+			printInvalidSelection()
+		}
+	}
 }
