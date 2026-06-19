@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	fmt.Println("MITRE Explorer v0.8.1")
+	fmt.Println("MITRE Explorer v0.8.2")
 
 	if len(os.Args) < 2 {
 		startInteractiveMode()

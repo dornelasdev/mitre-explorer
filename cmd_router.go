@@ -29,6 +29,9 @@ func runCommand(args []string) {
 	switch command {
 	case "update":
 		handleUpdate(args)
+	
+	case "help":
+		handleHelp(args)
 
 	case "search":
 		handleSearch(args)
