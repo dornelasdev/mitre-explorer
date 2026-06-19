@@ -33,6 +33,40 @@ func parseEntityFlags(args []string) (EntityFlags, error) {
 	return flags, nil
 }
 
+func validateEntityFlags(entity string, flags EntityFlags) error {
+	switch entity {
+	case "group", "mitigation", "software", "campaign":
+		if flags.Analytics {
+			return fmt.Errorf("%s does not support -a/--analytics", entity)
+		}
+		if flags.Components {
+			return fmt.Errorf("%s does not support -c/--components", entity)
+		}
+		if flags.Detailed && !flags.Techniques {
+			return fmt.Errorf("-d/--detailed requires -t/--techniques")
+		}
+
+	case "detection":
+		if flags.Detailed && !flags.Techniques {
+			return fmt.Errorf("-d/--detailed requires -t/--techniques")
+		}
+	case "analytic":
+		if flags.Techniques {
+			return fmt.Errorf("%s does not support -t/--techniques", entity)
+		}
+		if flags.Detailed {
+			return fmt.Errorf("%s does not support -d/--detailed", entity)
+		}
+		if flags.Analytics {
+			return fmt.Errorf("%s does not support -a/--analytics", entity)
+		}
+
+	default:
+		return fmt.Errorf("unknown entity type: %s", entity)
+	}
+	return nil
+}
+
 func loadCacheForCommand() (CacheData, bool) {
 	cache, err := loadCacheData(cachePath)
 	if err != nil {
@@ -95,6 +129,13 @@ func handleGroup(args []string) {
 		fmt.Println("Usage: go run . group <group_id> [-t|--techniques] [-d|--detailed] [--plain]")
 		return
 	}
+
+	if err := validateEntityFlags("group", flags); err != nil {
+		fmt.Println(errText(err.Error()))
+		fmt.Println("Usage: go run . group <group_id> [-t|--techniques] [-d|--detailed] [--plain]")
+		return
+	}
+
 	g, found := findGroup(cache, groupInput)
 	if !found {
 		fmt.Printf("Group %q not found in cache.\n", groupInput)
@@ -136,6 +177,13 @@ func handleMitigation(args []string) {
 		fmt.Println("Usage: go run . mitigation <mitigation_id> [-t|--techniques] [-d|--detailed] [--plain]")
 		return
 	}
+
+	if err := validateEntityFlags("mitigation", flags); err != nil {
+		fmt.Println(errText(err.Error()))
+		fmt.Println("Usage: go run . mitigation <mitigation_id> [-t|--techniques] [-d|--detailed] [--plain]")
+		return
+	}
+
 	m, found := findMitigation(cache, mitigationInput)
 	if !found {
 		fmt.Printf("Mitigation %q not found in cache.\n", mitigationInput)
@@ -176,6 +224,13 @@ func handleSoftware(args []string) {
 		fmt.Println("Usage: go run . software <software_id> [-t|--techniques] [-d|--detailed] [--plain]")
 		return
 	}
+
+	if err := validateEntityFlags("software", flags); err != nil {
+		fmt.Println(errText(err.Error()))
+		fmt.Println("Usage: go run . software <software_id> [-t|--techniques] [-d|--detailed] [--plain]")
+		return
+	}
+
 	s, found := findSoftware(cache, softwareInput)
 	if !found {
 		fmt.Printf("Software %q not found in cache.\n", softwareInput)
@@ -219,6 +274,12 @@ func handleCampaign(args []string) {
 		return
 	}
 
+	if err := validateEntityFlags("campaign", flags); err != nil {
+		fmt.Println(errText(err.Error()))
+		fmt.Println("Usage: go run . campaign <campaign_id> [-t|--techniques] [-d|--detailed] [--plain]")
+		return
+	}
+
 	c, found := findCampaign(cache, campaignInput)
 	if !found {
 		fmt.Printf("Campaign %q not found in cache.\n", campaignInput)
@@ -256,6 +317,12 @@ func handleDetection(args []string) {
 	detectionInput := args[1]
 	flags, err := parseEntityFlags(args[2:])
 	if err != nil {
+		fmt.Println(errText(err.Error()))
+		fmt.Println("Usage: go run . detection <detection_id> [-t|--techniques] [-a|--analytics] [-c|--components] [-d|--detailed] [--plain]")
+		return
+	}
+
+	if err := validateEntityFlags("detection", flags); err != nil {
 		fmt.Println(errText(err.Error()))
 		fmt.Println("Usage: go run . detection <detection_id> [-t|--techniques] [-a|--analytics] [-c|--components] [-d|--detailed] [--plain]")
 		return
@@ -311,6 +378,12 @@ func handleAnalytic(args []string) {
 	analyticInput := args[1]
 	flags, err := parseEntityFlags(args[2:])
 	if err != nil {
+		fmt.Println(errText(err.Error()))
+		fmt.Println("Usage: go run . analytic <analytic_id> [-c|--components] [--plain]")
+		return
+	}
+
+	if err := validateEntityFlags("analytic", flags); err != nil {
 		fmt.Println(errText(err.Error()))
 		fmt.Println("Usage: go run . analytic <analytic_id> [-c|--components] [--plain]")
 		return
