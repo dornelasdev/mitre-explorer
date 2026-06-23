@@ -13,6 +13,8 @@ func handleHelp(args []string) {
 		printUpdateHelp()
 	case "search":
 		printSearchHelp()
+	case "status":
+		printStatusHelp()
 	case "show":
 		printShowHelp()
 	case "list":
@@ -40,6 +42,7 @@ func printGlobalHelp() {
 	fmt.Println()
 	fmt.Println("Core commands:")
 	fmt.Println("  update      Download/update local cache")
+	fmt.Println("  status      Show cache and dataset status")
 	fmt.Println("  search      Search techniques")
 	fmt.Println("  show        Show technique details")
 	fmt.Println("  list        List targets with pagination")
@@ -133,4 +136,10 @@ func printEntityHelp(entity, idName string, supportsTechniques, supportsAnalytic
 	}
 
 	fmt.Println("  --plain           Disable colored output")
+}
+
+func printStatusHelp() {
+	fmt.Println("Usage: go run . status")
+	fmt.Println()
+	fmt.Println("Shows the status of the local cache and update metadata.")
 }
