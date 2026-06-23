@@ -70,11 +70,11 @@ func printSearchHelp() {
 	fmt.Println("Searches techniques by name/description, with optional detection-note searching.")
 	fmt.Println()
 	fmt.Println("Options:")
-	fmt.Println("  --name-only    	Search technique names only")
-	fmt.Println("  --limit <N>    	Limit results to N techniques")
-	fmt.Println("  --in-detection 	Show techniques with matching detection strategies")
-	fmt.Println("  --plain        	Disable colored output")
-	fmt.Println("  --detailed     	Show detailed technique output")
+	fmt.Println("  --name-only        Search technique names only")
+	fmt.Println("  --limit <N>        Limit results to N techniques")
+	fmt.Println("  --in-detection     Show techniques with matching detection strategies")
+	fmt.Println("  --plain            Disable colored output")
+	fmt.Println("  --detailed         Show detailed technique output")
 }
 
 func printShowHelp() {
@@ -89,18 +89,23 @@ func printListHelp() {
 	fmt.Println("Usage: go run . list <target>")
 	fmt.Println()
 	fmt.Println("Targets:")
-	fmt.Println("  techniques")
+	fmt.Println("  techniques (aliases: tech, techs)")
 	fmt.Println("  groups")
 	fmt.Println("  mitigations")
 	fmt.Println("  software")
 	fmt.Println("  campaigns")
-	fmt.Println("  detections")
+	fmt.Println("  detections (aliases: det, dets)")
 	fmt.Println("  analytics")
-	fmt.Println("  data-components")
+	fmt.Println("  data-components (aliases: dc, dcs)")
 	fmt.Println("  tactics")
 	fmt.Println("  platforms")
 	fmt.Println()
 	fmt.Println("Lists supported targets with pagination.")
+	fmt.Println()
+	fmt.Println("Technique filters:")
+	fmt.Println("  go run . list techniques --tactic <tactic_name>")
+	fmt.Println("  go run . list techniques --platform <platform_name>")
+	fmt.Println("  go run . list techniques --data-component <data_component_name>")
 }
 
 func printEntityHelp(entity, idName string, supportsTechniques, supportsAnalytics, supportsComponents bool) {

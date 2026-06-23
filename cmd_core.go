@@ -128,10 +128,80 @@ func handleShow(args []string) {
 	fmt.Printf("%s %s\n", label("Data Components:"), strings.Join(technique.DataComponents, ", "))
 }
 
+func normalizeListTarget(target string) string {
+	switch strings.ToLower(target) {
+	case "technique", "techniques", "tech", "techs":
+		return "techniques"
+	case "group", "groups":
+		return "groups"
+	case "mitigation", "mitigations":
+		return "mitigations"
+	case "software", "softwares":
+		return "software"
+	case "campaign", "campaigns":
+		return "campaigns"
+	case "detection", "detections", "det", "dets":
+		return "detections"
+	case "analytic", "analytics":
+		return "analytics"
+	case "data-component", "data-components", "dc", "dcs":
+		return "data-components"
+	case "tactic", "tactics":
+		return "tactics"
+	case "platform", "platforms":
+		return "platforms"
+	default:
+		return strings.ToLower(target)
+	}
+}
+
+func printListTargets() {
+	fmt.Println("Targets: techniques | groups | mitigations | software | campaigns | detections | analytics | data-components | tactics | platforms")
+}
+
+func parseTechniqueListFilters(args []string) (tactic, platform, dataComponent string, err error) {
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--tactic":
+			if i+1 >= len(args) {
+				return "", "", "", fmt.Errorf("--tactic requires a value")
+			}
+			tactic = args[i+1]
+			i++
+		case "--platform":
+			if i+1 >= len(args) {
+				return "", "", "", fmt.Errorf("--platform requires a value")
+			}
+			platform = args[i+1]
+			i++
+		case "--data-component":
+			if i+1 >= len(args) {
+				return "", "", "", fmt.Errorf("--data-component requires a value")
+			}
+			dataComponent = args[i+1]
+			i++
+		default:
+			return "", "", "", fmt.Errorf("unknown list option: %s", args[i])
+		}
+	}
+	return tactic, platform, dataComponent, nil
+}
+
+func techniqueRows(techniques []Technique) [][]string {
+	rows := make([][]string, 0, len(techniques))
+	for _, t := range techniques {
+		rows = append(rows, []string{
+			t.ID,
+			truncateText(t.Name, 72),
+		})
+	}
+	return rows
+}
+
 func handleList(args []string) {
 	if len(args) < 2 {
-		fmt.Println("Usage: go run . list <target>")
-		fmt.Println("Targets: techniques | groups | mitigations | software | campaigns | detections | analytics | data-components | tactics | platforms")
+		fmt.Println("Usage: go run . list <target> [filters]")
+		printListTargets()
 		return
 	}
 
@@ -145,27 +215,44 @@ func handleList(args []string) {
 		return
 	}
 
-	entity := strings.ToLower(args[1])
+	entity := normalizeListTarget(args[1])
 	const pageSize = 25
 
 	switch entity {
 	case "techniques":
-		rows := make([][]string, 0, len(cache.Techniques))
-		for _, t := range cache.Techniques {
-			rows = append(rows, []string{
-				t.ID,
-				truncateText(t.Name, 72),
-			})
+		results := cache.Techniques
+		titleText := "Techniques"
+
+		if len(args) > 2 {
+			tactic, platform, dataComponent, err := parseTechniqueListFilters(args[2:])
+			if err != nil {
+				fmt.Println(errText(err.Error()))
+				fmt.Println("Usage: go run . list techniques [--tactic <name>] [--platform <name>] [--data-component <name>]")
+				return
+			}
+
+			if tactic != "" {
+				results = listByTactic(results, tactic)
+				titleText = fmt.Sprintf("Techniques by tactic: %s", tactic)
+			}
+			if platform != "" {
+				results = listByPlatform(results, platform)
+				titleText = fmt.Sprintf("Techniques by platform: %s", platform)
+			}
+			if dataComponent != "" {
+				results = techniquesByDataComponent(cache, dataComponent)
+				titleText = fmt.Sprintf("Techniques by data component: %s", dataComponent)
+			}
 		}
 
 		printPaginatedTable(
-			"Techniques",
+			titleText,
 			[]string{"ID", "Name"},
-			rows,
+			techniqueRows(results),
 			[]int{12, 72},
 			pageSize,
 		)
-
+	
 	case "groups":
 		rows := make([][]string, 0, len(cache.Groups))
 		for _, g := range cache.Groups {
@@ -331,7 +418,7 @@ func handleList(args []string) {
 			pageSize,
 		)
 	default:
-		fmt.Printf("Unknown list target: %s\n", entity)
-		fmt.Println("Targets: techniques | groups | mitigations | software | campaigns | detections | analytics | data-components | tactics | platforms")
+		fmt.Printf("Unknown list target: %s\n", args[1])
+		printListTargets()
 	}
 }
