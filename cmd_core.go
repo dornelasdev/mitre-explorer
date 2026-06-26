@@ -8,9 +8,109 @@ import (
 	"strings"
 )
 
+type EntitySearchResult struct {
+	Type string
+	ID string
+	Name string
+}
+
+func appendEntitySearchResult(results []EntitySearchResult, entityType, id, name, description, term string) []EntitySearchResult {
+	if containsIgnoreCase(id, term) || containsIgnoreCase(name, term) || containsIgnoreCase(description, term) {
+		return append(results, EntitySearchResult{
+			Type: entityType,
+			ID: id,
+			Name: name,
+		})
+	}
+	return results
+}
+
+func searchEntities(cache CacheData, target, term string, limit int) []EntitySearchResult {
+	var results []EntitySearchResult
+
+	addGroups := target == "groups" || target == "all"
+	addMitigations := target == "mitigations" || target == "all"
+	addSoftware := target == "software" || target == "all"
+	addCampaigns := target == "campaigns" || target == "all"
+	addDetections := target == "detections" || target == "all"
+	addAnalytics := target == "analytics" || target == "all"
+	addDataComponents := target == "data-components" || target == "all"
+
+	if addGroups {
+		for _, g := range cache.Groups {
+			results = appendEntitySearchResult(results, "group", g.ID, g.Name, g.Description, term)
+		}
+	}
+
+	if addMitigations {
+		for _, m := range cache.Mitigations {
+			results = appendEntitySearchResult(results, "mitigation", m.ID, m.Name, m.Description, term)
+		}
+	}
+
+	if addSoftware {
+		for _, s := range cache.Softwares {
+			results = appendEntitySearchResult(results, "software", s.ID, s.Name, s.Description, term)
+		}
+	}
+
+	if addCampaigns {
+		for _, c := range cache.Campaigns {
+			results = appendEntitySearchResult(results, "campaign", c.ID, c.Name, c.Description, term)
+		}
+	}
+
+	if addDetections {
+		for _, d := range cache.DetectionStrategies {
+			results = appendEntitySearchResult(results, "detection", d.ID, d.Name, d.Description, term)
+		}
+	}
+
+	if addAnalytics {
+		for _, a := range cache.Analytics {
+			results = appendEntitySearchResult(results, "analytic", a.ID, a.Name, a.Description, term)
+		}
+	}
+
+	if addDataComponents {
+		for _, dc := range cache.DataComponents {
+			results = appendEntitySearchResult(results, "data-component", dc.ID, dc.Name, dc.Description, term)
+		}
+	}
+
+	sort.Slice(results, func(i, j int) bool {
+		if results[i].Type != results[j].Type {
+			return results[i].Type < results[j].Type
+		}
+		return results[i].Name < results[j].Name
+	})
+
+	if limit > 0 && len(results) > limit {
+		results = results[:limit]
+	}
+
+	return results
+}
+
+func printEntitySearchResults(results []EntitySearchResult) {
+	rows := make([][]string, 0, len(results))
+	for _, r := range results {
+		rows = append(rows, []string{
+			r.Type,
+			r.ID,
+			truncateText(r.Name, 64),
+		})
+	}
+	printEntityTable(
+		[]string{"Type", "ID", "Name"},
+		rows,
+		[]int{16, 14, 64},
+	)
+}
+
 func handleSearch(args []string) {
 	if len(args) < 2 {
-		fmt.Println("Usage: go run . search <term> [--name-only] [--limit N] [--detailed] [--plain]")
+		fmt.Println("Usage: go run . search <term> [--target <target>] [--name-only] [--limit N] [--detailed] [--plain]")
 		return
 	}
 	cache, err := loadCacheData(cachePath)
@@ -29,6 +129,7 @@ func handleSearch(args []string) {
 	detailed := false
 	limit := 0
 	inDetection := false
+	target := "techniques"
 
 	for i := 2; i < len(args); i++ {
 		switch args[i] {
@@ -50,27 +151,57 @@ func handleSearch(args []string) {
 			detailed = true
 		case "--in-detection":
 			inDetection = true
+		case "--target":
+			if i+1 >= len(args) {
+				fmt.Println("Usage: --target <target>")
+				return
+			}
+			target = normalizeListTarget(args[i+1])
+			i++
 		default:
 			fmt.Printf("Unknown search option: %s\n", args[i])
-			fmt.Println("Use --name-only, --limit N, and/or --in-detection")
+			fmt.Println("Use --target, --name-only, --limit N, --detailed, and/or --in-detection")
 			return
 		}
 	}
 
-	var results []Technique
-	if inDetection {
-		results = searchDetectionNotes(techniques, term, limit)
-	} else {
-		results = searchTechniques(techniques, term, nameOnly, limit)
-	}
-
-	if len(results) == 0 {
-		fmt.Println("No techniques found.")
+	if target == "techniques" {
+		var results []Technique
+		if inDetection {
+			results = searchDetectionNotes(techniques, term, limit)
+		} else {
+			results = searchTechniques(techniques, term, nameOnly, limit)
+		}
+		if len(results) == 0 {
+			fmt.Println("No techniques found.")
+			return
+		}
+		fmt.Printf("%s %d technique(s)\n", ok("Found"), len(results))
+		printMappedTechniquesWithMode(results, detailed)
 		return
 	}
 
-	fmt.Printf("%s %d technique(s)\n", ok("Found"), len(results))
-	printMappedTechniquesWithMode(results, detailed)
+	if inDetection || nameOnly || detailed {
+		fmt.Println(errText("--in-detection, --name-only, and --detailed are only supported for technique search"))
+		return
+	}
+
+	switch target {
+	case "groups", "mitigations", "software", "campaigns", "detections", "analytics", "data-components", "all":
+	default:
+		fmt.Printf("Unknown search target: %s\n", target)
+		fmt.Println("Targets: techniques | groups | mitigations | software | campaigns | detections | analytics | data-components | all")
+		return
+	}
+
+	results := searchEntities(cache, target, term, limit)
+	if len(results) == 0 {
+		fmt.Printf("No results found for target %q.\n", target)
+		return
+	}
+
+	fmt.Printf("%s %d result(s)\n", ok("Found"), len(results))
+	printEntitySearchResults(results)
 }
 
 func handleShow(args []string) {
