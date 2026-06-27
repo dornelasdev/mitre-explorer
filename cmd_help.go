@@ -15,6 +15,8 @@ func handleHelp(args []string) {
 		printSearchHelp()
 	case "status":
 		printStatusHelp()
+	case "export":
+		printExportHelp()
 	case "show":
 		printShowHelp()
 	case "list":
@@ -46,6 +48,7 @@ func printGlobalHelp() {
 	fmt.Println("  search      Search techniques")
 	fmt.Println("  show        Show technique details")
 	fmt.Println("  list        List targets with pagination")
+	fmt.Println("  export      Export cache data as CSV or Markdown")
 	fmt.Println()
 	fmt.Println("Entity commands:")
 	fmt.Println("  group        Show group details")
@@ -146,4 +149,25 @@ func printStatusHelp() {
 	fmt.Println("Usage: go run . status")
 	fmt.Println()
 	fmt.Println("Shows the status of the local cache and update metadata.")
+}
+
+func printExportHelp() {
+	fmt.Println("Usage: go run . export <target> --format csv|md --out <file>")
+	fmt.Println()
+	fmt.Println("Exports cached data into a basic report file.")
+	fmt.Println()
+	fmt.Println("Targets:")
+	fmt.Println("  summary")
+	fmt.Println("  techniques")
+	fmt.Println("  groups")
+	fmt.Println("  mitigations")
+	fmt.Println("  software")
+	fmt.Println("  campaigns")
+	fmt.Println("  detections")
+	fmt.Println("  analytics")
+	fmt.Println("  data-components")
+	fmt.Println()
+	fmt.Println("Examples:")
+	fmt.Println("  go run . export summary --format md --out reports/summary.md")
+	fmt.Println("  go run . export techniques --format csv --out reports/techniques.csv")
 }

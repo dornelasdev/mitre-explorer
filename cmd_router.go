@@ -32,7 +32,10 @@ func runCommand(args []string) {
 
 	case "status":
 		handleStatus(args)
-	
+
+	case "export":
+		handleExport(args)
+
 	case "help":
 		handleHelp(args)
 

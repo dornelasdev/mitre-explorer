@@ -116,8 +116,10 @@ Entity commands: group, mitigation, software, campaign, detection, and analytic.
 - `go run .` starts interactive mode
 
 ## Roadmap
-- **v0.8.5**: improve search scope and entity discovery.
-- **v0.8.6**: add basic export/report output.
+- **v0.8.7**: export mapped relationships.
+- **v0.8.8**: cache/report metadata polish.
+- **v0.8.9**: pre-v0.9 cleanup pass.
+
 
 ## Notes
 - ATT&CK Enterprise tactic model changed in ATT&CK v19 (April 2026):
