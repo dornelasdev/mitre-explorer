@@ -11,6 +11,7 @@ import (
 type ExportOptions struct {
 	Format string
 	Out string
+	For string
 }
 
 func parseExportOptions(args []string) (ExportOptions, error) {
@@ -32,6 +33,12 @@ func parseExportOptions(args []string) (ExportOptions, error) {
 			}
 			opts.Out = args[i+1]
 			i++
+		case "--for":
+			if i+1 >= len(args) {
+				return ExportOptions{}, fmt.Errorf("--for requires an id or name")
+			}
+			opts.For = args[i+1]
+			i++
 		default:
 			return ExportOptions{}, fmt.Errorf("unknown export option: %s", args[i])
 		}
@@ -50,8 +57,7 @@ func parseExportOptions(args []string) (ExportOptions, error) {
 
 func handleExport(args []string) {
 	if len(args) < 2 {
-		fmt.Println("Usage: go run . export <target> --format csv|md --out <file>")
-		fmt.Println("Targets: summary | techniques | groups | mitigations | software | campaigns | detections | analytics | data-components")
+		printExportHelp()
 		return
 	}
 	cache, cacheOK := loadCacheForCommand()
@@ -71,7 +77,7 @@ func handleExport(args []string) {
 		return
 	}
 
-	headers, rows, err := exportRows(cache, target)
+	headers, rows, err := exportRows(cache, target, opts)
 	if err != nil {
 		fmt.Println(errText(err.Error()))
 		return
@@ -85,7 +91,7 @@ func handleExport(args []string) {
 	fmt.Printf("%s exported %d row(s) to %s\n", ok("Exported"), len(rows), opts.Out)
 }
 
-func exportRows(cache CacheData, target string) ([]string, [][]string, error) {
+func exportRows(cache CacheData, target string, opts ExportOptions) ([]string, [][]string, error) {
 	switch target {
 	case "summary":
 		return []string{"Target", "Count"}, [][]string{
@@ -190,6 +196,133 @@ func exportRows(cache CacheData, target string) ([]string, [][]string, error) {
 		} 
 		return []string{"ID", "Name"}, rows, nil
 
+	case "group-techniques":
+		if opts.For == "" {
+			return nil, nil, fmt.Errorf("--for is required for group-techniques")
+		}
+		g, found := findGroup(cache, opts.For)
+		if !found {
+			return nil, nil, fmt.Errorf("group %q not found in cache", opts.For)
+		}
+
+		headers, rows := mappedTechniquesRows(
+			g.ID,
+			g.Name,
+			techniquesUsedByGroup(cache, g.ID),
+		)
+		return headers, rows, nil
+			
+	case "mitigation-techniques":
+		if opts.For == "" {
+			return nil, nil, fmt.Errorf("--for is required for mitigation-techniques")
+		}
+		m, found := findMitigation(cache, opts.For)
+		if !found {
+			return nil, nil, fmt.Errorf("mitigation %q not found in cache", opts.For)
+		}
+
+		headers, rows := mappedTechniquesRows(
+			m.ID,
+			m.Name,
+			techniquesMitigatedBy(cache, m.ID),
+		)
+		return headers, rows, nil
+
+	case "software-techniques":
+		if opts.For == "" {
+			return nil, nil, fmt.Errorf("--for is required for software-techniques")
+		}
+		s, found := findSoftware(cache, opts.For)
+		if !found {
+			return nil, nil, fmt.Errorf("software %q not found in cache", opts.For)
+		}
+
+		headers, rows := mappedTechniquesRows(
+			s.ID,
+			s.Name,
+			techniquesUsedBySoftware(cache, s.ID),
+		)
+		return headers, rows, nil
+
+	case "campaign-techniques":
+		if opts.For == "" {
+			return nil, nil, fmt.Errorf("--for is required for campaign-techniques")
+		}
+		c, found := findCampaign(cache, opts.For)
+		if !found {
+			return nil, nil, fmt.Errorf("campaign %q not found in cache", opts.For)
+		}
+		
+		headers, rows := mappedTechniquesRows(
+			c.ID,
+			c.Name,
+			techniquesUsedByCampaign(cache, c.ID),
+		)
+		return headers, rows, nil
+
+	case "detection-techniques":
+		if opts.For == "" {
+			return nil, nil, fmt.Errorf("--for is required for detection-techniques")
+		}
+		d, found := findDetectionStrategy(cache, opts.For)
+		if !found {
+			return nil, nil, fmt.Errorf("detection strategy %q not found in cache", opts.For)
+		}
+		
+		headers, rows := mappedTechniquesRows(
+			d.ID,
+			d.Name,
+			techniquesDetectedByStrategy(cache, d.ID),
+		)
+		return headers, rows, nil
+
+	case "detection-analytics":
+		if opts.For == "" {
+			return nil, nil, fmt.Errorf("--for is required for detection-analytics")
+		}
+		d, found := findDetectionStrategy(cache, opts.For)
+		if !found {
+			return nil, nil, fmt.Errorf("detection strategy %q not found in cache", opts.For)
+		}
+		
+		headers, rows := mappedAnalyticsRows(
+			d.ID,
+			d.Name,
+			analyticsByDetectionStrategy(cache, d.ID),
+		)
+		return headers, rows, nil
+
+	case "detection-components":
+		if opts.For == "" {
+			return nil, nil, fmt.Errorf("--for is required for detection-components")
+		}
+		d, found := findDetectionStrategy(cache, opts.For)
+		if !found {
+			return nil, nil, fmt.Errorf("detection strategy %q not found in cache", opts.For)
+		}
+		
+		headers, rows := mappedComponentsRows(
+			d.ID,
+			d.Name,
+			dataComponentsByDetectionStrategy(cache, d.ID),
+		)
+		return headers, rows, nil
+
+	case "analytic-components":
+		if opts.For == "" {
+			return nil, nil, fmt.Errorf("--for is required for analytic-components")
+		}
+		a, found := findAnalytic(cache, opts.For)
+		if !found {
+			return nil, nil, fmt.Errorf("analytic %q not found in cache", opts.For)
+		}
+		
+		headers, rows := mappedComponentsRows(
+			a.ID,
+			a.Name,
+			dataComponentsByAnalytic(cache, a.ID),
+		)
+		return headers, rows, nil
 	default:
 		return nil, nil, fmt.Errorf("unknown export target: %s", target)
 	}
@@ -226,6 +359,50 @@ func writeExportFile(path, format string, headers []string, rows [][]string) err
 	default:
 		return fmt.Errorf("unsupported format: %s", format)
 	}
+}
+
+func mappedTechniquesRows(sourceID, sourceName string, techniques []Technique) ([]string, [][]string) {
+	rows := make([][]string, 0, len(techniques))
+
+	for _, t := range techniques {
+		rows = append(rows, []string{
+			sourceID,
+			sourceName,
+			t.ID,
+			t.Name,
+			strings.Join(t.Tactics, ", "),
+			strings.Join(t.Platforms, ", "),
+		})
+	}
+	return []string{"Source ID", "Source Name", "Technique ID", "Technique Name", "Tactics", "Platforms"}, rows
+}
+
+func mappedAnalyticsRows(sourceID, sourceName string, analytics []Analytic) ([]string, [][]string) {
+	rows := make([][]string, 0, len(analytics))
+
+	for _, a := range analytics {
+		rows = append(rows, []string{
+			sourceID,
+			sourceName,
+			a.ID,
+			a.Name,
+		})
+	}
+	return []string{"Source ID", "Source Name", "Analytic ID", "Analytic Name"}, rows
+}
+
+func mappedComponentsRows(sourceID, sourceName string, components []DataComponent) ([]string, [][]string) {
+	rows := make([][]string, 0, len(components))
+
+	for _, dc := range components {
+		rows = append(rows, []string{
+			sourceID,
+			sourceName,
+			dc.ID,
+			dc.Name,
+		})
+	}
+	return []string{"Source ID", "Source Name", "Data Component ID", "Data Component Name"}, rows
 }
 
 func markdownTable(headers []string, rows [][]string) string {
