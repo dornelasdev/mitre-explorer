@@ -1,0 +1,7 @@
+.DS_Store
+
+.gocache/
+
+data/enterprise-attack.json
+data/mitre-cache.json
+data/update-meta.json
