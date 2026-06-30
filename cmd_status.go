@@ -22,13 +22,13 @@ func handleStatus(args []string) {
 		return
 	}
 
-	fmt.Printf("%s present\n", label("Cache"))
+	fmt.Printf("%s %s\n", label("Cache:"), ok("present"))
 	fmt.Printf("%s %s\n", label("Cache file:"), cachePath)
 	fmt.Printf("%s %s\n", label("Cache size:"), humanSize(cacheInfo.Size()))
 	fmt.Printf("%s %s\n", label("Cache modified:"), cacheInfo.ModTime().Format("2006-01-02 15:04:05"))
 
 	if metaErr == nil {
-		fmt.Printf("%s present\n", label("Update metadata:"))
+		fmt.Printf("%s %s\n", label("Update metadata:"), ok("present"))
 		fmt.Printf("%s %s\n", label("Metadata file:"), metaPath)
 		fmt.Printf("%s %s\n", label("Metadata modified:"), metaInfo.ModTime().Format("2006-01-02 15:04:05"))
 
@@ -50,7 +50,7 @@ func handleStatus(args []string) {
 	}
 
 	fmt.Println()
-	fmt.Println(title("Parsed Entities"))
+	fmt.Println(title("Cache Contents"))
 	fmt.Printf("%s %d\n", label("Techniques:"), len(cache.Techniques))
 	fmt.Printf("%s %d\n", label("Groups:"), len(cache.Groups))
 	fmt.Printf("%s %d\n", label("Mitigations:"), len(cache.Mitigations))

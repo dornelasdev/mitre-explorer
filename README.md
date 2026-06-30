@@ -10,7 +10,7 @@ CLI tool written in Go to explore MITRE ATT&CK techniques offline.
 A CLI for exploring MITRE ATT&CK data offline in a simple, learning-friendly workflow.
 It supports quick lookup, guided navigation, and local cache-based querying without needing live web requests for every command.
 
-## Current Features (v0.8.7)
+## Current Features (v0.8.8)
 - Offline cache + update pipeline.
 - Mappings for groups, mitigations, software, campaigns, detections, analytics, and data components.
 - Interactive guided/manual modes.
@@ -116,8 +116,6 @@ Entity commands: group, mitigation, software, campaign, detection, and analytic.
 - `go run .` starts interactive mode
 
 ## Roadmap
-- **v0.8.7**: export mapped relationships.
-- **v0.8.8**: cache/report metadata polish.
 - **v0.8.9**: pre-v0.9 cleanup pass.
 
 

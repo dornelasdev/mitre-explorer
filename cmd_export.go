@@ -6,12 +6,16 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 type ExportOptions struct {
 	Format string
 	Out string
 	For string
+	Target string
+	GeneratedAt string
+	Meta UpdateMeta
 }
 
 func parseExportOptions(args []string) (ExportOptions, error) {
@@ -77,13 +81,20 @@ func handleExport(args []string) {
 		return
 	}
 
+	opts.Target = target
+	opts.GeneratedAt = time.Now().Format("2006-01-02 15:04:05")
+
+	if meta, err := loadUpdateMeta(metaPath); err == nil {
+		opts.Meta = meta
+	}
+
 	headers, rows, err := exportRows(cache, target, opts)
 	if err != nil {
 		fmt.Println(errText(err.Error()))
 		return
 	}
 
-	if err := writeExportFile(opts.Out, opts.Format, headers, rows); err != nil {
+	if err := writeExportFile(opts, headers, rows); err != nil {
 		fmt.Printf("Error writing export: %v\n", err)
 		return
 	}
@@ -94,7 +105,12 @@ func handleExport(args []string) {
 func exportRows(cache CacheData, target string, opts ExportOptions) ([]string, [][]string, error) {
 	switch target {
 	case "summary":
-		return []string{"Target", "Count"}, [][]string{
+		rows := [][]string{
+			{"Generated At", opts.GeneratedAt},
+			{"Cache File", cachePath},
+			{"Metadata File", metaPath},
+			{"ETag", emptyFallback(opts.Meta.ETag)},
+			{"Last Modified", emptyFallback(opts.Meta.LastModified)},
 			{"Techniques", fmt.Sprintf("%d", len(cache.Techniques))},
 			{"Groups", fmt.Sprintf("%d", len(cache.Groups))},
 			{"Mitigations", fmt.Sprintf("%d", len(cache.Mitigations))},
@@ -104,7 +120,8 @@ func exportRows(cache CacheData, target string, opts ExportOptions) ([]string, [
 			{"Analytics", fmt.Sprintf("%d", len(cache.Analytics))},
 			{"Data Components", fmt.Sprintf("%d", len(cache.DataComponents))},
 			{"Relationships", fmt.Sprintf("%d", len(cache.Relationships))},
-		}, nil
+		}
+		return []string{"Field", "Value"}, rows, nil
 	
 	case "techniques":
 		rows := make([][]string, 0, len(cache.Techniques))
@@ -328,21 +345,21 @@ func exportRows(cache CacheData, target string, opts ExportOptions) ([]string, [
 	}
 }
 
-func writeExportFile(path, format string, headers []string, rows [][]string) error {
-	dir := filepath.Dir(path)
+func writeExportFile(opts ExportOptions, headers []string, rows [][]string) error {
+	dir := filepath.Dir(opts.Out)
 	if dir != "." {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return err
 		}
 	}
 
-	file, err := os.Create(path)
+	file, err := os.Create(opts.Out)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 
-	switch format {
+	switch opts.Format {
 	case "csv":
 		writer := csv.NewWriter(file)
 		defer writer.Flush()
@@ -353,11 +370,11 @@ func writeExportFile(path, format string, headers []string, rows [][]string) err
 		return writer.WriteAll(rows)
 	
 	case "md":
-		_, err := file.WriteString(markdownTable(headers, rows))
+		_, err := file.WriteString(markdownReport(opts, headers, rows))
 		return err
 	
 	default:
-		return fmt.Errorf("unsupported format: %s", format)
+		return fmt.Errorf("unsupported format: %s", opts.Format)
 	}
 }
 
@@ -405,6 +422,27 @@ func mappedComponentsRows(sourceID, sourceName string, components []DataComponen
 	return []string{"Source ID", "Source Name", "Data Component ID", "Data Component Name"}, rows
 }
 
+func markdownReport(opts ExportOptions, headers []string, rows [][]string) string {
+	var b strings.Builder
+
+	b.WriteString("# MITRE ATT&CK Cache Report\n\n")
+	b.WriteString("## Report Metadata\n\n")
+	b.WriteString("| Field | Value |\n")
+	b.WriteString("| --- | --- |\n")
+
+	writeMarkdownMetadataRow(&b, "Target", opts.Target)
+	writeMarkdownMetadataRow(&b, "Generated At", opts.GeneratedAt)
+	writeMarkdownMetadataRow(&b, "Cache File", cachePath)
+	writeMarkdownMetadataRow(&b, "Metadata File", metaPath)
+	writeMarkdownMetadataRow(&b, "ETag", emptyFallback(opts.Meta.ETag))
+	writeMarkdownMetadataRow(&b, "Last Modified", emptyFallback(opts.Meta.LastModified))
+	
+	b.WriteString("\n## Results\n\n")
+	b.WriteString(markdownTable(headers, rows))
+
+	return b.String()
+}
+
 func markdownTable(headers []string, rows [][]string) string {
 	var b strings.Builder
 
@@ -433,6 +471,15 @@ func markdownTable(headers []string, rows [][]string) string {
 	}
 	return b.String()
 }
+
+func writeMarkdownMetadataRow(b *strings.Builder, field, value string) {
+	b.WriteString("| ")
+	b.WriteString(markdownCell(field))
+	b.WriteString(" | ")
+	b.WriteString(markdownCell(value))
+	b.WriteString(" |\n")
+}
+
 
 func markdownCell(s string) string {
 	s = strings.ReplaceAll(s, "\n", " ")
