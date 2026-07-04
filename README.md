@@ -10,11 +10,12 @@ CLI tool written in Go to explore MITRE ATT&CK techniques offline.
 A CLI for exploring MITRE ATT&CK data offline in a simple, learning-friendly workflow.
 It supports quick lookup, guided navigation, and local cache-based querying without needing live web requests for every command.
 
-## Current Features (v0.8.8)
+## Current Features (v0.8.9)
 - Offline cache + update pipeline.
 - Mappings for groups, mitigations, software, campaigns, detections, analytics, and data components.
 - Interactive guided/manual modes.
 - Plain/detailed output modes.
+- CSV/Markdown exports for cache data and mapped relationship reports.
 
 ### Core Commands
 
@@ -92,9 +93,13 @@ Shows entity details and optionally expands mapped relationships.
 - `ui.go`: terminal UX (spinner and human-readable size formatting), color/theme, and table/truncation helpers.
 - `cmd_router.go`: central CLI command routing and global flag preprocessing.
 - `cmd_update.go`: `update` command handler (download/meta/cache rebuild flow).
-- `cmd_core.go`: core technique handlers (`search`, `show`, `list`).
+- `cmd_core.go`: core command handlers (`search`, `show`, `list`) and scoped search/list logic.
+- `cmd_export.go`: export/report handlers for CSV/Markdown and mapped relationship reports.
+- `cmd_status.go`: local cache/status summary command.
 - `cmd_map.go`: mapping handlers (`group`, `mitigation`, `software`, `campaign`, `detection`, `analytic`).
 - `guided_mode.go`: guided explorer flow and guided-specific detail rendering.
+
+Generated local files ignored by Git:
 - `data/mitre-cache.json`: normalized local cache used by `search`, `show`, and `list`.
 - `data/enterprise-attack.json`: raw Enterprise ATT&CK dataset downloaded by `update`.
 - `data/update-meta.json`: stores ETag/Last-Modified identifiers for update checks.
@@ -116,7 +121,7 @@ Entity commands: group, mitigation, software, campaign, detection, and analytic.
 - `go run .` starts interactive mode
 
 ## Roadmap
-- **v0.8.9**: pre-v0.9 cleanup pass.
+- **v0.9.0**: Mobile/ICS matrix support mapping
 
 
 ## Notes

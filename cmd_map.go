@@ -113,7 +113,7 @@ func printComponentMapping(source string, results []DataComponent) {
 
 func handleGroup(args []string) {
 	if len(args) < 2 {
-		fmt.Println("Usage: go run . group <group_id>")
+		fmt.Println("Usage: go run . group <group_id_or_name>")
 		return
 	}
 
@@ -126,13 +126,13 @@ func handleGroup(args []string) {
 	flags, err := parseEntityFlags(args[2:])
 	if err != nil {
 		fmt.Println(errText(err.Error()))
-		fmt.Println("Usage: go run . group <group_id> [-t|--techniques] [-d|--detailed] [--plain]")
+		fmt.Println("Usage: go run . group <group_id_or_name> [-t|--techniques] [-d|--detailed] [--plain]")
 		return
 	}
 
 	if err := validateEntityFlags("group", flags); err != nil {
 		fmt.Println(errText(err.Error()))
-		fmt.Println("Usage: go run . group <group_id> [-t|--techniques] [-d|--detailed] [--plain]")
+		fmt.Println("Usage: go run . group <group_id_or_name> [-t|--techniques] [-d|--detailed] [--plain]")
 		return
 	}
 
@@ -161,7 +161,7 @@ func handleGroup(args []string) {
 
 func handleMitigation(args []string) {
 	if len(args) < 2 {
-		fmt.Println("Usage: go run . mitigation <mitigation_id> [-t|--techniques] [-d|--detailed] [--plain]")
+		fmt.Println("Usage: go run . mitigation <mitigation_id_or_name> [-t|--techniques] [-d|--detailed] [--plain]")
 		return
 	}
 
@@ -174,13 +174,13 @@ func handleMitigation(args []string) {
 	flags, err := parseEntityFlags(args[2:])
 	if err != nil {
 		fmt.Println(errText(err.Error()))
-		fmt.Println("Usage: go run . mitigation <mitigation_id> [-t|--techniques] [-d|--detailed] [--plain]")
+		fmt.Println("Usage: go run . mitigation <mitigation_id_or_name> [-t|--techniques] [-d|--detailed] [--plain]")
 		return
 	}
 
 	if err := validateEntityFlags("mitigation", flags); err != nil {
 		fmt.Println(errText(err.Error()))
-		fmt.Println("Usage: go run . mitigation <mitigation_id> [-t|--techniques] [-d|--detailed] [--plain]")
+		fmt.Println("Usage: go run . mitigation <mitigation_id_or_name> [-t|--techniques] [-d|--detailed] [--plain]")
 		return
 	}
 
@@ -208,7 +208,7 @@ func handleMitigation(args []string) {
 
 func handleSoftware(args []string) {
 	if len(args) < 2 {
-		fmt.Println("Usage: go run . software <software_id> [-t|--techniques] [-d|--detailed] [--plain]")
+		fmt.Println("Usage: go run . software <software_id_or_name> [-t|--techniques] [-d|--detailed] [--plain]")
 		return
 	}
 
@@ -221,13 +221,13 @@ func handleSoftware(args []string) {
 	flags, err := parseEntityFlags(args[2:])
 	if err != nil {
 		fmt.Println(errText(err.Error()))
-		fmt.Println("Usage: go run . software <software_id> [-t|--techniques] [-d|--detailed] [--plain]")
+		fmt.Println("Usage: go run . software <software_id_or_name> [-t|--techniques] [-d|--detailed] [--plain]")
 		return
 	}
 
 	if err := validateEntityFlags("software", flags); err != nil {
 		fmt.Println(errText(err.Error()))
-		fmt.Println("Usage: go run . software <software_id> [-t|--techniques] [-d|--detailed] [--plain]")
+		fmt.Println("Usage: go run . software <software_id_or_name> [-t|--techniques] [-d|--detailed] [--plain]")
 		return
 	}
 
@@ -257,7 +257,7 @@ func handleSoftware(args []string) {
 
 func handleCampaign(args []string) {
 	if len(args) < 2 {
-		fmt.Println("Usage: go run . campaign <campaign_id> [-t|--techniques] [-d|--detailed] [--plain]")
+		fmt.Println("Usage: go run . campaign <campaign_id_or_name> [-t|--techniques] [-d|--detailed] [--plain]")
 		return
 	}
 
@@ -270,13 +270,13 @@ func handleCampaign(args []string) {
 	flags, err := parseEntityFlags(args[2:])
 	if err != nil {
 		fmt.Println(errText(err.Error()))
-		fmt.Println("Usage: go run . campaign <campaign_id> [-t|--techniques] [-d|--detailed] [--plain]")
+		fmt.Println("Usage: go run . campaign <campaign_id_or_name> [-t|--techniques] [-d|--detailed] [--plain]")
 		return
 	}
 
 	if err := validateEntityFlags("campaign", flags); err != nil {
 		fmt.Println(errText(err.Error()))
-		fmt.Println("Usage: go run . campaign <campaign_id> [-t|--techniques] [-d|--detailed] [--plain]")
+		fmt.Println("Usage: go run . campaign <campaign_id_or_name> [-t|--techniques] [-d|--detailed] [--plain]")
 		return
 	}
 
@@ -305,7 +305,7 @@ func handleCampaign(args []string) {
 
 func handleDetection(args []string) {
 	if len(args) < 2 {
-		fmt.Println("Usage: go run . detection <detection_id> [-t|--techniques] [-a|--analytics] [-c|--components] [-d|--detailed] [--plain]")
+		fmt.Println("Usage: go run . detection <detection_id_or_name> [-t|--techniques] [-a|--analytics] [-c|--components] [-d|--detailed] [--plain]")
 		return
 	}
 
@@ -318,13 +318,13 @@ func handleDetection(args []string) {
 	flags, err := parseEntityFlags(args[2:])
 	if err != nil {
 		fmt.Println(errText(err.Error()))
-		fmt.Println("Usage: go run . detection <detection_id> [-t|--techniques] [-a|--analytics] [-c|--components] [-d|--detailed] [--plain]")
+		fmt.Println("Usage: go run . detection <detection_id_or_name> [-t|--techniques] [-a|--analytics] [-c|--components] [-d|--detailed] [--plain]")
 		return
 	}
 
 	if err := validateEntityFlags("detection", flags); err != nil {
 		fmt.Println(errText(err.Error()))
-		fmt.Println("Usage: go run . detection <detection_id> [-t|--techniques] [-a|--analytics] [-c|--components] [-d|--detailed] [--plain]")
+		fmt.Println("Usage: go run . detection <detection_id_or_name> [-t|--techniques] [-a|--analytics] [-c|--components] [-d|--detailed] [--plain]")
 		return
 	}
 
@@ -366,7 +366,7 @@ func handleDetection(args []string) {
 
 func handleAnalytic(args []string) {
 	if len(args) < 2 {
-		fmt.Println("Usage: go run . analytic <analytic_id> [-c|--components] [--plain]")
+		fmt.Println("Usage: go run . analytic <analytic_id_or_name> [-c|--components] [--plain]")
 		return
 	}
 
@@ -379,13 +379,13 @@ func handleAnalytic(args []string) {
 	flags, err := parseEntityFlags(args[2:])
 	if err != nil {
 		fmt.Println(errText(err.Error()))
-		fmt.Println("Usage: go run . analytic <analytic_id> [-c|--components] [--plain]")
+		fmt.Println("Usage: go run . analytic <analytic_id_or_name> [-c|--components] [--plain]")
 		return
 	}
 
 	if err := validateEntityFlags("analytic", flags); err != nil {
 		fmt.Println(errText(err.Error()))
-		fmt.Println("Usage: go run . analytic <analytic_id> [-c|--components] [--plain]")
+		fmt.Println("Usage: go run . analytic <analytic_id_or_name> [-c|--components] [--plain]")
 		return
 	}
 

@@ -45,7 +45,7 @@ func printGlobalHelp() {
 	fmt.Println("Core commands:")
 	fmt.Println("  update      Download/update local cache")
 	fmt.Println("  status      Show cache and dataset status")
-	fmt.Println("  search      Search techniques")
+	fmt.Println("  search      Search techniques and cached entities")
 	fmt.Println("  show        Show technique details")
 	fmt.Println("  list        List targets with pagination")
 	fmt.Println("  export      Export cache data as CSV or Markdown")
@@ -152,7 +152,7 @@ func printStatusHelp() {
 }
 
 func printExportHelp() {
-	fmt.Println("Usage: go run . export <target> --format csv|md --out <file>")
+	fmt.Println("Usage: go run . export <target> [--for <id_or_name>] --format csv|md --out <file>")
 	fmt.Println()
 	fmt.Println("Exports cached data into a basic report file.")
 	fmt.Println()
@@ -167,7 +167,7 @@ func printExportHelp() {
 	fmt.Println("  analytics")
 	fmt.Println("  data-components")
 	fmt.Println()
-	fmt.Println("Mapped relationships targets:")
+	fmt.Println("Mapped relationship targets:")
 	fmt.Println("  group-techniques")
 	fmt.Println("  mitigation-techniques")
 	fmt.Println("  software-techniques")

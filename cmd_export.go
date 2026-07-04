@@ -425,7 +425,7 @@ func mappedComponentsRows(sourceID, sourceName string, components []DataComponen
 func markdownReport(opts ExportOptions, headers []string, rows [][]string) string {
 	var b strings.Builder
 
-	b.WriteString("# MITRE ATT&CK Cache Report\n\n")
+	b.WriteString("# MITRE ATT&CK Export Report\n\n")
 	b.WriteString("## Report Metadata\n\n")
 	b.WriteString("| Field | Value |\n")
 	b.WriteString("| --- | --- |\n")
@@ -480,10 +480,8 @@ func writeMarkdownMetadataRow(b *strings.Builder, field, value string) {
 	b.WriteString(" |\n")
 }
 
-
 func markdownCell(s string) string {
 	s = strings.ReplaceAll(s, "\n", " ")
 	s = strings.ReplaceAll(s, "|", "\\|")
 	return s
 }
-

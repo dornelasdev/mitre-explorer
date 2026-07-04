@@ -5,3 +5,5 @@
 data/enterprise-attack.json
 data/mitre-cache.json
 data/update-meta.json
+
+reports/

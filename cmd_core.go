@@ -110,7 +110,7 @@ func printEntitySearchResults(results []EntitySearchResult) {
 
 func handleSearch(args []string) {
 	if len(args) < 2 {
-		fmt.Println("Usage: go run . search <term> [--target <target>] [--name-only] [--limit N] [--detailed] [--plain]")
+		fmt.Println("Usage: go run . search <term> [--target <target>] [--name-only] [--in-detection] [--limit N] [--detailed] [--plain]")
 		return
 	}
 	cache, err := loadCacheData(cachePath)
