@@ -6,16 +6,16 @@ import (
 )
 
 func handleUpdate(args []string) {
-	const sourceURL = "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json"
-	const rawPath = "data/enterprise-attack.json"
+	sourceURL := activeMatrix.SourceURL
+	rawPath := activeMatrix.RawPath
 
 	force := len(args) >= 2 && (args[1] == "-f" || args[1] == "--force")
 	if len(args) > 2 {
-		fmt.Println("Usage: go run . update [-f|--force] [--plain]")
+		fmt.Println("Usage: go run . update [-f|--force] [--matrix enterprise] [--plain]")
 		return
 	}
 	if len(args) == 2 && args[1] != "-f" && args[1] != "--force" {
-		fmt.Println("Usage: go run . update [-f|--force] [--plain]")
+		fmt.Println("Usage: go run . update [-f|--force] [--matrix enterprise] [--plain]")
 		return
 	}
 
@@ -80,6 +80,7 @@ func handleUpdate(args []string) {
 	}
 
 	fmt.Println(ok("Update complete."))
+	fmt.Printf("Matrix: %s\n", activeMatrixName())
 	fmt.Printf("Source: %s\n", sourceURL)
 	fmt.Printf("Saved: %s\n", rawPath)
 	fmt.Printf("Size: %s (%d bytes)\n", humanSize(dl.Bytes), dl.Bytes)

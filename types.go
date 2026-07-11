@@ -119,9 +119,9 @@ type CacheData struct {
 	Analytics []Analytic `json:"analytics"`
 }
 
-const (
-	cachePath = "data/mitre-cache.json"
-	metaPath  = "data/update-meta.json"
+var (
+	cachePath = enterpriseMatrix.CachePath
+	metaPath  = enterpriseMatrix.MetaPath
 )
 
 type UpdateMeta struct {

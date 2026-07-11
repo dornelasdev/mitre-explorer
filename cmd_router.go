@@ -12,16 +12,39 @@ func runCommand(args []string) {
 
 	useColor = true
 
+	if err := setActiveMatrix("enterprise"); err != nil {
+		fmt.Println(errText(err.Error()))
+		return
+	}
+
 	command := args[0]
 
 	filtered := make([]string, 0, len(args))
 	filtered = append(filtered, command)
 
-	for _, a := range args[1:] {
+	for i := 1; i < len(args); i++ {
+		a := args[i]
+
 		if a == "--plain" {
 			useColor = false
 			continue
 		}
+
+		if a == "--matrix" {
+			if i+1 >= len(args) {
+				fmt.Println("Usage: --matrix <enterprise>")
+				return
+			}
+
+			if err := setActiveMatrix(args[i+1]); err != nil {
+				fmt.Println(errText(err.Error()))
+				return
+			}
+
+			i++
+			continue
+		}
+
 		filtered = append(filtered, a)
 	}
 	args = filtered

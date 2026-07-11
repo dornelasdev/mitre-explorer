@@ -11,6 +11,7 @@ func handleStatus(args []string) {
 	metaInfo, metaErr := os.Stat(metaPath)
 
 	fmt.Println(title("MITRE Explorer Status"))
+	fmt.Printf("%s %s\n", label("Matrix:"), activeMatrixName())
 
 	if cacheErr != nil {
 		if os.IsNotExist(cacheErr) {

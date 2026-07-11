@@ -59,15 +59,20 @@ func printGlobalHelp() {
 	fmt.Println("  analytic     Show analytic details")
 	fmt.Println()
 	fmt.Println("Use: go run . help <command>")
+	fmt.Println()
+	fmt.Println("Global options:")
+	fmt.Println("  --matrix enterprise   Select ATT&CK matrix cache/source")
+	fmt.Println("  --plain               Disable colored output")
 }
 
 func printUpdateHelp() {
-	fmt.Println("Usage: go run . update [-f|--force]")
+	fmt.Println("Usage: go run . update [-f|--force] [--matrix enterprise] [--plain]")
 	fmt.Println()
 	fmt.Println("Downloads and normalizes the ATT&CK dataset into the local cache.")
 	fmt.Println()
 	fmt.Println("Flags:")
 	fmt.Println("  -f, --force    Force dataset download and cache rebuild")
+	fmt.Println("  --matrix enterprise   Select ATT&CK matrix source")
 }
 
 func printSearchHelp() {
