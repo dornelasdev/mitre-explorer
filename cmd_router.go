@@ -32,7 +32,7 @@ func runCommand(args []string) {
 
 		if a == "--matrix" {
 			if i+1 >= len(args) {
-				fmt.Println("Usage: --matrix <enterprise|mobile>")
+				fmt.Println("Usage: --matrix <enterprise|mobile|ics>")
 				return
 			}
 

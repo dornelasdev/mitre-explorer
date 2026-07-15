@@ -10,4 +10,8 @@ data/mobile-attack.json
 data/mobile-cache.json
 data/mobile-meta.json
 
+data/ics-attack.json
+data/ics-cache.json
+data/ics-meta.json
+
 reports/

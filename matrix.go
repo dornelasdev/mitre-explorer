@@ -47,6 +47,21 @@ var mobileTacticOrder = []string{
 	"Impact",
 }
 
+var icsTacticOrder = []string{
+	"Initial Access",
+	"Execution",
+	"Persistence",
+	"Privilege Escalation",
+	"Evasion",
+	"Discovery",
+	"Lateral Movement",
+	"Collection",
+	"Command and Control",
+	"Inhibit Response Function",
+	"Impair Process Control",
+	"Impact",
+}
+
 var enterpriseMatrix = MatrixConfig{
 	Name: "enterprise",
 	SourceURL: "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json",
@@ -65,6 +80,14 @@ var mobileMatrix = MatrixConfig{
 	TacticOrder: mobileTacticOrder,
 }
 
+var icsMatrix = MatrixConfig{
+	Name: "ics",
+	SourceURL: "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/ics-attack/ics-attack.json",
+	RawPath: "data/ics-attack.json",
+	CachePath: "data/ics-cache.json",
+	MetaPath: "data/ics-meta.json",
+	TacticOrder: icsTacticOrder,
+}
 
 var activeMatrix = enterpriseMatrix
 
@@ -76,8 +99,10 @@ func setActiveMatrix(name string) error {
 		activeMatrix = enterpriseMatrix
 	case "mobile":
 		activeMatrix = mobileMatrix
+	case "ics":
+		activeMatrix = icsMatrix
 	default:
-		return fmt.Errorf("unsupported matrix %q. Supported matrices: enterprise, mobile", name)
+		return fmt.Errorf("unsupported matrix %q. Supported matrices: enterprise, mobile, ics", name)
 	}
 
 	cachePath = activeMatrix.CachePath

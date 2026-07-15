@@ -61,18 +61,18 @@ func printGlobalHelp() {
 	fmt.Println("Use: go run . help <command>")
 	fmt.Println()
 	fmt.Println("Global options:")
-	fmt.Println("  --matrix <matrix>	Select ATT&CK matrix: enterprise or mobile")
+	fmt.Println("  --matrix <matrix>	Select ATT&CK matrix: enterprise, mobile, or ics")
 	fmt.Println("  --plain              Disable colored output")
 }
 
 func printUpdateHelp() {
-	fmt.Println("Usage: go run . update [-f|--force] [--matrix enterprise|mobile] [--plain]")
+	fmt.Println("Usage: go run . update [-f|--force] [--matrix enterprise|mobile|ics] [--plain]")
 	fmt.Println()
 	fmt.Println("Downloads and normalizes the ATT&CK dataset into the local cache.")
 	fmt.Println()
 	fmt.Println("Flags:")
 	fmt.Println("  -f, --force    Force dataset download and cache rebuild")
-	fmt.Println("  --matrix <matrix>   Select ATT&CK matrix source: enterprise or mobile")
+	fmt.Println("  --matrix <matrix>   Select ATT&CK matrix source: enterprise, mobile, or ics")
 }
 
 func printSearchHelp() {

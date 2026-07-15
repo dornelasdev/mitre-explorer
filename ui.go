@@ -340,6 +340,8 @@ func printPaginatedTable(titleText string, headers []string, rows [][]string, wi
 		input := strings.ToLower(strings.TrimSpace(readLine(reader)))
 
 		switch input {
+		case "":
+			return
 		case "n":
 			if page < totalPages-1 {
 				page++
