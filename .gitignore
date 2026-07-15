@@ -6,4 +6,8 @@ data/enterprise-attack.json
 data/mitre-cache.json
 data/update-meta.json
 
+data/mobile-attack.json
+data/mobile-cache.json
+data/mobile-meta.json
+
 reports/

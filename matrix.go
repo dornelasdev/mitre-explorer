@@ -21,6 +21,15 @@ var enterpriseMatrix = MatrixConfig{
 	MetaPath: "data/update-meta.json",
 }
 
+var mobileMatrix = MatrixConfig{
+	Name: "mobile",
+	SourceURL: "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/mobile-attack/mobile-attack.json",
+	RawPath: "data/mobile-attack.json",
+	CachePath: "data/mobile-cache.json",
+	MetaPath: "data/mobile-meta.json",
+}
+
+
 var activeMatrix = enterpriseMatrix
 
 func setActiveMatrix(name string) error {
@@ -29,8 +38,10 @@ func setActiveMatrix(name string) error {
 	switch matrixName {
 	case "", "enterprise":
 		activeMatrix = enterpriseMatrix
+	case "mobile":
+		activeMatrix = mobileMatrix
 	default:
-		return fmt.Errorf("unsupported matrix %q. Supported matrices: enterprise", name)
+		return fmt.Errorf("unsupported matrix %q. Supported matrices: enterprise, mobile", name)
 	}
 
 	cachePath = activeMatrix.CachePath
