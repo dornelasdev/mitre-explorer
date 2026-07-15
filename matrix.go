@@ -11,6 +11,40 @@ type MatrixConfig struct {
 	RawPath string
 	CachePath string
 	MetaPath string
+	TacticOrder []string
+}
+
+var enterpriseTacticOrder = []string{
+	"Reconnaissance",
+	"Resource Development",
+	"Initial Access",
+	"Execution",
+	"Persistence",
+	"Privilege Escalation",
+	"Stealth",
+	"Defense Impairment",
+	"Credential Access",
+	"Discovery",
+	"Lateral Movement",
+	"Collection",
+	"Command and Control",
+	"Exfiltration",
+	"Impact",
+}
+
+var mobileTacticOrder = []string{
+	"Initial Access",
+	"Execution",
+	"Persistence",
+	"Privilege Escalation",
+	"Defense Evasion",
+	"Credential Access",
+	"Discovery",
+	"Lateral Movement",
+	"Collection",
+	"Command and Control",
+	"Exfiltration",
+	"Impact",
 }
 
 var enterpriseMatrix = MatrixConfig{
@@ -19,6 +53,7 @@ var enterpriseMatrix = MatrixConfig{
 	RawPath: "data/enterprise-attack.json",
 	CachePath: "data/mitre-cache.json",
 	MetaPath: "data/update-meta.json",
+	TacticOrder: enterpriseTacticOrder,
 }
 
 var mobileMatrix = MatrixConfig{
@@ -27,6 +62,7 @@ var mobileMatrix = MatrixConfig{
 	RawPath: "data/mobile-attack.json",
 	CachePath: "data/mobile-cache.json",
 	MetaPath: "data/mobile-meta.json",
+	TacticOrder: mobileTacticOrder,
 }
 
 

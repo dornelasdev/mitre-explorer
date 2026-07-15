@@ -112,24 +112,8 @@ func listByPlatform(techniques []Technique, platform string) []Technique {
 }
 
 func collectUniqueTactics(techniques []Technique) []string {
-	// ATT&CK Enterprise tactic order
-	attackOrder := []string{
-		"Reconnaissance",
-		"Resource Development",
-		"Initial Access",
-		"Execution",
-		"Persistence",
-		"Privilege Escalation",
-		"Stealth",
-		"Defense Impairment",
-		"Credential Access",
-		"Discovery",
-		"Lateral Movement",
-		"Collection",
-		"Command and Control",
-		"Exfiltration",
-		"Impact",
-	}
+	// Active ATT&CK matrix tactic order
+	attackOrder := activeMatrix.TacticOrder
 
 	orderIndex := make(map[string]int, len(attackOrder))
 	displayName := make(map[string]string, len(attackOrder))
