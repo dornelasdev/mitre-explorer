@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 )
 
 func handleStatus(args []string) {
@@ -61,6 +62,20 @@ func handleStatus(args []string) {
 	fmt.Printf("%s %d\n", label("Analytics:"), len(cache.Analytics))
 	fmt.Printf("%s %d\n", label("Data Components:"), len(cache.DataComponents))
 	fmt.Printf("%s %d\n", label("Relationships:"), len(cache.Relationships))
+	printMatrixTacticStatus(cache)
+}
+
+func printMatrixTacticStatus(cache CacheData) {
+	known, unknown := matrixTacticValidation(cache.Techniques)
+	
+	fmt.Println()
+	fmt.Println(title("Matrix Tactics"))
+	fmt.Printf("%s %d\n", label("Known tactics:"), len(known))
+	fmt.Printf("%s %d\n", label("Unknown tactics:"), len(unknown))
+
+	if len(known) > 0 {
+		fmt.Printf("%s %s\n", label("Unknown tactic names:"), strings.Join(known, ", "))
+	}
 }
 
 func emptyFallback(value string) string {

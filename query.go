@@ -173,6 +173,44 @@ func collectUniqueTactics(techniques []Technique) []string {
 	return out
 }
 
+func matrixTacticValidation(techniques []Technique) (known []string, unknown []string) {
+	expected := make(map[string]struct{})
+	for _, tactic := range activeMatrix.TacticOrder {
+		expected[normalizeTactic(tactic)] = struct{}{}
+	}
+
+	seenKnown := make(map[string]struct{})
+	seenUnknown := make(map[string]struct{})
+
+	for _, technique := range techniques {
+		for _, tactic := range technique.Tactics {
+			key := normalizeTactic(tactic)
+			if key == "" {
+				continue
+			}
+
+			if _, ok := expected[key]; ok {
+				if _, seen := seenKnown[key]; seen {
+					continue
+				}
+				seenKnown[key] = struct{}{}
+				known = append(known, tactic)
+				continue
+			}
+
+			if _, seen := seenUnknown[key]; seen {
+				continue
+			}
+			seenUnknown[key] = struct{}{}
+			unknown = append(unknown, tactic)
+		}
+	}
+
+	sort.Slice(known, func(i, j int) bool { return normalizeTactic(known[i]) < normalizeTactic(known[j]) })
+	sort.Slice(unknown, func(i, j int) bool { return normalizeTactic(unknown[i]) < normalizeTactic(unknown[j]) })
+	return known, unknown
+}
+
 func findGroup(cache CacheData, input string) (Group, bool) {
 	q := strings.TrimSpace(strings.ToLower(input))
 
