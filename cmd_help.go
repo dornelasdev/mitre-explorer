@@ -183,7 +183,7 @@ func printExportHelp() {
 	fmt.Println("  analytic-components")
 	fmt.Println()
 	fmt.Println("Examples:")
-	fmt.Println("  go run . export summary --format md --out reports/summary.md")
-	fmt.Println("  go run . export techniques --format csv --out reports/techniques.csv")
-	fmt.Println("  go run . export group-techniques --for <group_id_or_name> --format md --out reports/group-techniques.md")
+	fmt.Println("  go run . export summary --matrix enterprise --format md --out reports/enterprise-summary.md")
+	fmt.Println("  go run . export techniques --matrix mobile --format csv --out reports/mobile-techniques.csv")
+	fmt.Println("  go run . export group-techniques --for <group_id_or_name> --matrix enterprise --format md --out reports/group-techniques.md")
 }

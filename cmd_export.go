@@ -14,6 +14,7 @@ type ExportOptions struct {
 	Out string
 	For string
 	Target string
+	Matrix string
 	GeneratedAt string
 	Meta UpdateMeta
 }
@@ -82,6 +83,7 @@ func handleExport(args []string) {
 	}
 
 	opts.Target = target
+	opts.Matrix = activeMatrixName()
 	opts.GeneratedAt = time.Now().Format("2006-01-02 15:04:05")
 
 	if meta, err := loadUpdateMeta(metaPath); err == nil {
@@ -99,13 +101,14 @@ func handleExport(args []string) {
 		return
 	}
 	
-	fmt.Printf("%s exported %d row(s) to %s\n", ok("Exported"), len(rows), opts.Out)
+	fmt.Printf("%s wrote %d results row(s) from %s matrix to %s\n", ok("Exported"), len(rows), opts.Matrix, opts.Out)
 }
 
 func exportRows(cache CacheData, target string, opts ExportOptions) ([]string, [][]string, error) {
 	switch target {
 	case "summary":
 		rows := [][]string{
+			{"Matrix", opts.Matrix},
 			{"Generated At", opts.GeneratedAt},
 			{"Cache File", cachePath},
 			{"Metadata File", metaPath},
@@ -430,6 +433,7 @@ func markdownReport(opts ExportOptions, headers []string, rows [][]string) strin
 	b.WriteString("| Field | Value |\n")
 	b.WriteString("| --- | --- |\n")
 
+	writeMarkdownMetadataRow(&b, "Matrix", opts.Matrix)
 	writeMarkdownMetadataRow(&b, "Target", opts.Target)
 	writeMarkdownMetadataRow(&b, "Generated At", opts.GeneratedAt)
 	writeMarkdownMetadataRow(&b, "Cache File", cachePath)
