@@ -8,23 +8,26 @@ import (
 )
 
 func main() {
-	fmt.Println("MITRE Explorer v0.9.5")
+	fmt.Println("MITRE Explorer v0.9.6")
 
-	if len(os.Args) < 2 {
+	args, ok := applyGlobalOptions(os.Args[1:])
+	if !ok {
+		return
+	}
+
+	if len(args) == 0 {
 		startInteractiveMode()
 		return
 	}
 
-	runCommand(os.Args[1:])
+	runCommand(args)
 }
 
 func startInteractiveMode() {
 
-	useColor = true
-
 	reader := bufio.NewReader(os.Stdin)
 	for {
-		fmt.Println("Choose mode:")
+		fmt.Printf("Matrix: %s\n", activeMatrixName())
 		fmt.Println("  [1] Guided Explorer")
 		fmt.Println("  [2] Manual Command Mode")
 		fmt.Println("  [q] Quit")
@@ -42,7 +45,7 @@ func startInteractiveMode() {
 			fmt.Println("Type a command (without `go run .`), for example:")
 			fmt.Println("  search powershell --limit 5 --detailed")
 			fmt.Println("  show T1059")
-			fmt.Println("  list --tactic execution --plain")
+			fmt.Println("  list techniques--tactic execution --plain")
 			fmt.Println("Type `back` to return to mode menu, or `q` to quit.")
 
 			for {

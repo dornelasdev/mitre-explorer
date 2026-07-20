@@ -4,25 +4,16 @@ import (
 	"fmt"
 )
 
-func runCommand(args []string) {
-	if len(args) == 0 {
-		fmt.Println("Usage: go run . <command>")
-		return
-	}
-
+func applyGlobalOptions(args []string) ([]string, bool) {
 	useColor = true
-
 	if err := setActiveMatrix("enterprise"); err != nil {
 		fmt.Println(errText(err.Error()))
-		return
+		return nil, false
 	}
 
-	command := args[0]
-
 	filtered := make([]string, 0, len(args))
-	filtered = append(filtered, command)
-
-	for i := 1; i < len(args); i++ {
+	
+	for i := 0; i < len(args); i++ {
 		a := args[i]
 
 		if a == "--plain" {
@@ -33,12 +24,12 @@ func runCommand(args []string) {
 		if a == "--matrix" {
 			if i+1 >= len(args) {
 				fmt.Println("Usage: --matrix <enterprise|mobile|ics>")
-				return
+				return nil, false
 			}
 
 			if err := setActiveMatrix(args[i+1]); err != nil {
 				fmt.Println(errText(err.Error()))
-				return
+				return nil, false
 			}
 
 			i++
@@ -47,7 +38,25 @@ func runCommand(args []string) {
 
 		filtered = append(filtered, a)
 	}
-	args = filtered
+	return filtered, true
+}
+
+func runCommand(args []string) {
+	if len(args) == 0 {
+		fmt.Println("Usage: go run . <command>")
+		return
+	}
+
+	args, ok := applyGlobalOptions(args)
+	if !ok {
+		return
+	}
+
+	if len(args) == 0 {
+		return
+	}
+
+	command := args[0]
 
 	switch command {
 	case "update":

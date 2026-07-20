@@ -13,7 +13,7 @@ func runGuidedExplorer() {
 	cache, err := loadCacheData(cachePath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			fmt.Println(errText("Cache not found. Run: go run . update"))
+			fmt.Printf("%s\n", errText(fmt.Sprintf("Cache not found for matrix %q. Run: go run . update --matrix %s", activeMatrixName(), activeMatrixName())))
 			return
 		}
 		fmt.Printf("Error loading cache: %v\n", err)
@@ -23,7 +23,8 @@ func runGuidedExplorer() {
 	reader := bufio.NewReader(os.Stdin)
 
 	for {
-		fmt.Println(title("Guided Explorer"))
+		fmt.Println("Guided Explorer")
+		fmt.Printf("%s %s\n", label("Matrix:"), activeMatrixName())
 		fmt.Println("  [1] Explore Tactics")
 		fmt.Println("  [2] Explore Groups")
 		fmt.Println("  [3] Explore Mitigations")
