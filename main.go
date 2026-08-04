@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	fmt.Println("MITRE Explorer v0.9.8")
+	fmt.Println("MITRE Explorer v1.0")
 
 	args, ok := applyGlobalOptions(os.Args[1:])
 	if !ok {
