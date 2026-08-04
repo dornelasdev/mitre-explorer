@@ -8,9 +8,9 @@ import (
 
 type EntityFlags struct {
 	Techniques bool
-	Analytics bool
+	Analytics  bool
 	Components bool
-	Detailed bool
+	Detailed   bool
 }
 
 func parseEntityFlags(args []string) (EntityFlags, error) {

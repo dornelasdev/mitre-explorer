@@ -10,13 +10,13 @@ import (
 )
 
 type ExportOptions struct {
-	Format string
-	Out string
-	For string
-	Target string
-	Matrix string
+	Format      string
+	Out         string
+	For         string
+	Target      string
+	Matrix      string
 	GeneratedAt string
-	Meta UpdateMeta
+	Meta        UpdateMeta
 }
 
 func parseExportOptions(args []string) (ExportOptions, error) {
@@ -48,7 +48,7 @@ func parseExportOptions(args []string) (ExportOptions, error) {
 			return ExportOptions{}, fmt.Errorf("unknown export option: %s", args[i])
 		}
 	}
-	
+
 	if opts.Format != "csv" && opts.Format != "md" {
 		return ExportOptions{}, fmt.Errorf("unsupported format: %s", opts.Format)
 	}
@@ -100,7 +100,7 @@ func handleExport(args []string) {
 		fmt.Printf("Error writing export: %v\n", err)
 		return
 	}
-	
+
 	fmt.Printf("%s wrote %d results row(s) from %s matrix to %s\n", ok("Exported"), len(rows), opts.Matrix, opts.Out)
 }
 
@@ -125,7 +125,7 @@ func exportRows(cache CacheData, target string, opts ExportOptions) ([]string, [
 			{"Relationships", fmt.Sprintf("%d", len(cache.Relationships))},
 		}
 		return []string{"Field", "Value"}, rows, nil
-	
+
 	case "techniques":
 		rows := make([][]string, 0, len(cache.Techniques))
 		for _, t := range cache.Techniques {
@@ -138,7 +138,7 @@ func exportRows(cache CacheData, target string, opts ExportOptions) ([]string, [
 			})
 		}
 		return []string{"ID", "Name", "Tactics", "Platforms", "Data Components"}, rows, nil
-	
+
 	case "groups":
 		rows := make([][]string, 0, len(cache.Groups))
 		for _, g := range cache.Groups {
@@ -149,7 +149,7 @@ func exportRows(cache CacheData, target string, opts ExportOptions) ([]string, [
 			})
 		}
 		return []string{"ID", "Name", "Aliases"}, rows, nil
-	
+
 	case "mitigations":
 		rows := make([][]string, 0, len(cache.Mitigations))
 		for _, m := range cache.Mitigations {
@@ -159,7 +159,7 @@ func exportRows(cache CacheData, target string, opts ExportOptions) ([]string, [
 			})
 		}
 		return []string{"ID", "Name"}, rows, nil
-	
+
 	case "software":
 		rows := make([][]string, 0, len(cache.Softwares))
 		for _, s := range cache.Softwares {
@@ -171,7 +171,6 @@ func exportRows(cache CacheData, target string, opts ExportOptions) ([]string, [
 			})
 		}
 		return []string{"ID", "Name", "Type", "Aliases"}, rows, nil
-	
 
 	case "campaigns":
 		rows := make([][]string, 0, len(cache.Campaigns))
@@ -183,7 +182,7 @@ func exportRows(cache CacheData, target string, opts ExportOptions) ([]string, [
 			})
 		}
 		return []string{"ID", "Name", "Aliases"}, rows, nil
-	
+
 	case "detections":
 		rows := make([][]string, 0, len(cache.DetectionStrategies))
 		for _, d := range cache.DetectionStrategies {
@@ -194,7 +193,7 @@ func exportRows(cache CacheData, target string, opts ExportOptions) ([]string, [
 			})
 		}
 		return []string{"ID", "Name", "Analytics"}, rows, nil
-	
+
 	case "analytics":
 		rows := make([][]string, 0, len(cache.Analytics))
 		for _, a := range cache.Analytics {
@@ -205,7 +204,7 @@ func exportRows(cache CacheData, target string, opts ExportOptions) ([]string, [
 			})
 		}
 		return []string{"ID", "Name", "Data Components"}, rows, nil
-	
+
 	case "data-components":
 		rows := make([][]string, 0, len(cache.DataComponents))
 		for _, dc := range cache.DataComponents {
@@ -213,7 +212,7 @@ func exportRows(cache CacheData, target string, opts ExportOptions) ([]string, [
 				dc.ID,
 				dc.Name,
 			})
-		} 
+		}
 		return []string{"ID", "Name"}, rows, nil
 
 	case "group-techniques":
@@ -231,7 +230,7 @@ func exportRows(cache CacheData, target string, opts ExportOptions) ([]string, [
 			techniquesUsedByGroup(cache, g.ID),
 		)
 		return headers, rows, nil
-			
+
 	case "mitigation-techniques":
 		if opts.For == "" {
 			return nil, nil, fmt.Errorf("--for is required for mitigation-techniques")
@@ -272,7 +271,7 @@ func exportRows(cache CacheData, target string, opts ExportOptions) ([]string, [
 		if !found {
 			return nil, nil, fmt.Errorf("campaign %q not found in cache", opts.For)
 		}
-		
+
 		headers, rows := mappedTechniquesRows(
 			c.ID,
 			c.Name,
@@ -288,7 +287,7 @@ func exportRows(cache CacheData, target string, opts ExportOptions) ([]string, [
 		if !found {
 			return nil, nil, fmt.Errorf("detection strategy %q not found in cache", opts.For)
 		}
-		
+
 		headers, rows := mappedTechniquesRows(
 			d.ID,
 			d.Name,
@@ -304,7 +303,7 @@ func exportRows(cache CacheData, target string, opts ExportOptions) ([]string, [
 		if !found {
 			return nil, nil, fmt.Errorf("detection strategy %q not found in cache", opts.For)
 		}
-		
+
 		headers, rows := mappedAnalyticsRows(
 			d.ID,
 			d.Name,
@@ -320,7 +319,7 @@ func exportRows(cache CacheData, target string, opts ExportOptions) ([]string, [
 		if !found {
 			return nil, nil, fmt.Errorf("detection strategy %q not found in cache", opts.For)
 		}
-		
+
 		headers, rows := mappedComponentsRows(
 			d.ID,
 			d.Name,
@@ -336,7 +335,7 @@ func exportRows(cache CacheData, target string, opts ExportOptions) ([]string, [
 		if !found {
 			return nil, nil, fmt.Errorf("analytic %q not found in cache", opts.For)
 		}
-		
+
 		headers, rows := mappedComponentsRows(
 			a.ID,
 			a.Name,
@@ -371,11 +370,11 @@ func writeExportFile(opts ExportOptions, headers []string, rows [][]string) erro
 			return err
 		}
 		return writer.WriteAll(rows)
-	
+
 	case "md":
 		_, err := file.WriteString(markdownReport(opts, headers, rows))
 		return err
-	
+
 	default:
 		return fmt.Errorf("unsupported format: %s", opts.Format)
 	}
@@ -440,7 +439,7 @@ func markdownReport(opts ExportOptions, headers []string, rows [][]string) strin
 	writeMarkdownMetadataRow(&b, "Metadata File", metaPath)
 	writeMarkdownMetadataRow(&b, "ETag", emptyFallback(opts.Meta.ETag))
 	writeMarkdownMetadataRow(&b, "Last Modified", emptyFallback(opts.Meta.LastModified))
-	
+
 	b.WriteString("\n## Results\n\n")
 	b.WriteString(markdownTable(headers, rows))
 
@@ -453,7 +452,7 @@ func markdownTable(headers []string, rows [][]string) string {
 	b.WriteString("| ")
 	b.WriteString(strings.Join(headers, " | "))
 	b.WriteString(" |\n")
-	
+
 	b.WriteString("| ")
 	for i := range headers {
 		if i > 0 {

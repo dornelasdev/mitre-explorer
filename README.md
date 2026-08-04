@@ -10,13 +10,13 @@ CLI tool written in Go to explore MITRE ATT&CK techniques offline.
 A CLI for exploring MITRE ATT&CK data offline in a simple, learning-friendly workflow.
 It supports quick lookup, guided navigation, and local cache-based querying without needing live web requests for every command.
 
-## Current Features (v0.9.8)
+## Current Features (v0.9.9)
 - Offline cache + update pipeline.
 - Mappings for groups, mitigations, software, campaigns, detections, analytics, and data components.
 - Interactive guided/manual modes.
 - Plain/detailed output modes.
 - CSV/Markdown exports for cache data and mapped relationship reports.
-- Matrix-aware command groundwork with Enterprise as the default matrix.
+- Matrix-aware workflows for Enterprise, Mobile, and ICS, with Enterprise as the default.
 
 ### Core Commands
 
@@ -101,9 +101,9 @@ Shows entity details and optionally expands mapped relationships.
 - `guided_mode.go`: guided explorer flow and guided-specific detail rendering.
 
 Generated local files ignored by Git:
-- `data/mitre-cache.json`: normalized local cache used by `search`, `show`, and `list`.
-- `data/enterprise-attack.json`: raw Enterprise ATT&CK dataset downloaded by `update`.
-- `data/update-meta.json`: stores ETag/Last-Modified identifiers for update checks.
+- `data/*-cache.json`: normalized local cache used by `search`, `show`, and `list`.
+- `data/*-attack.json`: raw ATT&CK datasets downloaded by `update`.
+- `data/*-meta.json`: stores ETag/Last-Modified identifiers for update checks.
 
 ## Usage
 ```bash
@@ -122,10 +122,12 @@ Entity commands: group, mitigation, software, campaign, detection, and analytic.
 - `go run .` starts interactive mode
 
 Matrix note:
-Enterprise is the default supported matrix. The `--matrix enterprise` option is available as groundwork for future Mobile/ICS support.
+Enterprise is the default matrix. Use `--matrix mobile` or `--matrix ics` to query Mobile or ICS caches.
+
+For full command examples, see [docs/commands.md](docs/commands.md).
 
 ## Roadmap
-- **v0.9.x**: Mobile/ICS matrix support mapping
+- **v1.0**: stable multi-matrix CLI release.
 
 
 ## Notes

@@ -61,7 +61,7 @@ func printGlobalHelp() {
 	fmt.Println("Use: go run . help <command>")
 	fmt.Println()
 	fmt.Println("Global options:")
-	fmt.Println("  --matrix <matrix>	Select ATT&CK matrix: enterprise, mobile, or ics")
+	fmt.Println("  --matrix <matrix>    Select ATT&CK matrix: enterprise, mobile, or ics")
 	fmt.Println("  --plain              Disable colored output")
 }
 
@@ -71,8 +71,8 @@ func printUpdateHelp() {
 	fmt.Println("Downloads and normalizes the ATT&CK dataset into the local cache.")
 	fmt.Println()
 	fmt.Println("Flags:")
-	fmt.Println("  -f, --force    Force dataset download and cache rebuild")
-	fmt.Println("  --matrix <matrix>   Select ATT&CK matrix source: enterprise, mobile, or ics")
+	fmt.Println("  -f, --force          Force dataset download and cache rebuild")
+	fmt.Println("  --matrix <matrix>    Select ATT&CK matrix source: enterprise, mobile, or ics")
 }
 
 func printSearchHelp() {
@@ -90,6 +90,7 @@ func printSearchHelp() {
 	fmt.Println("  --in-detection     Show techniques with matching detection strategies")
 	fmt.Println("  --plain            Disable colored output")
 	fmt.Println("  --detailed         Show detailed technique output")
+	fmt.Println("  --matrix <matrix>  Select ATT&CK matrix")
 }
 
 func printShowHelp() {
@@ -153,13 +154,13 @@ func printEntityHelp(entity, idName string, supportsTechniques, supportsAnalytic
 func printStatusHelp() {
 	fmt.Println("Usage: go run . status")
 	fmt.Println()
-	fmt.Println("Shows the status of the local cache and update metadata.")
+	fmt.Println("Shows cache status, update metadata, parsed entity counts, and tactic validation.")
 }
 
 func printExportHelp() {
 	fmt.Println("Usage: go run . export <target> [--for <id_or_name>] --format csv|md --out <file>")
 	fmt.Println()
-	fmt.Println("Exports cached data into a basic report file.")
+	fmt.Println("Exports cached data into CSV or Markdown reports with matrix-aware metadata.")
 	fmt.Println()
 	fmt.Println("Targets:")
 	fmt.Println("  summary")

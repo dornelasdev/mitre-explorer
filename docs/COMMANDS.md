@@ -91,7 +91,7 @@ Useful filters:
 - `--data-component <name>`: lists techniques by data component.
 - `--matrix enterprise|mobile|ics`: lists techniques from a specific matrix cache.
 
-## Entities And Mappings
+## Entities and Mappings
 
 Entities are ATT&CK objects that can be connected to techniques or other objects. The tool can show details for each entity and optionally expand mapped relationships.
 

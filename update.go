@@ -484,11 +484,11 @@ func buildCacheDataFromSTIX(path string) (CacheData, error) {
 			}
 
 			detectionStrategies = append(detectionStrategies, DetectionStrategy{
-				ID: detID,
-				StixID: obj.ID,
-				Name: obj.Name,
+				ID:          detID,
+				StixID:      obj.ID,
+				Name:        obj.Name,
 				Description: obj.Description,
-				Analytics: obj.XMitreAnalyticRefs,
+				Analytics:   obj.XMitreAnalyticRefs,
 			})
 		case "x-mitre-analytic":
 			analyticID := stixToExternal[obj.ID]
@@ -514,10 +514,10 @@ func buildCacheDataFromSTIX(path string) (CacheData, error) {
 			}
 
 			analytics = append(analytics, Analytic{
-				ID: analyticID,
-				StixID: obj.ID,
-				Name: obj.Name,
-				Description: obj.Description,
+				ID:             analyticID,
+				StixID:         obj.ID,
+				Name:           obj.Name,
+				Description:    obj.Description,
 				DataComponents: componentIDs,
 			})
 		}
@@ -595,15 +595,15 @@ func buildCacheDataFromSTIX(path string) (CacheData, error) {
 	}
 
 	return CacheData{
-		Techniques:     techniques,
-		Groups:         groups,
-		Mitigations:    mitigations,
-		Relationships:  relationships,
-		Softwares:      softwares,
-		Campaigns:      campaigns,
-		DataComponents: dataComponents,
+		Techniques:          techniques,
+		Groups:              groups,
+		Mitigations:         mitigations,
+		Relationships:       relationships,
+		Softwares:           softwares,
+		Campaigns:           campaigns,
+		DataComponents:      dataComponents,
 		DetectionStrategies: detectionStrategies,
-		Analytics: analytics,
+		Analytics:           analytics,
 	}, nil
 }
 

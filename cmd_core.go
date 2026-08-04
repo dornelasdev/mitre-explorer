@@ -10,7 +10,7 @@ import (
 
 type EntitySearchResult struct {
 	Type string
-	ID string
+	ID   string
 	Name string
 }
 
@@ -18,7 +18,7 @@ func appendEntitySearchResult(results []EntitySearchResult, entityType, id, name
 	if containsIgnoreCase(id, term) || containsIgnoreCase(name, term) || containsIgnoreCase(description, term) {
 		return append(results, EntitySearchResult{
 			Type: entityType,
-			ID: id,
+			ID:   id,
 			Name: name,
 		})
 	}
@@ -383,7 +383,7 @@ func handleList(args []string) {
 			[]int{12, 72},
 			pageSize,
 		)
-	
+
 	case "groups":
 		rows := make([][]string, 0, len(cache.Groups))
 		for _, g := range cache.Groups {
@@ -400,7 +400,7 @@ func handleList(args []string) {
 			[]int{10, 60},
 			pageSize,
 		)
-	
+
 	case "mitigations":
 		rows := make([][]string, 0, len(cache.Mitigations))
 		for _, m := range cache.Mitigations {
@@ -417,7 +417,7 @@ func handleList(args []string) {
 			[]int{10, 60},
 			pageSize,
 		)
-	
+
 	case "software":
 		rows := make([][]string, 0, len(cache.Softwares))
 		for _, s := range cache.Softwares {
@@ -434,7 +434,7 @@ func handleList(args []string) {
 			[]int{10, 60},
 			pageSize,
 		)
-	
+
 	case "campaigns":
 		rows := make([][]string, 0, len(cache.Campaigns))
 		for _, c := range cache.Campaigns {
@@ -451,7 +451,7 @@ func handleList(args []string) {
 			[]int{10, 60},
 			pageSize,
 		)
-	
+
 	case "detections":
 		rows := make([][]string, 0, len(cache.DetectionStrategies))
 		for _, d := range cache.DetectionStrategies {
@@ -468,7 +468,7 @@ func handleList(args []string) {
 			[]int{12, 60},
 			pageSize,
 		)
-	
+
 	case "analytics":
 		rows := make([][]string, 0, len(cache.Analytics))
 		for _, a := range cache.Analytics {
@@ -485,7 +485,7 @@ func handleList(args []string) {
 			[]int{12, 60},
 			pageSize,
 		)
-	
+
 	case "data-components":
 		rows := make([][]string, 0, len(cache.DataComponents))
 		for _, dc := range cache.DataComponents {
@@ -501,7 +501,7 @@ func handleList(args []string) {
 			[]int{72},
 			pageSize,
 		)
-	
+
 	case "tactics":
 		tactics := collectUniqueTactics(cache.Techniques)
 		rows := make([][]string, 0, len(tactics))
@@ -518,7 +518,7 @@ func handleList(args []string) {
 			[]int{72},
 			pageSize,
 		)
-	
+
 	case "platforms":
 		seen := make(map[string]bool)
 		var platforms []string

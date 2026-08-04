@@ -24,17 +24,17 @@ type STIXObject struct {
 		PhaseName string `json:"phase_name"`
 	} `json:"kill_chain_phases"`
 
-	XMitrePlatforms      []string `json:"x_mitre_platforms"`
-	XMitreDataSources    []string `json:"x_mitre_data_sources"`
-	XMitreDetection      string   `json:"x_mitre_detection"`
-	XMitreAliases        []string `json:"x_mitre_aliases"`
-	XMitreDeprecated     bool     `json:"x_mitre_deprecated"`
-	XMitreDataComponents []string `json:"x_mitre_data_components"`
-	XMitreAnalyticRefs []string `json:"x_mitre_analytic_refs"`
+	XMitrePlatforms           []string `json:"x_mitre_platforms"`
+	XMitreDataSources         []string `json:"x_mitre_data_sources"`
+	XMitreDetection           string   `json:"x_mitre_detection"`
+	XMitreAliases             []string `json:"x_mitre_aliases"`
+	XMitreDeprecated          bool     `json:"x_mitre_deprecated"`
+	XMitreDataComponents      []string `json:"x_mitre_data_components"`
+	XMitreAnalyticRefs        []string `json:"x_mitre_analytic_refs"`
 	XMitreLogSourceReferences []struct {
 		XMitreDataComponentRef string `json:"x_mitre_data_component_ref"`
 	} `json:"x_mitre_log_source_references"`
-	Revoked              bool     `json:"revoked"`
+	Revoked bool `json:"revoked"`
 
 	ID               string   `json:"id"`
 	RelationshipType string   `json:"relationship_type"`
@@ -92,31 +92,31 @@ type DataComponent struct {
 }
 
 type DetectionStrategy struct {
-	ID string `json:"id"`
-	StixID string `json:"stix_id"`
-	Name string `json:"name"`
-	Description string `json:"description"`
-	Analytics []string `json:"analytics"`
+	ID          string   `json:"id"`
+	StixID      string   `json:"stix_id"`
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	Analytics   []string `json:"analytics"`
 }
 
 type Analytic struct {
-	ID string `json:"id"`
-	StixID string `json:"stix_id"`
-	Name string `json:"name"`
-	Description string `json:"description"`
+	ID             string   `json:"id"`
+	StixID         string   `json:"stix_id"`
+	Name           string   `json:"name"`
+	Description    string   `json:"description"`
 	DataComponents []string `json:"data_components"`
 }
 
 type CacheData struct {
-	Techniques     []Technique     `json:"techniques"`
-	Groups         []Group         `json:"groups"`
-	Mitigations    []Mitigation    `json:"mitigations"`
-	Softwares      []Software      `json:"softwares"`
-	Campaigns      []Campaign      `json:"campaigns"`
-	Relationships  []Relationship  `json:"relationships"`
-	DataComponents []DataComponent `json:"data_components"`
+	Techniques          []Technique         `json:"techniques"`
+	Groups              []Group             `json:"groups"`
+	Mitigations         []Mitigation        `json:"mitigations"`
+	Softwares           []Software          `json:"softwares"`
+	Campaigns           []Campaign          `json:"campaigns"`
+	Relationships       []Relationship      `json:"relationships"`
+	DataComponents      []DataComponent     `json:"data_components"`
 	DetectionStrategies []DetectionStrategy `json:"detection_strategies"`
-	Analytics []Analytic `json:"analytics"`
+	Analytics           []Analytic          `json:"analytics"`
 }
 
 var (

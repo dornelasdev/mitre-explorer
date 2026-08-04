@@ -67,7 +67,7 @@ func handleStatus(args []string) {
 
 func printMatrixTacticStatus(cache CacheData) {
 	known, unknown := matrixTacticValidation(cache.Techniques)
-	
+
 	fmt.Println()
 	fmt.Println(title("Matrix Tactics"))
 	fmt.Printf("%s %d\n", label("Known tactics:"), len(known))

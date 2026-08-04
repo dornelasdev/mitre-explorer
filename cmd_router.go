@@ -12,7 +12,7 @@ func applyGlobalOptions(args []string) ([]string, bool) {
 	}
 
 	filtered := make([]string, 0, len(args))
-	
+
 	for i := 0; i < len(args); i++ {
 		a := args[i]
 

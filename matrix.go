@@ -6,11 +6,11 @@ import (
 )
 
 type MatrixConfig struct {
-	Name string
-	SourceURL string
-	RawPath string
-	CachePath string
-	MetaPath string
+	Name        string
+	SourceURL   string
+	RawPath     string
+	CachePath   string
+	MetaPath    string
 	TacticOrder []string
 }
 
@@ -63,29 +63,29 @@ var icsTacticOrder = []string{
 }
 
 var enterpriseMatrix = MatrixConfig{
-	Name: "enterprise",
-	SourceURL: "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json",
-	RawPath: "data/enterprise-attack.json",
-	CachePath: "data/mitre-cache.json",
-	MetaPath: "data/update-meta.json",
+	Name:        "enterprise",
+	SourceURL:   "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json",
+	RawPath:     "data/enterprise-attack.json",
+	CachePath:   "data/mitre-cache.json",
+	MetaPath:    "data/update-meta.json",
 	TacticOrder: enterpriseTacticOrder,
 }
 
 var mobileMatrix = MatrixConfig{
-	Name: "mobile",
-	SourceURL: "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/mobile-attack/mobile-attack.json",
-	RawPath: "data/mobile-attack.json",
-	CachePath: "data/mobile-cache.json",
-	MetaPath: "data/mobile-meta.json",
+	Name:        "mobile",
+	SourceURL:   "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/mobile-attack/mobile-attack.json",
+	RawPath:     "data/mobile-attack.json",
+	CachePath:   "data/mobile-cache.json",
+	MetaPath:    "data/mobile-meta.json",
 	TacticOrder: mobileTacticOrder,
 }
 
 var icsMatrix = MatrixConfig{
-	Name: "ics",
-	SourceURL: "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/ics-attack/ics-attack.json",
-	RawPath: "data/ics-attack.json",
-	CachePath: "data/ics-cache.json",
-	MetaPath: "data/ics-meta.json",
+	Name:        "ics",
+	SourceURL:   "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/ics-attack/ics-attack.json",
+	RawPath:     "data/ics-attack.json",
+	CachePath:   "data/ics-cache.json",
+	MetaPath:    "data/ics-meta.json",
 	TacticOrder: icsTacticOrder,
 }
 
