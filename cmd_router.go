@@ -56,6 +56,10 @@ func runCommand(args []string) {
 		return
 	}
 
+	dispatchCommand(args)
+}
+
+func dispatchCommand(args []string) {
 	command := args[0]
 
 	switch command {

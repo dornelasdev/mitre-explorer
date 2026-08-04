@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	fmt.Println("MITRE Explorer v0.9.6")
+	fmt.Println("MITRE Explorer v0.9.8")
 
 	args, ok := applyGlobalOptions(os.Args[1:])
 	if !ok {
@@ -20,7 +20,7 @@ func main() {
 		return
 	}
 
-	runCommand(args)
+	dispatchCommand(args)
 }
 
 func startInteractiveMode() {
@@ -45,7 +45,7 @@ func startInteractiveMode() {
 			fmt.Println("Type a command (without `go run .`), for example:")
 			fmt.Println("  search powershell --limit 5 --detailed")
 			fmt.Println("  show T1059")
-			fmt.Println("  list techniques--tactic execution --plain")
+			fmt.Println("  list techniques --tactic execution --plain")
 			fmt.Println("Type `back` to return to mode menu, or `q` to quit.")
 
 			for {
@@ -63,7 +63,7 @@ func startInteractiveMode() {
 				}
 
 				cmdArgs := strings.Fields(line)
-				runCommand(cmdArgs)
+				dispatchCommand(cmdArgs)
 			}
 		case "q":
 			fmt.Println("Exiting.")

@@ -73,8 +73,8 @@ func printMatrixTacticStatus(cache CacheData) {
 	fmt.Printf("%s %d\n", label("Known tactics:"), len(known))
 	fmt.Printf("%s %d\n", label("Unknown tactics:"), len(unknown))
 
-	if len(known) > 0 {
-		fmt.Printf("%s %s\n", label("Unknown tactic names:"), strings.Join(known, ", "))
+	if len(unknown) > 0 {
+		fmt.Printf("%s %s\n", label("Unknown tactic names:"), strings.Join(unknown, ", "))
 	}
 }
 
