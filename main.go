@@ -8,19 +8,7 @@ import (
 )
 
 func main() {
-	fmt.Println("MITRE Explorer v1.0")
-
-	args, ok := applyGlobalOptions(os.Args[1:])
-	if !ok {
-		return
-	}
-
-	if len(args) == 0 {
-		startInteractiveMode()
-		return
-	}
-
-	dispatchCommand(args)
+	runApp(os.Args[1:])
 }
 
 func startInteractiveMode() {
