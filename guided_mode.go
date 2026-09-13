@@ -7,10 +7,12 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"mitre-explorer/internal/attack"
 )
 
 func runGuidedExplorer() {
-	cache, err := loadCacheData(cachePath)
+	cache, err := attack.LoadCacheData(cachePath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			fmt.Printf("%s\n", errText(fmt.Sprintf("Cache not found for matrix %q. Run: go run . update --matrix %s", activeMatrixName(), activeMatrixName())))
@@ -36,7 +38,11 @@ func runGuidedExplorer() {
 		fmt.Println("  [q] Exit guided mode")
 		fmt.Printf("> ")
 
-		choice := strings.ToLower(strings.TrimSpace(readLine(reader)))
+		choice, err := readLine(reader)
+		if err != nil {
+			return
+		}
+		choice = strings.ToLower(choice)
 
 		switch choice {
 		case "1":
@@ -54,7 +60,10 @@ func runGuidedExplorer() {
 				}
 				fmt.Print("> ")
 
-				tacticInput := readLine(reader)
+				tacticInput, err := readLine(reader)
+				if err != nil {
+					return
+				}
 				if strings.EqualFold(tacticInput, "q") {
 					break
 				}
@@ -80,7 +89,10 @@ func runGuidedExplorer() {
 					fmt.Println("  [q] Return to guided menu")
 					fmt.Print("> ")
 
-					pickInput := readLine(reader)
+					pickInput, err := readLine(reader)
+					if err != nil {
+						return
+					}
 
 					if strings.EqualFold(pickInput, "q") {
 						goto guidedMenu
@@ -102,7 +114,9 @@ func runGuidedExplorer() {
 					fmt.Println()
 					fmt.Println("Press Enter to return to the technique list.")
 					fmt.Print("> ")
-					readLine(reader)
+					if _, err := readLine(reader); err != nil {
+						return
+					}
 
 				}
 			}
@@ -112,7 +126,7 @@ func runGuidedExplorer() {
 				continue
 			}
 
-			groups := make([]Group, len(cache.Groups))
+			groups := make([]attack.Group, len(cache.Groups))
 			copy(groups, cache.Groups)
 			sort.Slice(groups, func(i, j int) bool { return groups[i].ID < groups[j].ID })
 
@@ -123,7 +137,10 @@ func runGuidedExplorer() {
 				fmt.Println("  [q] Return to guided menu")
 				fmt.Print("> ")
 
-				input := readLine(reader)
+				input, err := readLine(reader)
+				if err != nil {
+					return
+				}
 				if strings.EqualFold(input, "q") {
 					break
 				}
@@ -157,7 +174,11 @@ func runGuidedExplorer() {
 					fmt.Println("  [q] Return to guided menu")
 					fmt.Print("> ")
 
-					next := strings.ToLower(readLine(reader))
+					next, err := readLine(reader)
+					if err != nil {
+						return
+					}
+					next = strings.ToLower(next)
 					switch next {
 					case "1":
 						if viewedMapped {
@@ -190,7 +211,7 @@ func runGuidedExplorer() {
 				continue
 			}
 
-			mitigations := make([]Mitigation, len(cache.Mitigations))
+			mitigations := make([]attack.Mitigation, len(cache.Mitigations))
 			copy(mitigations, cache.Mitigations)
 			sort.Slice(mitigations, func(i, j int) bool { return mitigations[i].ID < mitigations[j].ID })
 
@@ -201,7 +222,10 @@ func runGuidedExplorer() {
 				fmt.Println("  [q] Return to guided menu")
 				fmt.Print("> ")
 
-				input := readLine(reader)
+				input, err := readLine(reader)
+				if err != nil {
+					return
+				}
 				if strings.EqualFold(input, "q") {
 					break
 				}
@@ -234,7 +258,11 @@ func runGuidedExplorer() {
 					fmt.Println("  [q] Return to guided menu")
 					fmt.Print("> ")
 
-					next := strings.ToLower(readLine(reader))
+					next, err := readLine(reader)
+					if err != nil {
+						return
+					}
+					next = strings.ToLower(next)
 					switch next {
 					case "1":
 						if viewedMapped {
@@ -266,7 +294,7 @@ func runGuidedExplorer() {
 				continue
 			}
 
-			softwares := make([]Software, len(cache.Softwares))
+			softwares := make([]attack.Software, len(cache.Softwares))
 			copy(softwares, cache.Softwares)
 			sort.Slice(softwares, func(i, j int) bool { return softwares[i].ID < softwares[j].ID })
 			for {
@@ -276,7 +304,10 @@ func runGuidedExplorer() {
 				fmt.Println("  [q] Return to guided menu")
 				fmt.Print("> ")
 
-				input := readLine(reader)
+				input, err := readLine(reader)
+				if err != nil {
+					return
+				}
 				if strings.EqualFold(input, "q") {
 					break
 				}
@@ -310,7 +341,11 @@ func runGuidedExplorer() {
 					fmt.Println("  [q] Return to guided menu")
 					fmt.Print("> ")
 
-					next := strings.ToLower(readLine(reader))
+					next, err := readLine(reader)
+					if err != nil {
+						return
+					}
+					next = strings.ToLower(next)
 					switch next {
 					case "1":
 						if viewedMapped {
@@ -342,7 +377,7 @@ func runGuidedExplorer() {
 				continue
 			}
 
-			campaigns := make([]Campaign, len(cache.Campaigns))
+			campaigns := make([]attack.Campaign, len(cache.Campaigns))
 			copy(campaigns, cache.Campaigns)
 			sort.Slice(campaigns, func(i, j int) bool { return campaigns[i].ID < campaigns[j].ID })
 
@@ -353,7 +388,10 @@ func runGuidedExplorer() {
 				fmt.Println("  [q] Return to guided menu")
 				fmt.Print("> ")
 
-				input := readLine(reader)
+				input, err := readLine(reader)
+				if err != nil {
+					return
+				}
 				if strings.EqualFold(input, "q") {
 					break
 				}
@@ -386,7 +424,11 @@ func runGuidedExplorer() {
 					fmt.Println("  [q] Return to guided menu")
 					fmt.Print("> ")
 
-					next := strings.ToLower(readLine(reader))
+					next, err := readLine(reader)
+					if err != nil {
+						return
+					}
+					next = strings.ToLower(next)
 					switch next {
 					case "1":
 						if viewedMapped {
@@ -431,13 +473,13 @@ func runGuidedExplorer() {
 	}
 }
 
-func runGuidedDataComponents(cache CacheData, reader *bufio.Reader) {
+func runGuidedDataComponents(cache attack.CacheData, reader *bufio.Reader) {
 	if len(cache.DataComponents) == 0 {
 		printNoResults("data components")
 		return
 	}
 
-	components := make([]DataComponent, len(cache.DataComponents))
+	components := make([]attack.DataComponent, len(cache.DataComponents))
 	copy(components, cache.DataComponents)
 	sort.Slice(components, func(i, j int) bool { return components[i].Name < components[j].Name })
 
@@ -449,7 +491,10 @@ func runGuidedDataComponents(cache CacheData, reader *bufio.Reader) {
 		fmt.Println("  [q] Return to guided menu")
 		fmt.Print("> ")
 
-		input := readLine(reader)
+		input, err := readLine(reader)
+		if err != nil {
+			return
+		}
 		if strings.EqualFold(input, "q") {
 			return
 		}
@@ -481,7 +526,11 @@ func runGuidedDataComponents(cache CacheData, reader *bufio.Reader) {
 			fmt.Println("  [q] Return to guided menu")
 			fmt.Print("> ")
 
-			next := strings.ToLower(readLine(reader))
+			next, err := readLine(reader)
+			if err != nil {
+				return
+			}
+			next = strings.ToLower(next)
 
 			switch next {
 			case "1":
@@ -510,13 +559,13 @@ func runGuidedDataComponents(cache CacheData, reader *bufio.Reader) {
 
 }
 
-func runGuidedDetections(cache CacheData, reader *bufio.Reader) {
+func runGuidedDetections(cache attack.CacheData, reader *bufio.Reader) {
 	if len(cache.DetectionStrategies) == 0 {
 		printNoResults("detection strategies")
 		return
 	}
 
-	detections := make([]DetectionStrategy, len(cache.DetectionStrategies))
+	detections := make([]attack.DetectionStrategy, len(cache.DetectionStrategies))
 	copy(detections, cache.DetectionStrategies)
 	sort.Slice(detections, func(i, j int) bool { return detections[i].Name < detections[j].Name })
 
@@ -527,7 +576,10 @@ func runGuidedDetections(cache CacheData, reader *bufio.Reader) {
 		fmt.Println("  [q] Return to guided menu")
 		fmt.Print("> ")
 
-		input := readLine(reader)
+		input, err := readLine(reader)
+		if err != nil {
+			return
+		}
 		if strings.EqualFold(input, "q") {
 			return
 		}
@@ -572,7 +624,11 @@ func runGuidedDetections(cache CacheData, reader *bufio.Reader) {
 			fmt.Println("  [q] Return to guided menu")
 			fmt.Print("> ")
 
-			next := strings.ToLower(readLine(reader))
+			next, err := readLine(reader)
+			if err != nil {
+				return
+			}
+			next = strings.ToLower(next)
 
 			switch next {
 			case "1":
@@ -627,13 +683,13 @@ func runGuidedDetections(cache CacheData, reader *bufio.Reader) {
 
 }
 
-func runGuidedAnalytics(cache CacheData, reader *bufio.Reader) {
+func runGuidedAnalytics(cache attack.CacheData, reader *bufio.Reader) {
 	if len(cache.Analytics) == 0 {
 		printNoResults("analytics")
 		return
 	}
 
-	analytics := make([]Analytic, len(cache.Analytics))
+	analytics := make([]attack.Analytic, len(cache.Analytics))
 	copy(analytics, cache.Analytics)
 	sort.Slice(analytics, func(i, j int) bool { return analytics[i].ID < analytics[j].ID })
 
@@ -645,7 +701,10 @@ func runGuidedAnalytics(cache CacheData, reader *bufio.Reader) {
 		fmt.Println("  [q] Return to guided menu")
 		fmt.Print("> ")
 
-		input := readLine(reader)
+		input, err := readLine(reader)
+		if err != nil {
+			return
+		}
 		if strings.EqualFold(input, "q") {
 			return
 		}
@@ -678,7 +737,11 @@ func runGuidedAnalytics(cache CacheData, reader *bufio.Reader) {
 			fmt.Println("  [q] Return to guided menu")
 			fmt.Print("> ")
 
-			next := strings.ToLower(readLine(reader))
+			next, err := readLine(reader)
+			if err != nil {
+				return
+			}
+			next = strings.ToLower(next)
 
 			switch next {
 			case "1":
@@ -707,7 +770,7 @@ func runGuidedAnalytics(cache CacheData, reader *bufio.Reader) {
 
 }
 
-func printTechniqueDetails(t Technique) {
+func printTechniqueDetails(t attack.Technique) {
 	fmt.Printf("ID: %s\n", t.ID)
 	fmt.Printf("Name: %s\n", t.Name)
 	fmt.Printf("Description: %s\n", t.Description)

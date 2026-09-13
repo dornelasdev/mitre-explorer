@@ -91,6 +91,11 @@ var icsMatrix = MatrixConfig{
 
 var activeMatrix = enterpriseMatrix
 
+var (
+	cachePath = enterpriseMatrix.CachePath
+	metaPath  = enterpriseMatrix.MetaPath
+)
+
 func setActiveMatrix(name string) error {
 	matrixName := strings.ToLower(strings.TrimSpace(name))
 

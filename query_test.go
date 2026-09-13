@@ -1,6 +1,10 @@
 package main
 
-import "testing"
+import (
+	"testing"
+
+	"mitre-explorer/internal/attack"
+)
 
 func TestNormalizeTactic(t *testing.T) {
 	got := normalizeTactic("Command-and-Control")
@@ -24,7 +28,7 @@ func TestContainsTacticNormalized(t *testing.T) {
 }
 
 func TestSearchTechniquesPrioritizesNameMatches(t *testing.T) {
-	techniques := []Technique{
+	techniques := []attack.Technique{
 		{ID: "T2000", Name: "Other", Description: "PowerShell appears here"},
 		{ID: "T1000", Name: "PowerShell", Description: "Name match"},
 	}
@@ -39,7 +43,7 @@ func TestSearchTechniquesPrioritizesNameMatches(t *testing.T) {
 }
 
 func TestFindTechniqueByID(t *testing.T) {
-	techniques := []Technique{{ID: "T1059", Name: "Command and Scripting Interpreter"}}
+	techniques := []attack.Technique{{ID: "T1059", Name: "Command and Scripting Interpreter"}}
 
 	technique, found := findTechniqueByID(techniques, "t1059")
 	if !found {

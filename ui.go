@@ -7,7 +7,21 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"mitre-explorer/internal/attack"
 )
+
+func printMappedTechniquesWithMode(results []attack.Technique, detailed bool) {
+	if detailed {
+		for i, t := range results {
+			fmt.Printf("\n[%d] %s | %s\n", i+1, t.ID, t.Name)
+			fmt.Printf("    Tactics: %s\n", strings.Join(t.Tactics, ", "))
+			fmt.Printf("    Platforms: %s\n", strings.Join(t.Platforms, ", "))
+		}
+		return
+	}
+	printTechniqueTable(results)
+}
 
 func startSpinner(message string) func() {
 	done := make(chan struct{})
@@ -91,7 +105,7 @@ func label(text string) string {
 	return cBold + text + cReset
 }
 
-func printTechniqueTable(techniques []Technique) {
+func printTechniqueTable(techniques []attack.Technique) {
 	const nameWidth = 72
 
 	rows := make([][]string, 0, len(techniques))
@@ -156,7 +170,7 @@ func printEntityTable(headers []string, rows [][]string, widths []int) {
 	}
 }
 
-func printGroupTable(groups []Group) {
+func printGroupTable(groups []attack.Group) {
 	rows := make([][]string, 0, len(groups))
 	for i, g := range groups {
 		rows = append(rows, []string{
@@ -173,7 +187,7 @@ func printGroupTable(groups []Group) {
 	)
 }
 
-func printMitigationTable(mitigations []Mitigation) {
+func printMitigationTable(mitigations []attack.Mitigation) {
 	rows := make([][]string, 0, len(mitigations))
 	for i, m := range mitigations {
 		rows = append(rows, []string{
@@ -190,7 +204,7 @@ func printMitigationTable(mitigations []Mitigation) {
 	)
 }
 
-func printSoftwareTable(softwares []Software) {
+func printSoftwareTable(softwares []attack.Software) {
 	rows := make([][]string, 0, len(softwares))
 	for i, s := range softwares {
 		rows = append(rows, []string{
@@ -207,7 +221,7 @@ func printSoftwareTable(softwares []Software) {
 	)
 }
 
-func printCampaignTable(campaigns []Campaign) {
+func printCampaignTable(campaigns []attack.Campaign) {
 	rows := make([][]string, 0, len(campaigns))
 	for i, c := range campaigns {
 		rows = append(rows, []string{
@@ -224,7 +238,7 @@ func printCampaignTable(campaigns []Campaign) {
 	)
 }
 
-func printDataComponentList(components []DataComponent) {
+func printDataComponentList(components []attack.DataComponent) {
 	rows := make([][]string, 0, len(components))
 	for i, dc := range components {
 		rows = append(rows, []string{
@@ -240,7 +254,7 @@ func printDataComponentList(components []DataComponent) {
 	)
 }
 
-func printDetectionTable(detections []DetectionStrategy) {
+func printDetectionTable(detections []attack.DetectionStrategy) {
 	rows := make([][]string, 0, len(detections))
 	for i, d := range detections {
 		rows = append(rows, []string{
@@ -257,7 +271,7 @@ func printDetectionTable(detections []DetectionStrategy) {
 	)
 }
 
-func printAnalyticList(analytics []Analytic) {
+func printAnalyticList(analytics []attack.Analytic) {
 	rows := make([][]string, 0, len(analytics))
 	for i, d := range analytics {
 		rows = append(rows, []string{
@@ -337,7 +351,11 @@ func printPaginatedTable(titleText string, headers []string, rows [][]string, wi
 		fmt.Println("[n] Next  [p] Previous  [q] Quit")
 		fmt.Print("> ")
 
-		input := strings.ToLower(strings.TrimSpace(readLine(reader)))
+		input, err := readLine(reader)
+		if err != nil {
+			return
+		}
+		input = strings.ToLower(input)
 
 		switch input {
 		case "":

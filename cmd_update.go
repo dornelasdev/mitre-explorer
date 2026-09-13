@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
+
+	"mitre-explorer/internal/attack"
 )
 
 func handleUpdate(args []string) {
@@ -19,14 +21,14 @@ func handleUpdate(args []string) {
 		return
 	}
 
-	meta, err := loadUpdateMeta(metaPath)
+	meta, err := attack.LoadUpdateMeta(metaPath)
 	if err != nil && !os.IsNotExist(err) {
 		fmt.Printf("Failed to read update metadata: %v\n", err)
 		return
 	}
 
 	stop := startSpinner("Checking/downloading ATT&CK data")
-	dl, err := downloadFileConditional(sourceURL, rawPath, meta, force)
+	dl, err := attack.DownloadFileConditional(sourceURL, rawPath, meta, force)
 	stop()
 	if err != nil {
 		fmt.Printf("Update failed: %v\n", err)
@@ -61,18 +63,18 @@ func handleUpdate(args []string) {
 		dl.Bytes = info.Size()
 	}
 
-	cache, err := buildCacheDataFromSTIX(rawPath)
+	cache, err := attack.BuildCacheDataFromSTIX(rawPath)
 	if err != nil {
 		fmt.Printf("Parse failed: %v\n", err)
 		return
 	}
 
-	if err := saveCacheData(cachePath, cache); err != nil {
+	if err := attack.SaveCacheData(cachePath, cache); err != nil {
 		fmt.Printf("Cache write failed: %v\n", err)
 		return
 	}
 
-	if err := saveUpdateMeta(metaPath, UpdateMeta{
+	if err := attack.SaveUpdateMeta(metaPath, attack.UpdateMeta{
 		ETag:         dl.ETag,
 		LastModified: dl.LastModified,
 	}); err != nil {

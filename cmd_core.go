@@ -6,6 +6,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"mitre-explorer/internal/attack"
 )
 
 type EntitySearchResult struct {
@@ -25,7 +27,7 @@ func appendEntitySearchResult(results []EntitySearchResult, entityType, id, name
 	return results
 }
 
-func searchEntities(cache CacheData, target, term string, limit int) []EntitySearchResult {
+func searchEntities(cache attack.CacheData, target, term string, limit int) []EntitySearchResult {
 	var results []EntitySearchResult
 
 	addGroups := target == "groups" || target == "all"
@@ -113,7 +115,7 @@ func handleSearch(args []string) {
 		fmt.Println("Usage: go run . search <term> [--target <target>] [--name-only] [--in-detection] [--limit N] [--detailed] [--plain]")
 		return
 	}
-	cache, err := loadCacheData(cachePath)
+	cache, err := attack.LoadCacheData(cachePath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			fmt.Println(errText("Cache not found. Run: go run . update"))
@@ -166,7 +168,7 @@ func handleSearch(args []string) {
 	}
 
 	if target == "techniques" {
-		var results []Technique
+		var results []attack.Technique
 		if inDetection {
 			results = searchDetectionNotes(techniques, term, limit)
 		} else {
@@ -216,7 +218,7 @@ func handleShow(args []string) {
 		return
 	}
 
-	cache, err := loadCacheData(cachePath)
+	cache, err := attack.LoadCacheData(cachePath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			fmt.Println("Cache not found. Run: go run . update")
@@ -318,7 +320,7 @@ func parseTechniqueListFilters(args []string) (tactic, platform, dataComponent s
 	return tactic, platform, dataComponent, nil
 }
 
-func techniqueRows(techniques []Technique) [][]string {
+func techniqueRows(techniques []attack.Technique) [][]string {
 	rows := make([][]string, 0, len(techniques))
 	for _, t := range techniques {
 		rows = append(rows, []string{
@@ -336,7 +338,7 @@ func handleList(args []string) {
 		return
 	}
 
-	cache, err := loadCacheData(cachePath)
+	cache, err := attack.LoadCacheData(cachePath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			fmt.Println(errText("Cache not found. Run: go run . update"))

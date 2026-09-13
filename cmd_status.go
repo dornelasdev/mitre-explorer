@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"mitre-explorer/internal/attack"
 )
 
 func handleStatus(args []string) {
@@ -34,7 +36,7 @@ func handleStatus(args []string) {
 		fmt.Printf("%s %s\n", label("Metadata file:"), metaPath)
 		fmt.Printf("%s %s\n", label("Metadata modified:"), metaInfo.ModTime().Format("2006-01-02 15:04:05"))
 
-		meta, err := loadUpdateMeta(metaPath)
+		meta, err := attack.LoadUpdateMeta(metaPath)
 		if err == nil {
 			fmt.Printf("%s %s\n", label("ETag:"), emptyFallback(meta.ETag))
 			fmt.Printf("%s %s\n", label("Last modified:"), emptyFallback(meta.LastModified))
@@ -45,7 +47,7 @@ func handleStatus(args []string) {
 		fmt.Printf("Update metadata: error reading metadata file: %v\n", metaErr)
 	}
 
-	cache, err := loadCacheData(cachePath)
+	cache, err := attack.LoadCacheData(cachePath)
 	if err != nil {
 		fmt.Printf("Error loading cache: %v\n", err)
 		return
@@ -65,7 +67,7 @@ func handleStatus(args []string) {
 	printMatrixTacticStatus(cache)
 }
 
-func printMatrixTacticStatus(cache CacheData) {
+func printMatrixTacticStatus(cache attack.CacheData) {
 	known, unknown := matrixTacticValidation(cache.Techniques)
 
 	fmt.Println()

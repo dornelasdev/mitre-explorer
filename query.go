@@ -3,15 +3,17 @@ package main
 import (
 	"sort"
 	"strings"
+
+	"mitre-explorer/internal/attack"
 )
 
 func containsIgnoreCase(text, term string) bool {
 	return strings.Contains(strings.ToLower(text), strings.ToLower(term))
 }
 
-func searchTechniques(techniques []Technique, term string, nameOnly bool, limit int) []Technique {
+func searchTechniques(techniques []attack.Technique, term string, nameOnly bool, limit int) []attack.Technique {
 	type searchHit struct {
-		technique Technique
+		technique attack.Technique
 		score     int
 	}
 
@@ -42,7 +44,7 @@ func searchTechniques(techniques []Technique, term string, nameOnly bool, limit 
 		return hits[i].technique.ID < hits[j].technique.ID
 	})
 
-	out := make([]Technique, 0, len(hits))
+	out := make([]attack.Technique, 0, len(hits))
 	for _, h := range hits {
 		out = append(out, h.technique)
 	}
@@ -54,13 +56,13 @@ func searchTechniques(techniques []Technique, term string, nameOnly bool, limit 
 	return out
 }
 
-func findTechniqueByID(techniques []Technique, id string) (Technique, bool) {
+func findTechniqueByID(techniques []attack.Technique, id string) (attack.Technique, bool) {
 	for _, t := range techniques {
 		if strings.EqualFold(t.ID, id) {
 			return t, true
 		}
 	}
-	return Technique{}, false
+	return attack.Technique{}, false
 }
 
 func containsSliceIgnoreCase(values []string, target string) bool {
@@ -72,8 +74,8 @@ func containsSliceIgnoreCase(values []string, target string) bool {
 	return false
 }
 
-func listByTactic(techniques []Technique, tactic string) []Technique {
-	var out []Technique
+func listByTactic(techniques []attack.Technique, tactic string) []attack.Technique {
+	var out []attack.Technique
 	for _, t := range techniques {
 		if containsTacticNormalized(t.Tactics, tactic) {
 			out = append(out, t)
@@ -100,8 +102,8 @@ func containsTacticNormalized(values []string, target string) bool {
 	return false
 }
 
-func listByPlatform(techniques []Technique, platform string) []Technique {
-	var out []Technique
+func listByPlatform(techniques []attack.Technique, platform string) []attack.Technique {
+	var out []attack.Technique
 	for _, t := range techniques {
 		if containsSliceIgnoreCase(t.Platforms, platform) {
 			out = append(out, t)
@@ -111,7 +113,7 @@ func listByPlatform(techniques []Technique, platform string) []Technique {
 	return out
 }
 
-func collectUniqueTactics(techniques []Technique) []string {
+func collectUniqueTactics(techniques []attack.Technique) []string {
 	// Active ATT&CK matrix tactic order
 	attackOrder := activeMatrix.TacticOrder
 
@@ -173,7 +175,7 @@ func collectUniqueTactics(techniques []Technique) []string {
 	return out
 }
 
-func matrixTacticValidation(techniques []Technique) (known []string, unknown []string) {
+func matrixTacticValidation(techniques []attack.Technique) (known []string, unknown []string) {
 	expected := make(map[string]struct{})
 	for _, tactic := range activeMatrix.TacticOrder {
 		expected[normalizeTactic(tactic)] = struct{}{}
@@ -211,7 +213,7 @@ func matrixTacticValidation(techniques []Technique) (known []string, unknown []s
 	return known, unknown
 }
 
-func findGroup(cache CacheData, input string) (Group, bool) {
+func findGroup(cache attack.CacheData, input string) (attack.Group, bool) {
 	q := strings.TrimSpace(strings.ToLower(input))
 
 	for _, g := range cache.Groups {
@@ -224,17 +226,17 @@ func findGroup(cache CacheData, input string) (Group, bool) {
 			}
 		}
 	}
-	return Group{}, false
+	return attack.Group{}, false
 }
 
-func techniquesUsedByGroup(cache CacheData, groupID string) []Technique {
-	techByID := make(map[string]Technique, len(cache.Techniques))
+func techniquesUsedByGroup(cache attack.CacheData, groupID string) []attack.Technique {
+	techByID := make(map[string]attack.Technique, len(cache.Techniques))
 	for _, t := range cache.Techniques {
 		techByID[t.ID] = t
 	}
 
 	seen := make(map[string]struct{})
-	var out []Technique
+	var out []attack.Technique
 
 	for _, rel := range cache.Relationships {
 		if rel.Type != "uses" {
@@ -260,24 +262,24 @@ func techniquesUsedByGroup(cache CacheData, groupID string) []Technique {
 	return out
 }
 
-func findMitigation(cache CacheData, input string) (Mitigation, bool) {
+func findMitigation(cache attack.CacheData, input string) (attack.Mitigation, bool) {
 	q := strings.TrimSpace(strings.ToLower(input))
 	for _, m := range cache.Mitigations {
 		if strings.ToLower(m.ID) == q || strings.ToLower(m.Name) == q {
 			return m, true
 		}
 	}
-	return Mitigation{}, false
+	return attack.Mitigation{}, false
 }
 
-func techniquesMitigatedBy(cache CacheData, mitigationID string) []Technique {
-	techByID := make(map[string]Technique, len(cache.Techniques))
+func techniquesMitigatedBy(cache attack.CacheData, mitigationID string) []attack.Technique {
+	techByID := make(map[string]attack.Technique, len(cache.Techniques))
 	for _, t := range cache.Techniques {
 		techByID[t.ID] = t
 	}
 
 	seen := make(map[string]struct{})
-	var out []Technique
+	var out []attack.Technique
 
 	for _, rel := range cache.Relationships {
 		if rel.Type != "mitigates" {
@@ -303,7 +305,7 @@ func techniquesMitigatedBy(cache CacheData, mitigationID string) []Technique {
 	return out
 }
 
-func findSoftware(cache CacheData, input string) (Software, bool) {
+func findSoftware(cache attack.CacheData, input string) (attack.Software, bool) {
 	q := strings.TrimSpace(strings.ToLower(input))
 
 	for _, s := range cache.Softwares {
@@ -316,17 +318,17 @@ func findSoftware(cache CacheData, input string) (Software, bool) {
 			}
 		}
 	}
-	return Software{}, false
+	return attack.Software{}, false
 }
 
-func techniquesUsedBySoftware(cache CacheData, softwareID string) []Technique {
-	techByID := make(map[string]Technique, len(cache.Techniques))
+func techniquesUsedBySoftware(cache attack.CacheData, softwareID string) []attack.Technique {
+	techByID := make(map[string]attack.Technique, len(cache.Techniques))
 	for _, t := range cache.Techniques {
 		techByID[t.ID] = t
 	}
 
 	seen := make(map[string]struct{})
-	var out []Technique
+	var out []attack.Technique
 
 	for _, rel := range cache.Relationships {
 		if rel.Type != "uses" {
@@ -352,7 +354,7 @@ func techniquesUsedBySoftware(cache CacheData, softwareID string) []Technique {
 	return out
 }
 
-func findCampaign(cache CacheData, input string) (Campaign, bool) {
+func findCampaign(cache attack.CacheData, input string) (attack.Campaign, bool) {
 	q := strings.TrimSpace(strings.ToLower(input))
 
 	for _, c := range cache.Campaigns {
@@ -365,17 +367,17 @@ func findCampaign(cache CacheData, input string) (Campaign, bool) {
 			}
 		}
 	}
-	return Campaign{}, false
+	return attack.Campaign{}, false
 }
 
-func techniquesUsedByCampaign(cache CacheData, campaignID string) []Technique {
-	techByID := make(map[string]Technique, len(cache.Techniques))
+func techniquesUsedByCampaign(cache attack.CacheData, campaignID string) []attack.Technique {
+	techByID := make(map[string]attack.Technique, len(cache.Techniques))
 	for _, t := range cache.Techniques {
 		techByID[t.ID] = t
 	}
 
 	seen := make(map[string]struct{})
-	var out []Technique
+	var out []attack.Technique
 
 	for _, rel := range cache.Relationships {
 		if rel.Type != "uses" {
@@ -401,8 +403,8 @@ func techniquesUsedByCampaign(cache CacheData, campaignID string) []Technique {
 	return out
 }
 
-func listByDataComponent(techniques []Technique, component string) []Technique {
-	var out []Technique
+func listByDataComponent(techniques []attack.Technique, component string) []attack.Technique {
+	var out []attack.Technique
 	for _, t := range techniques {
 		if containsSliceIgnoreCase(t.DataComponents, component) {
 			out = append(out, t)
@@ -412,8 +414,8 @@ func listByDataComponent(techniques []Technique, component string) []Technique {
 	return out
 }
 
-func searchDetectionNotes(techniques []Technique, term string, limit int) []Technique {
-	var out []Technique
+func searchDetectionNotes(techniques []attack.Technique, term string, limit int) []attack.Technique {
+	var out []attack.Technique
 	term = strings.ToLower(strings.TrimSpace(term))
 	if term == "" {
 		return out
@@ -433,7 +435,7 @@ func searchDetectionNotes(techniques []Technique, term string, limit int) []Tech
 	return out
 }
 
-func techniquesByDataComponent(cache CacheData, componentInput string) []Technique {
+func techniquesByDataComponent(cache attack.CacheData, componentInput string) []attack.Technique {
 	q := strings.TrimSpace(strings.ToLower(componentInput))
 	if q == "" {
 		return nil
@@ -447,13 +449,13 @@ func techniquesByDataComponent(cache CacheData, componentInput string) []Techniq
 		}
 	}
 
-	techByID := make(map[string]Technique, len(cache.Techniques))
+	techByID := make(map[string]attack.Technique, len(cache.Techniques))
 	for _, t := range cache.Techniques {
 		techByID[t.ID] = t
 	}
 
 	seen := make(map[string]struct{})
-	var out []Technique
+	var out []attack.Technique
 
 	for _, rel := range cache.Relationships {
 		if rel.Type != "has_data_component" || rel.SourceType != "technique" || rel.TargetType != "data_component" {
@@ -500,7 +502,7 @@ func techniquesByDataComponent(cache CacheData, componentInput string) []Techniq
 	return out
 }
 
-func findDetectionStrategy(cache CacheData, input string) (DetectionStrategy, bool) {
+func findDetectionStrategy(cache attack.CacheData, input string) (attack.DetectionStrategy, bool) {
 	q := strings.TrimSpace(strings.ToLower(input))
 
 	for _, d := range cache.DetectionStrategies {
@@ -508,17 +510,17 @@ func findDetectionStrategy(cache CacheData, input string) (DetectionStrategy, bo
 			return d, true
 		}
 	}
-	return DetectionStrategy{}, false
+	return attack.DetectionStrategy{}, false
 }
 
-func techniquesDetectedByStrategy(cache CacheData, detectionID string) []Technique {
-	techByID := make(map[string]Technique, len(cache.Techniques))
+func techniquesDetectedByStrategy(cache attack.CacheData, detectionID string) []attack.Technique {
+	techByID := make(map[string]attack.Technique, len(cache.Techniques))
 	for _, t := range cache.Techniques {
 		techByID[t.ID] = t
 	}
 
 	seen := make(map[string]struct{})
-	var out []Technique
+	var out []attack.Technique
 
 	for _, rel := range cache.Relationships {
 		if rel.Type != "detects" {
@@ -543,7 +545,7 @@ func techniquesDetectedByStrategy(cache CacheData, detectionID string) []Techniq
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out
 }
-func findAnalytic(cache CacheData, input string) (Analytic, bool) {
+func findAnalytic(cache attack.CacheData, input string) (attack.Analytic, bool) {
 	q := strings.TrimSpace(strings.ToLower(input))
 
 	for _, a := range cache.Analytics {
@@ -552,23 +554,23 @@ func findAnalytic(cache CacheData, input string) (Analytic, bool) {
 		}
 	}
 
-	return Analytic{}, false
+	return attack.Analytic{}, false
 }
 
-func analyticsByDetectionStrategy(cache CacheData, detectionID string) []Analytic {
+func analyticsByDetectionStrategy(cache attack.CacheData, detectionID string) []attack.Analytic {
 	d, found := findDetectionStrategy(cache, detectionID)
 	if !found {
 		return nil
 	}
 
-	analyticByID := make(map[string]Analytic, len(cache.Analytics))
+	analyticByID := make(map[string]attack.Analytic, len(cache.Analytics))
 	for _, a := range cache.Analytics {
 		analyticByID[a.ID] = a
 		analyticByID[a.StixID] = a
 	}
 
 	seen := make(map[string]struct{})
-	var out []Analytic
+	var out []attack.Analytic
 
 	for _, ref := range d.Analytics {
 		a, ok := analyticByID[ref]
@@ -587,20 +589,20 @@ func analyticsByDetectionStrategy(cache CacheData, detectionID string) []Analyti
 	return out
 }
 
-func dataComponentsByAnalytic(cache CacheData, analyticID string) []DataComponent {
+func dataComponentsByAnalytic(cache attack.CacheData, analyticID string) []attack.DataComponent {
 	a, found := findAnalytic(cache, analyticID)
 	if !found {
 		return nil
 	}
 
-	componentByID := make(map[string]DataComponent, len(cache.DataComponents))
+	componentByID := make(map[string]attack.DataComponent, len(cache.DataComponents))
 	for _, dc := range cache.DataComponents {
 		componentByID[dc.ID] = dc
 		componentByID[dc.StixID] = dc
 	}
 
 	seen := make(map[string]struct{})
-	var out []DataComponent
+	var out []attack.DataComponent
 
 	for _, ref := range a.DataComponents {
 		dc, ok := componentByID[ref]
@@ -620,11 +622,11 @@ func dataComponentsByAnalytic(cache CacheData, analyticID string) []DataComponen
 	return out
 }
 
-func dataComponentsByDetectionStrategy(cache CacheData, detectionID string) []DataComponent {
+func dataComponentsByDetectionStrategy(cache attack.CacheData, detectionID string) []attack.DataComponent {
 	analytics := analyticsByDetectionStrategy(cache, detectionID)
 
 	seen := make(map[string]struct{})
-	var out []DataComponent
+	var out []attack.DataComponent
 
 	for _, a := range analytics {
 		components := dataComponentsByAnalytic(cache, a.ID)

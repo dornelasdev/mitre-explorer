@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"mitre-explorer/internal/attack"
 )
 
 type ExportOptions struct {
@@ -16,7 +18,7 @@ type ExportOptions struct {
 	Target      string
 	Matrix      string
 	GeneratedAt string
-	Meta        UpdateMeta
+	Meta        attack.UpdateMeta
 }
 
 func parseExportOptions(args []string) (ExportOptions, error) {
@@ -86,7 +88,7 @@ func handleExport(args []string) {
 	opts.Matrix = activeMatrixName()
 	opts.GeneratedAt = time.Now().Format("2006-01-02 15:04:05")
 
-	if meta, err := loadUpdateMeta(metaPath); err == nil {
+	if meta, err := attack.LoadUpdateMeta(metaPath); err == nil {
 		opts.Meta = meta
 	}
 
@@ -104,7 +106,7 @@ func handleExport(args []string) {
 	fmt.Printf("%s wrote %d results row(s) from %s matrix to %s\n", ok("Exported"), len(rows), opts.Matrix, opts.Out)
 }
 
-func exportRows(cache CacheData, target string, opts ExportOptions) ([]string, [][]string, error) {
+func exportRows(cache attack.CacheData, target string, opts ExportOptions) ([]string, [][]string, error) {
 	switch target {
 	case "summary":
 		rows := [][]string{
@@ -380,7 +382,7 @@ func writeExportFile(opts ExportOptions, headers []string, rows [][]string) erro
 	}
 }
 
-func mappedTechniquesRows(sourceID, sourceName string, techniques []Technique) ([]string, [][]string) {
+func mappedTechniquesRows(sourceID, sourceName string, techniques []attack.Technique) ([]string, [][]string) {
 	rows := make([][]string, 0, len(techniques))
 
 	for _, t := range techniques {
@@ -396,7 +398,7 @@ func mappedTechniquesRows(sourceID, sourceName string, techniques []Technique) (
 	return []string{"Source ID", "Source Name", "Technique ID", "Technique Name", "Tactics", "Platforms"}, rows
 }
 
-func mappedAnalyticsRows(sourceID, sourceName string, analytics []Analytic) ([]string, [][]string) {
+func mappedAnalyticsRows(sourceID, sourceName string, analytics []attack.Analytic) ([]string, [][]string) {
 	rows := make([][]string, 0, len(analytics))
 
 	for _, a := range analytics {
@@ -410,7 +412,7 @@ func mappedAnalyticsRows(sourceID, sourceName string, analytics []Analytic) ([]s
 	return []string{"Source ID", "Source Name", "Analytic ID", "Analytic Name"}, rows
 }
 
-func mappedComponentsRows(sourceID, sourceName string, components []DataComponent) ([]string, [][]string) {
+func mappedComponentsRows(sourceID, sourceName string, components []attack.DataComponent) ([]string, [][]string) {
 	rows := make([][]string, 0, len(components))
 
 	for _, dc := range components {

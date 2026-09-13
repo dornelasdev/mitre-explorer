@@ -87,11 +87,18 @@ Shows entity details and optionally expands mapped relationships.
 - Navigation shortcuts: `q` to quit, `back`/`b` where applicable.
 
 ## Structure
-- `main.go`: app entrypoint, interactive mode bootstrap, shared line-reader/output helper.
-- `types.go`: core data models (STIX bundle/object structs, cache path constant).
-- `update.go`: update pipeline (download raw ATT&CK data, parse STIX, build/write and load cache).
+- `main.go`: executable entrypoint that passes arguments to the app.
+- `app.go`: app startup, banner, global options, and command/interactive dispatch.
+- `version.go`: shared application version.
+- `interactive_mode.go`: guided/manual mode selection and shared line-reader helper.
+- `internal/attack/models.go`: shared ATT&CK entity, relationship, cache, and metadata models.
+- `internal/attack/download.go`: conditional HTTP downloads with bounded requests and safe file replacement.
+- `internal/attack/stix.go`: STIX parsing, cache normalization, and detection enrichment.
+- `internal/attack/cache.go`: cache/metadata storage and shared file-write helpers.
+- `internal/attack/*_test.go` and `testdata/`: data-layer regression tests and a small synthetic STIX fixture.
+- `matrix.go`: matrix configuration, tactic orders, and active CLI paths.
 - `query.go`: search and filter logic.
-- `ui.go`: terminal UX (spinner and human-readable size formatting), color/theme, and table/truncation helpers.
+- `ui.go`: terminal UX (spinner and human-readable size formatting), color/theme, and table/detail/truncation helpers.
 - `cmd_router.go`: central CLI command routing and global flag preprocessing.
 - `cmd_update.go`: `update` command handler (download/meta/cache rebuild flow).
 - `cmd_core.go`: core command handlers (`search`, `show`, `list`) and scoped search/list logic.
@@ -124,7 +131,12 @@ Entity commands: group, mitigation, software, campaign, detection, and analytic.
 Matrix note:
 Enterprise is the default matrix. Use `--matrix mobile` or `--matrix ics` to query Mobile or ICS caches.
 
-For full command examples, see [docs/commands.md](docs/commands.md).
+For full command examples, see [docs/COMMANDS.md](docs/COMMANDS.md).
+
+## Development
+
+For setup, formatting, tests, CI, and the rework workflow, see
+[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
 ## Roadmap
 - **v1.0**: stable multi-matrix CLI release.

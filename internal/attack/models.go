@@ -1,4 +1,5 @@
-package main
+// Package attack provides ATT&CK models, dataset normalization, and local storage.
+package attack
 
 type Technique struct {
 	ID             string   `json:"id"`
@@ -9,43 +10,6 @@ type Technique struct {
 	DataSources    []string `json:"data_sources"`
 	DetectionNotes string   `json:"detection_notes"`
 	DataComponents []string `json:"data_components"`
-}
-
-type STIXBundle struct {
-	Objects []STIXObject `json:"objects"`
-}
-
-type STIXObject struct {
-	Type        string `json:"type"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-
-	KillChainPhases []struct {
-		PhaseName string `json:"phase_name"`
-	} `json:"kill_chain_phases"`
-
-	XMitrePlatforms           []string `json:"x_mitre_platforms"`
-	XMitreDataSources         []string `json:"x_mitre_data_sources"`
-	XMitreDetection           string   `json:"x_mitre_detection"`
-	XMitreAliases             []string `json:"x_mitre_aliases"`
-	XMitreDeprecated          bool     `json:"x_mitre_deprecated"`
-	XMitreDataComponents      []string `json:"x_mitre_data_components"`
-	XMitreAnalyticRefs        []string `json:"x_mitre_analytic_refs"`
-	XMitreLogSourceReferences []struct {
-		XMitreDataComponentRef string `json:"x_mitre_data_component_ref"`
-	} `json:"x_mitre_log_source_references"`
-	Revoked bool `json:"revoked"`
-
-	ID               string   `json:"id"`
-	RelationshipType string   `json:"relationship_type"`
-	SourceRef        string   `json:"source_ref"`
-	TargetRef        string   `json:"target_ref"`
-	ObjectRefs       []string `json:"object_refs"`
-
-	ExternalReferences []struct {
-		SourceName string `json:"source_name"`
-		ExternalID string `json:"external_id"`
-	} `json:"external_references"`
 }
 
 type Group struct {
@@ -118,11 +82,6 @@ type CacheData struct {
 	DetectionStrategies []DetectionStrategy `json:"detection_strategies"`
 	Analytics           []Analytic          `json:"analytics"`
 }
-
-var (
-	cachePath = enterpriseMatrix.CachePath
-	metaPath  = enterpriseMatrix.MetaPath
-)
 
 type UpdateMeta struct {
 	ETag         string `json:"etag"`

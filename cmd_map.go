@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"mitre-explorer/internal/attack"
 )
 
 type EntityFlags struct {
@@ -67,21 +69,21 @@ func validateEntityFlags(entity string, flags EntityFlags) error {
 	return nil
 }
 
-func loadCacheForCommand() (CacheData, bool) {
-	cache, err := loadCacheData(cachePath)
+func loadCacheForCommand() (attack.CacheData, bool) {
+	cache, err := attack.LoadCacheData(cachePath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			fmt.Println(errText("Cache not found. Run: go run . update"))
-			return CacheData{}, false
+			return attack.CacheData{}, false
 		}
 		fmt.Printf("Error loading cache: %v\n", err)
-		return CacheData{}, false
+		return attack.CacheData{}, false
 	}
 
 	return cache, true
 }
 
-func printTechniqueMapping(titleText string, results []Technique, detailed bool) {
+func printTechniqueMapping(titleText string, results []attack.Technique, detailed bool) {
 	if len(results) == 0 {
 		printNoMappedResults("techniques", titleText)
 		return
@@ -91,7 +93,7 @@ func printTechniqueMapping(titleText string, results []Technique, detailed bool)
 	printMappedTechniquesWithMode(results, detailed)
 }
 
-func printAnalyticMapping(results []Analytic) {
+func printAnalyticMapping(results []attack.Analytic) {
 	if len(results) == 0 {
 		printNoMappedResults("analytics", "detection strategy")
 		return
@@ -101,7 +103,7 @@ func printAnalyticMapping(results []Analytic) {
 	printAnalyticList(results)
 }
 
-func printComponentMapping(source string, results []DataComponent) {
+func printComponentMapping(source string, results []attack.DataComponent) {
 	if len(results) == 0 {
 		printNoMappedResults("data components", source)
 		return
