@@ -1,136 +1,153 @@
-## MITRE ATT&CK CLI EXPLORER TOOL
+# MITRE ATT&CK Explorer CLI
 
-CLI tool written in Go to explore MITRE ATT&CK techniques offline.
-*This is an unofficial and **learning** project, not affiliated with MITRE.*
+A Go CLI for downloading, normalizing, and exploring MITRE ATT&CK data offline.
 
-### DISCLAIMER
-**THIS PROJECT USES MITRE ATT&CK DATA UNDER MITRE ATT&CK TERMS OF USE. MITRE ATT&CK AND ATT&CK ARE REGISTERED TRADEMARKS OF THE MITRE CORPORATION.**
+> This is an unofficial learning and portfolio project. It is not affiliated with
+> or endorsed by The MITRE Corporation.
 
-## Description
-A CLI for exploring MITRE ATT&CK data offline in a simple, learning-friendly workflow.
-It supports quick lookup, guided navigation, and local cache-based querying without needing live web requests for every command.
+## What It Does
 
-## Current Features (v1.0)
-- Offline cache + update pipeline.
-- Mappings for groups, mitigations, software, campaigns, detections, analytics, and data components.
-- Interactive guided/manual modes.
-- Plain/detailed output modes.
-- CSV/Markdown exports for cache data and mapped relationship reports.
-- Matrix-aware workflows for Enterprise, Mobile, and ICS, with Enterprise as the default.
+MITRE ATT&CK Explorer builds a local JSON cache from the official ATT&CK STIX
+datasets. After an update, searches, mappings, guided navigation, and reports use
+that local cache instead of making a web request for every query.
 
-### Core Commands
+The tool supports the Enterprise, Mobile, and ICS matrices. Enterprise is selected
+by default.
 
-### Update local cache
+## Features
+
+- Conditional dataset updates using ETag and Last-Modified metadata.
+- Offline technique and entity searches after the selected cache is built.
+- Technique mappings for groups, mitigations, software, campaigns, and detection
+  strategies.
+- Detection strategy, analytic, and data component relationships.
+- Guided explorer and manual command modes.
+- Matrix-aware, paginated, plain, and detailed terminal output.
+- CSV and Markdown exports, including mapped relationship reports.
+- Automated unit, integration, interactive, and multi-matrix regression tests.
+
+## Quick Start
+
+Use the Go version declared in [`go.mod`](go.mod). The project currently uses only
+the Go standard library.
+
+Build the default Enterprise cache:
 
 ```bash
 go run . update
-go run . update -f
 ```
 
-Downloads and normalizes the ATT&CK dataset into the local cache.
-
-### Search techniques
+Search it or inspect a technique:
 
 ```bash
 go run . search powershell
-go run . search powershell --name-only
-go run . search powershell --in-detection
-```
-
-Shows technique names/description, with optional detection-note searching.
-
-### Show a technique
-
-```bash
 go run . show T1059
-go run . show detection T1059
+go run . group G0020 --techniques
 ```
 
-Shows technique details or detection notes for a technique.
-
-### List targets
+Start the interactive menu:
 
 ```bash
-go run . list groups
-go run . list detections
-go run . list data-components
+go run .
 ```
 
-Lists supported targets with pagination.
-
-### Explore entities
+Select another matrix with a global option:
 
 ```bash
-go run . group G0020
-go run . group G0020 -t
-go run . detection DET0505 -a -c
-go run . analytic AN1394 -c
+go run . update --matrix mobile
+go run . list tactics --matrix mobile
 ```
 
-Shows entity details and optionally expands mapped relationships.
+Mobile and ICS have independent raw datasets, caches, and update metadata. Run
+`update --matrix <name>` before querying a matrix for the first time.
 
-### Flags
+## Commands
+
+| Command | Purpose |
+| --- | --- |
+| `update` | Download or refresh a matrix dataset and normalized cache. |
+| `status` | Inspect cache, metadata, entity counts, and tactic validation. |
+| `search` | Search techniques or another cached ATT&CK object type. |
+| `show` | Display technique details or its detection notes. |
+| `list` | Browse cache objects with pagination and optional technique filters. |
+| `group`, `mitigation`, `software`, `campaign` | Show an object and optional mappings. |
+| `detection`, `analytic` | Display detection content and linked objects. |
+| `export` | Write cache or relationship data as CSV or Markdown. |
+| `help` | Show global or command-specific help. |
+
+Global options:
+
+```text
+--matrix <enterprise|mobile|ics>  Select a matrix
+--plain                           Disable colored output
+```
+
+See [docs/COMMANDS.md](docs/COMMANDS.md) for every target, flag, mapping export,
+interactive behavior, and exit code.
+
+## Interactive Mode
+
+Running the tool without a command opens a menu:
+
+- **Guided Explorer** navigates tactics and ATT&CK objects step by step.
+- **Manual Command Mode** accepts the same commands without the `go run .` prefix.
+- Matrix and plain-output selections persist within one interactive session.
+- Quoted multiword values such as `"Process Creation"` are supported.
+- Use `q` to quit and `back` or `b` where shown to return to a previous screen.
+
+## Project Layout
+
+```text
+.
+|-- .github/workflows/go.yml   # Formatting, test, and vet checks
+|-- docs/
+|   |-- COMMANDS.md            # Complete command reference
+|   `-- DEVELOPMENT.md         # Architecture and development workflow
+|-- internal/
+|   |-- attack/                # ATT&CK models, STIX, storage, and queries
+|   `-- cli/                   # Commands, session state, and terminal UI
+|-- main.go                    # Thin executable entry point
+`-- version.go                 # Build-overridable release version
+```
+
+Tests are colocated with the packages they cover. Small fixtures live under
+`internal/attack/testdata/`.
+
+## Local Data
+
+Generated files are intentionally excluded from Git:
+
+- `data/`: downloaded STIX bundles, normalized caches, and update metadata.
+- `reports/`: default location for generated CSV and Markdown reports.
+- `.gocache/`: optional repository-local Go build cache.
+
+Do not commit downloaded ATT&CK datasets, generated reports, secrets, or local-only
+coordination files.
+
+## Development
+
+Run the standard checks from the repository root:
 
 ```bash
--t, --techniques  Show mapped techniques
--a, --analytics   Show mapped analytics
--c, --components  Show mapped data components
--d, --detailed    Show detailed technique output
---plain           Disable colored output
--f, --force       Force dataset update
+gofmt -l .
+go test ./...
+go vet ./...
 ```
 
-### Interactive Mode
-- Launches when running `go run .` with no command arguments.
-- **GUIDED EXPLORER**: navigate tactic -> technique -> details with in-terminal prompts.
-- **MANUAL COMMAND MODE**: type commands directly inside the app.
-- Navigation shortcuts: `q` to quit, `back`/`b` where applicable.
+For architecture decisions, race checks, fixtures, and the branch/PR workflow, see
+[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
-## Structure
-- `main.go`: app entrypoint, interactive mode bootstrap, shared line-reader/output helper.
-- `types.go`: core data models (STIX bundle/object structs, cache path constant).
-- `update.go`: update pipeline (download raw ATT&CK data, parse STIX, build/write and load cache).
-- `query.go`: search and filter logic.
-- `ui.go`: terminal UX (spinner and human-readable size formatting), color/theme, and table/truncation helpers.
-- `cmd_router.go`: central CLI command routing and global flag preprocessing.
-- `cmd_update.go`: `update` command handler (download/meta/cache rebuild flow).
-- `cmd_core.go`: core command handlers (`search`, `show`, `list`) and scoped search/list logic.
-- `cmd_export.go`: export/report handlers for CSV/Markdown and mapped relationship reports.
-- `cmd_status.go`: local cache/status summary command.
-- `cmd_map.go`: mapping handlers (`group`, `mitigation`, `software`, `campaign`, `detection`, `analytic`).
-- `guided_mode.go`: guided explorer flow and guided-specific detail rendering.
+## Project Status
 
-Generated local files ignored by Git:
-- `data/*-cache.json`: normalized local cache used by `search`, `show`, and `list`.
-- `data/*-attack.json`: raw ATT&CK datasets downloaded by `update`.
-- `data/*-meta.json`: stores ETag/Last-Modified identifiers for update checks.
+The released baseline is `v1.0`. Development after v1.0 improves package boundaries,
+state management, validation, failure handling, and regression coverage while
+preserving valid command syntax and the cache schema.
 
-## Usage
-```bash
-go run . <command> [arguments] [options]
-```
+## ATT&CK Data And Trademarks
 
-Common pattern:
-```bash
-go run . list <target>
-go run . <entity> <id_or_name> [flags]
-```
-Available `list` targets: techniques, groups, mitigations, software, campaigns, detections, analytics, data-components, tactics, and platforms.
+This project uses publicly available MITRE ATT&CK data under the MITRE ATT&CK terms
+of use. MITRE ATT&CK and ATT&CK are registered trademarks of The MITRE Corporation.
 
-Entity commands: group, mitigation, software, campaign, detection, and analytic.
-
-- `go run .` starts interactive mode
-
-Matrix note:
-Enterprise is the default matrix. Use `--matrix mobile` or `--matrix ics` to query Mobile or ICS caches.
-
-For full command examples, see [docs/commands.md](docs/commands.md).
-
-## Roadmap
-- **v1.0**: stable multi-matrix CLI release.
-
-
-## Notes
-- ATT&CK Enterprise tactic model changed in ATT&CK v19 (April 2026):
-  - `Defense Evasion` was split into `Stealth` and `Defense Impairment`.
-- This project tracks current tactics in guided/list flows.
+The Enterprise tactic scheme represented by the tool includes `Stealth` and
+`Defense Impairment`. The `status` command reports tactic names present in a cache
+that are not yet recognized by the selected matrix configuration.

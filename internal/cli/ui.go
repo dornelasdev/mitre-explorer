@@ -1,35 +1,55 @@
-package main
+package cli
 
 import (
-	"bufio"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
+
+	"mitre-explorer/internal/attack"
 )
 
-func startSpinner(message string) func() {
+func (app *App) printMappedTechniquesWithMode(results []attack.Technique, detailed bool) {
+	if detailed {
+		for i, t := range results {
+			fmt.Fprintf(app.out, "\n[%d] %s | %s\n", i+1, t.ID, t.Name)
+			fmt.Fprintf(app.out, "    Tactics: %s\n", strings.Join(t.Tactics, ", "))
+			fmt.Fprintf(app.out, "    Platforms: %s\n", strings.Join(t.Platforms, ", "))
+		}
+		return
+	}
+	app.printTechniqueTable(results)
+}
+
+func (app *App) startSpinner(message string) func() {
 	done := make(chan struct{})
+	finished := make(chan struct{})
 
 	go func() {
+		defer close(finished)
+		ticker := time.NewTicker(120 * time.Millisecond)
+		defer ticker.Stop()
 		frames := []rune{'|', '/', '-', '\\'}
 		i := 0
 		for {
+			fmt.Fprintf(app.out, "\r%s... %c", message, frames[i%len(frames)])
+			i++
 			select {
 			case <-done:
-				fmt.Printf("\r%s... done\n", message)
+				fmt.Fprintf(app.out, "\r%s... done\n", message)
 
 				return
-			default:
-				fmt.Printf("\r%s... %c", message, frames[i%len(frames)])
-				time.Sleep(120 * time.Millisecond)
-				i++
+			case <-ticker.C:
 			}
 		}
 	}()
 
-	return func() { close(done) }
+	var stopOnce sync.Once
+	return func() {
+		stopOnce.Do(func() { close(done) })
+		<-finished
+	}
 }
 
 func humanSize(n int64) string {
@@ -54,44 +74,42 @@ const (
 	cRed    = "\033[31m"
 )
 
-var useColor = true
-
-func title(text string) string {
-	if !useColor {
+func (app *App) title(text string) string {
+	if !app.useColor {
 		return text
 	}
 	return cBold + cCyan + text + cReset
 }
 
-func ok(text string) string {
-	if !useColor {
+func (app *App) ok(text string) string {
+	if !app.useColor {
 		return text
 	}
 	return cGreen + text + cReset
 }
 
-func warn(text string) string {
-	if !useColor {
+func (app *App) warn(text string) string {
+	if !app.useColor {
 		return text
 	}
 	return cYellow + text + cReset
 }
 
-func errText(text string) string {
-	if !useColor {
+func (app *App) errText(text string) string {
+	if !app.useColor {
 		return text
 	}
 	return cRed + text + cReset
 }
 
-func label(text string) string {
-	if !useColor {
+func (app *App) label(text string) string {
+	if !app.useColor {
 		return text
 	}
 	return cBold + text + cReset
 }
 
-func printTechniqueTable(techniques []Technique) {
+func (app *App) printTechniqueTable(techniques []attack.Technique) {
 	const nameWidth = 72
 
 	rows := make([][]string, 0, len(techniques))
@@ -103,7 +121,7 @@ func printTechniqueTable(techniques []Technique) {
 		})
 	}
 
-	printEntityTable(
+	app.printEntityTable(
 		[]string{"#", "ID", "Name"},
 		rows,
 		[]int{4, 12, nameWidth},
@@ -124,39 +142,39 @@ func truncateText(s string, max int) string {
 	return string(r[:max-1]) + "..."
 }
 
-func printDivider(width int) {
-	fmt.Println(strings.Repeat("-", width))
+func (app *App) printDivider(width int) {
+	fmt.Fprintln(app.out, strings.Repeat("-", width))
 }
 
-func printEntityTable(headers []string, rows [][]string, widths []int) {
+func (app *App) printEntityTable(headers []string, rows [][]string, widths []int) {
 	for i, h := range headers {
 		if i == len(headers)-1 {
-			fmt.Printf("%s", h)
+			fmt.Fprintf(app.out, "%s", h)
 			continue
 		}
-		fmt.Printf("%-*s ", widths[i], h)
+		fmt.Fprintf(app.out, "%-*s ", widths[i], h)
 	}
-	fmt.Println()
+	fmt.Fprintln(app.out)
 
 	totalWidth := 0
 	for _, w := range widths {
 		totalWidth += w + 1
 	}
-	printDivider(totalWidth)
+	app.printDivider(totalWidth)
 
 	for _, row := range rows {
 		for i, cell := range row {
 			if i == len(row)-1 {
-				fmt.Printf("%s", cell)
+				fmt.Fprintf(app.out, "%s", cell)
 				continue
 			}
-			fmt.Printf("%-*s ", widths[i], cell)
+			fmt.Fprintf(app.out, "%-*s ", widths[i], cell)
 		}
-		fmt.Println()
+		fmt.Fprintln(app.out)
 	}
 }
 
-func printGroupTable(groups []Group) {
+func (app *App) printGroupTable(groups []attack.Group) {
 	rows := make([][]string, 0, len(groups))
 	for i, g := range groups {
 		rows = append(rows, []string{
@@ -166,14 +184,14 @@ func printGroupTable(groups []Group) {
 		})
 	}
 
-	printEntityTable(
+	app.printEntityTable(
 		[]string{"#", "ID", "Name"},
 		rows,
 		[]int{4, 10, 48},
 	)
 }
 
-func printMitigationTable(mitigations []Mitigation) {
+func (app *App) printMitigationTable(mitigations []attack.Mitigation) {
 	rows := make([][]string, 0, len(mitigations))
 	for i, m := range mitigations {
 		rows = append(rows, []string{
@@ -183,14 +201,14 @@ func printMitigationTable(mitigations []Mitigation) {
 		})
 	}
 
-	printEntityTable(
+	app.printEntityTable(
 		[]string{"#", "ID", "Name"},
 		rows,
 		[]int{4, 10, 48},
 	)
 }
 
-func printSoftwareTable(softwares []Software) {
+func (app *App) printSoftwareTable(softwares []attack.Software) {
 	rows := make([][]string, 0, len(softwares))
 	for i, s := range softwares {
 		rows = append(rows, []string{
@@ -200,14 +218,14 @@ func printSoftwareTable(softwares []Software) {
 		})
 	}
 
-	printEntityTable(
+	app.printEntityTable(
 		[]string{"#", "ID", "Name"},
 		rows,
 		[]int{4, 10, 48},
 	)
 }
 
-func printCampaignTable(campaigns []Campaign) {
+func (app *App) printCampaignTable(campaigns []attack.Campaign) {
 	rows := make([][]string, 0, len(campaigns))
 	for i, c := range campaigns {
 		rows = append(rows, []string{
@@ -217,14 +235,14 @@ func printCampaignTable(campaigns []Campaign) {
 		})
 	}
 
-	printEntityTable(
+	app.printEntityTable(
 		[]string{"#", "ID", "Name"},
 		rows,
 		[]int{4, 10, 48},
 	)
 }
 
-func printDataComponentList(components []DataComponent) {
+func (app *App) printDataComponentList(components []attack.DataComponent) {
 	rows := make([][]string, 0, len(components))
 	for i, dc := range components {
 		rows = append(rows, []string{
@@ -233,14 +251,14 @@ func printDataComponentList(components []DataComponent) {
 		})
 	}
 
-	printEntityTable(
+	app.printEntityTable(
 		[]string{"#", "Name"},
 		rows,
 		[]int{4, 56},
 	)
 }
 
-func printDetectionTable(detections []DetectionStrategy) {
+func (app *App) printDetectionTable(detections []attack.DetectionStrategy) {
 	rows := make([][]string, 0, len(detections))
 	for i, d := range detections {
 		rows = append(rows, []string{
@@ -250,14 +268,14 @@ func printDetectionTable(detections []DetectionStrategy) {
 		})
 	}
 
-	printEntityTable(
+	app.printEntityTable(
 		[]string{"#", "ID", "Name"},
 		rows,
 		[]int{4, 12, 56},
 	)
 }
 
-func printAnalyticList(analytics []Analytic) {
+func (app *App) printAnalyticList(analytics []attack.Analytic) {
 	rows := make([][]string, 0, len(analytics))
 	for i, d := range analytics {
 		rows = append(rows, []string{
@@ -267,7 +285,7 @@ func printAnalyticList(analytics []Analytic) {
 		})
 	}
 
-	printEntityTable(
+	app.printEntityTable(
 		[]string{"#", "ID", "Name"},
 		rows,
 		[]int{4, 12, 56},
@@ -279,47 +297,47 @@ type DetailField struct {
 	Value string
 }
 
-func printDetails(fields []DetailField) {
+func (app *App) printDetails(fields []DetailField) {
 	for _, f := range fields {
-		fmt.Printf("%s %s\n", label(f.Label), f.Value)
+		fmt.Fprintf(app.out, "%s %s\n", app.label(f.Label), f.Value)
 	}
 }
 
-func printInvalidSelection() {
-	fmt.Println("Invalid selection.")
+func (app *App) printInvalidSelection() {
+	fmt.Fprintln(app.out, "Invalid selection.")
 }
 
-func printNoResults(item string) {
-	fmt.Printf("No %s found.\n", item)
+func (app *App) printNoResults(item string) {
+	fmt.Fprintf(app.out, "No %s found.\n", item)
 }
 
-func printNoMappedResults(item string, source string) {
-	fmt.Printf("No %s mapped for this %s.\n", item, source)
+func (app *App) printNoMappedResults(item string, source string) {
+	fmt.Fprintf(app.out, "No %s mapped for this %s.\n", item, source)
 }
 
-func printSection(text string) {
-	fmt.Println()
-	fmt.Println(title(text))
-	printDivider(64)
+func (app *App) printSection(text string) {
+	fmt.Fprintln(app.out)
+	fmt.Fprintln(app.out, app.title(text))
+	app.printDivider(64)
 }
 
-func printSubsection(text string) {
-	fmt.Println()
-	fmt.Println(label(text))
-	printDivider(40)
+func (app *App) printSubsection(text string) {
+	fmt.Fprintln(app.out)
+	fmt.Fprintln(app.out, app.label(text))
+	app.printDivider(40)
 }
 
-func printPaginatedTable(titleText string, headers []string, rows [][]string, widths []int, pageSize int) {
+func (app *App) printPaginatedTable(titleText string, headers []string, rows [][]string, widths []int, pageSize int) {
 	if pageSize <= 0 {
 		pageSize = 25
 	}
 
 	if len(rows) == 0 {
-		printNoResults(strings.ToLower(titleText))
+		app.printNoResults(strings.ToLower(titleText))
 		return
 	}
 
-	reader := bufio.NewReader(os.Stdin)
+	reader := app.reader
 	page := 0
 	totalPages := (len(rows) + pageSize - 1) / pageSize
 
@@ -330,14 +348,18 @@ func printPaginatedTable(titleText string, headers []string, rows [][]string, wi
 			end = len(rows)
 		}
 
-		printSection(titleText)
-		fmt.Printf("Showing %d-%d of %d\n", start+1, end, len(rows))
-		printEntityTable(headers, rows[start:end], widths)
-		fmt.Println()
-		fmt.Println("[n] Next  [p] Previous  [q] Quit")
-		fmt.Print("> ")
+		app.printSection(titleText)
+		fmt.Fprintf(app.out, "Showing %d-%d of %d\n", start+1, end, len(rows))
+		app.printEntityTable(headers, rows[start:end], widths)
+		fmt.Fprintln(app.out)
+		fmt.Fprintln(app.out, "[n] Next  [p] Previous  [q] Quit")
+		fmt.Fprint(app.out, "> ")
 
-		input := strings.ToLower(strings.TrimSpace(readLine(reader)))
+		input, err := readLine(reader)
+		if err != nil {
+			return
+		}
+		input = strings.ToLower(input)
 
 		switch input {
 		case "":
@@ -346,18 +368,18 @@ func printPaginatedTable(titleText string, headers []string, rows [][]string, wi
 			if page < totalPages-1 {
 				page++
 			} else {
-				fmt.Println("Already on last page.")
+				fmt.Fprintln(app.out, "Already on last page.")
 			}
 		case "p":
 			if page > 0 {
 				page--
 			} else {
-				fmt.Println("Already on first page.")
+				fmt.Fprintln(app.out, "Already on first page.")
 			}
 		case "q":
 			return
 		default:
-			printInvalidSelection()
+			app.printInvalidSelection()
 		}
 	}
 }

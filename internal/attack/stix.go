@@ -1,199 +1,49 @@
-package main
+package attack
 
-import (
-	"encoding/json"
-	"fmt"
-	"io"
-	"net/http"
-	"os"
-	"strings"
-)
+import "strings"
 
-type DownloadResult struct {
-	Downloaded   bool
-	NotModified  bool
-	Bytes        int64
-	ETag         string
-	LastModified string
+type stixBundle struct {
+	Objects []stixObject `json:"objects"`
 }
 
-func downloadFileConditional(url, outputPath string, prev UpdateMeta, force bool) (DownloadResult, error) {
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		return DownloadResult{}, err
-	}
+type stixObject struct {
+	Type        string `json:"type"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
 
-	if !force {
-		if prev.ETag != "" {
-			req.Header.Set("If-None-Match", prev.ETag)
-		}
-		if prev.LastModified != "" {
-			req.Header.Set("If-Modified-Since", prev.LastModified)
-		}
-	}
+	KillChainPhases []struct {
+		PhaseName string `json:"phase_name"`
+	} `json:"kill_chain_phases"`
 
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return DownloadResult{}, err
-	}
-	defer resp.Body.Close()
+	XMitrePlatforms           []string `json:"x_mitre_platforms"`
+	XMitreDataSources         []string `json:"x_mitre_data_sources"`
+	XMitreDetection           string   `json:"x_mitre_detection"`
+	XMitreAliases             []string `json:"x_mitre_aliases"`
+	XMitreDeprecated          bool     `json:"x_mitre_deprecated"`
+	XMitreDataComponents      []string `json:"x_mitre_data_components"`
+	XMitreAnalyticRefs        []string `json:"x_mitre_analytic_refs"`
+	XMitreLogSourceReferences []struct {
+		XMitreDataComponentRef string `json:"x_mitre_data_component_ref"`
+	} `json:"x_mitre_log_source_references"`
+	Revoked bool `json:"revoked"`
 
-	if resp.StatusCode == http.StatusNotModified {
-		return DownloadResult{
-			NotModified:  true,
-			ETag:         prev.ETag,
-			LastModified: prev.LastModified,
-		}, nil
-	}
+	ID               string   `json:"id"`
+	RelationshipType string   `json:"relationship_type"`
+	SourceRef        string   `json:"source_ref"`
+	TargetRef        string   `json:"target_ref"`
+	ObjectRefs       []string `json:"object_refs"`
 
-	if resp.StatusCode != http.StatusOK {
-		return DownloadResult{}, fmt.Errorf("Unexpected HTTP status: %s", resp.Status)
-	}
-
-	if err := os.MkdirAll("data", 0o755); err != nil {
-		return DownloadResult{}, err
-	}
-
-	file, err := os.Create(outputPath)
-	if err != nil {
-		return DownloadResult{}, err
-	}
-	defer file.Close()
-
-	n, err := io.Copy(file, resp.Body)
-	if err != nil {
-		return DownloadResult{}, err
-	}
-
-	etag := resp.Header.Get("ETag")
-	if etag == "" {
-		etag = prev.ETag
-	}
-
-	lastMod := resp.Header.Get("Last-Modified")
-	if lastMod == "" {
-		lastMod = prev.LastModified
-	}
-
-	return DownloadResult{
-		Downloaded:   true,
-		Bytes:        n,
-		ETag:         etag,
-		LastModified: lastMod,
-	}, nil
+	ExternalReferences []struct {
+		SourceName string `json:"source_name"`
+		ExternalID string `json:"external_id"`
+	} `json:"external_references"`
 }
 
-func buildTechniquesFromSTIX(path string) ([]Technique, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	var bundle STIXBundle
-	if err := json.Unmarshal(data, &bundle); err != nil {
-		return nil, err
-	}
-
-	var techniques []Technique
-
-	for _, obj := range bundle.Objects {
-		if obj.Type != "attack-pattern" {
-			continue
-		}
-
-		id := ""
-		for _, ref := range obj.ExternalReferences {
-			if ref.SourceName == "mitre-attack" && ref.ExternalID != "" {
-				id = ref.ExternalID
-				break
-			}
-		}
-		if id == "" {
-			continue
-		}
-
-		var tactics []string
-		for _, phase := range obj.KillChainPhases {
-			if phase.PhaseName != "" {
-				tactics = append(tactics, phase.PhaseName)
-			}
-		}
-
-		techniques = append(techniques, Technique{
-			ID:             id,
-			Name:           obj.Name,
-			Description:    obj.Description,
-			Tactics:        tactics,
-			Platforms:      obj.XMitrePlatforms,
-			DataSources:    obj.XMitreDataSources,
-			DetectionNotes: obj.XMitreDetection,
-			DataComponents: obj.XMitreDataComponents,
-		})
-	}
-
-	return techniques, nil
-}
-
-func saveTechniques(path string, techniques []Technique) error {
-	data, err := json.MarshalIndent(techniques, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	if err := os.MkdirAll("data", 0o755); err != nil {
-		return err
-	}
-
-	return os.WriteFile(path, data, 0o644)
-}
-
-func loadTechniques(path string) ([]Technique, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	var techniques []Technique
-	if err := json.Unmarshal(data, &techniques); err != nil {
-		return nil, err
-	}
-
-	return techniques, nil
-}
-
-func loadUpdateMeta(path string) (UpdateMeta, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return UpdateMeta{}, err
-	}
-
-	var m UpdateMeta
-	if err := json.Unmarshal(data, &m); err != nil {
-		return UpdateMeta{}, err
-	}
-	return m, nil
-}
-
-func saveUpdateMeta(path string, m UpdateMeta) error {
-	data, err := json.MarshalIndent(m, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	if err := os.MkdirAll("data", 0o755); err != nil {
-		return err
-	}
-	return os.WriteFile(path, data, 0o644)
-}
-
-func buildCacheDataFromSTIX(path string) (CacheData, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return CacheData{}, err
-	}
-
-	var bundle STIXBundle
-	if err := json.Unmarshal(data, &bundle); err != nil {
+// BuildCacheDataFromSTIX normalizes supported objects and enriches techniques
+// with detection notes and data-component relationships.
+func BuildCacheDataFromSTIX(path string) (CacheData, error) {
+	var bundle stixBundle
+	if err := loadJSON(path, &bundle); err != nil {
 		return CacheData{}, err
 	}
 
@@ -638,31 +488,4 @@ func appendUniqueText(parts []string, text string) []string {
 	}
 
 	return append(parts, text)
-}
-
-func saveCacheData(path string, cache CacheData) error {
-	data, err := json.MarshalIndent(cache, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	if err := os.MkdirAll("data", 0o755); err != nil {
-		return err
-	}
-
-	return os.WriteFile(path, data, 0o644)
-}
-
-func loadCacheData(path string) (CacheData, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return CacheData{}, err
-	}
-
-	var cache CacheData
-	if err := json.Unmarshal(data, &cache); err != nil {
-		return CacheData{}, err
-	}
-
-	return cache, nil
 }

@@ -1,4 +1,4 @@
-package main
+package cli
 
 import (
 	"fmt"
@@ -89,28 +89,33 @@ var icsMatrix = MatrixConfig{
 	TacticOrder: icsTacticOrder,
 }
 
-var activeMatrix = enterpriseMatrix
-
-func setActiveMatrix(name string) error {
+func matrixFor(name string) (MatrixConfig, error) {
 	matrixName := strings.ToLower(strings.TrimSpace(name))
+	var matrix MatrixConfig
 
 	switch matrixName {
 	case "", "enterprise":
-		activeMatrix = enterpriseMatrix
+		matrix = enterpriseMatrix
 	case "mobile":
-		activeMatrix = mobileMatrix
+		matrix = mobileMatrix
 	case "ics":
-		activeMatrix = icsMatrix
+		matrix = icsMatrix
 	default:
-		return fmt.Errorf("unsupported matrix %q. Supported matrices: enterprise, mobile, ics", name)
+		return MatrixConfig{}, fmt.Errorf("unsupported matrix %q. Supported matrices: enterprise, mobile, ics", name)
 	}
+	matrix.TacticOrder = append([]string(nil), matrix.TacticOrder...)
+	return matrix, nil
+}
 
-	cachePath = activeMatrix.CachePath
-	metaPath = activeMatrix.MetaPath
-
+func (app *App) setActiveMatrix(name string) error {
+	matrix, err := matrixFor(name)
+	if err != nil {
+		return err
+	}
+	app.matrix = matrix
 	return nil
 }
 
-func activeMatrixName() string {
-	return activeMatrix.Name
+func (app *App) activeMatrixName() string {
+	return app.matrix.Name
 }
