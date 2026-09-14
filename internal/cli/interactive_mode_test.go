@@ -1,4 +1,4 @@
-package main
+package cli
 
 import (
 	"bufio"
@@ -87,7 +87,7 @@ func TestInteractiveEOFHelper(t *testing.T) {
 	if mode == "" {
 		return
 	}
-	reader := bufio.NewReader(os.Stdin)
+	app := New(os.Stdin, io.Discard)
 	cache := attack.CacheData{
 		DataComponents:      []attack.DataComponent{{Name: "Process Creation"}},
 		DetectionStrategies: []attack.DetectionStrategy{{ID: "DET0001", Name: "Test detection"}},
@@ -95,15 +95,15 @@ func TestInteractiveEOFHelper(t *testing.T) {
 	}
 	switch mode {
 	case "menu":
-		startInteractiveMode()
+		app.startInteractiveMode()
 	case "pagination":
-		printPaginatedTable("Test", []string{"Name"}, [][]string{{"First"}, {"Second"}}, []int{10}, 1)
+		app.printPaginatedTable("Test", []string{"Name"}, [][]string{{"First"}, {"Second"}}, []int{10}, 1)
 	case "components":
-		runGuidedDataComponents(cache, reader)
+		app.runGuidedDataComponents(cache)
 	case "detections":
-		runGuidedDetections(cache, reader)
+		app.runGuidedDetections(cache)
 	case "analytics":
-		runGuidedAnalytics(cache, reader)
+		app.runGuidedAnalytics(cache)
 	default:
 		t.Fatalf("unknown helper mode %q", mode)
 	}

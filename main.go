@@ -1,7 +1,11 @@
 package main
 
-import "os"
+import (
+	"os"
+
+	"mitre-explorer/internal/cli"
+)
 
 func main() {
-	runApp(os.Args[1:])
+	os.Exit(cli.Run(os.Args[1:], version))
 }
