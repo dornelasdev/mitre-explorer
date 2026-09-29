@@ -5,10 +5,11 @@ import tea "charm.land/bubbletea/v2"
 
 // Options contains session state supplied by the command-line application.
 type Options struct {
-	Matrix    string
-	CachePath string
-	Version   string
-	Plain     bool
+	Matrix      string
+	CachePath   string
+	TacticOrder []string
+	Version     string
+	Plain       bool
 }
 
 // Run starts the full-screen terminal interface.

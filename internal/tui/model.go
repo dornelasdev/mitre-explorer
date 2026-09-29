@@ -1,33 +1,61 @@
 package tui
 
 import (
-	"fmt"
-	"strings"
+	"mitre-explorer/internal/attack"
 
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 )
 
-const wideBanner = ` __  __ ___ _____ ____  _____    _____  __  __ ____  _      ___  ____  _____ ____
-|  \/  |_ _|_   _|  _ \| ____|  | ____| \ \/ /|  _ \| |    / _ \|  _ \| ____|  _ \
-| |\/| || |  | | | |_) |  _|    |  _|    \  / | |_) | |   | | | | |_) |  _| | |_) |
-| |  | || |  | | |  _ <| |___   | |___   /  \ |  __/| |___| |_| |  _ <| |___|  _ <
-|_|  |_|___| |_| |_| \_\_____|  |_____| /_/\_\|_|   |_____|\___/|_| \_\_____|_| \_\`
+type screen uint8
 
-const compactBanner = "MITRE EXPLORER"
+const (
+	screenTactics screen = iota
+	screenTechniques
+	screenTechniqueDetail
+)
+
+type cacheLoadedMsg struct {
+	cache attack.CacheData
+}
+
+type cacheLoadFailedMsg struct {
+	err error
+}
 
 type model struct {
-	options Options
-	width   int
-	height  int
+	options         Options
+	cache           attack.CacheData
+	tactics         []string
+	techniques      []attack.Technique
+	screen          screen
+	tacticCursor    int
+	techniqueCursor int
+	width           int
+	height          int
+	loading         bool
+	loadErr         error
 }
 
 func newModel(options Options) model {
-	return model{options: options}
+	return model{
+		options: options,
+		screen:  screenTactics,
+		loading: true,
+	}
 }
 
 func (m model) Init() tea.Cmd {
-	return nil
+	return loadCache(m.options.CachePath)
+}
+
+func loadCache(path string) tea.Cmd {
+	return func() tea.Msg {
+		cache, err := attack.LoadCacheData(path)
+		if err != nil {
+			return cacheLoadFailedMsg{err: err}
+		}
+		return cacheLoadedMsg{cache: cache}
+	}
 }
 
 func (m model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
@@ -35,141 +63,104 @@ func (m model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = message.Width
 		m.height = message.Height
+	case cacheLoadedMsg:
+		m.cache = message.cache
+		m.tactics = attack.CollectUniqueTactics(m.cache.Techniques, m.options.TacticOrder)
+		m.loading = false
+		m.loadErr = nil
+	case cacheLoadFailedMsg:
+		m.loading = false
+		m.loadErr = message.err
 	case tea.KeyPressMsg:
-		switch message.String() {
-		case "q", "esc", "ctrl+c":
-			return m, tea.Quit
-		}
+		return m.handleKey(message.String())
 	}
 
 	return m, nil
 }
 
-func (m model) View() tea.View {
-	view := tea.NewView(m.render())
-	view.AltScreen = true
-	view.WindowTitle = "MITRE Explorer"
-	return view
-}
-
-func (m model) render() string {
-	width, height := m.width, m.height
-	if width == 0 {
-		width = 100
+func (m model) handleKey(key string) (tea.Model, tea.Cmd) {
+	if key == "q" || key == "ctrl+c" {
+		return m, tea.Quit
 	}
-	if height == 0 {
-		height = 30
+	if key == "esc" {
+		if m.screen == screenTactics || m.loading || m.loadErr != nil {
+			return m, tea.Quit
+		}
+		m.goBack()
+		return m, nil
 	}
-
-	if width < 36 || height < 10 {
-		return m.renderSmall(width, height)
-	}
-	if width >= 76 && height >= 18 {
-		return m.renderWide(width, height)
-	}
-	return m.renderCompact(width)
-}
-
-func (m model) renderWide(width, height int) string {
-	leftWidth := 22
-	rightWidth := width - leftWidth - 4
-	bodyHeight := max(7, height-13)
-
-	left := m.panelStyle(leftWidth, bodyHeight).Render(strings.Join([]string{
-		m.headingStyle().Render("NAVIGATE"),
-		"",
-		"> Overview",
-		"  Tactics",
-		"  Techniques",
-		"  Search",
-	}, "\n"))
-	right := m.panelStyle(rightWidth, bodyHeight).Render(strings.Join([]string{
-		m.headingStyle().Render("TUI FOUNDATION"),
-		"",
-		"The full-screen interface is ready.",
-		"",
-		"The next section will connect this layout to",
-		"the selected matrix, tactics, and techniques.",
-	}, "\n"))
-
-	header := compactBanner
-	if width >= 100 && height >= 24 {
-		header = wideBanner
+	if m.loading || m.loadErr != nil {
+		return m, nil
 	}
 
-	return strings.Join([]string{
-		m.titleStyle().Render(header),
-		m.statusLine(),
-		"",
-		lipgloss.JoinHorizontal(lipgloss.Top, left, right),
-		"",
-		m.footer(),
-	}, "\n")
-}
-
-func (m model) renderCompact(width int) string {
-	contentWidth := max(30, width-2)
-	return strings.Join([]string{
-		m.titleStyle().Render(compactBanner),
-		m.statusLine(),
-		"",
-		m.panelStyle(contentWidth-2, 7).Render(strings.Join([]string{
-			m.headingStyle().Render("TUI FOUNDATION"),
-			"",
-			"Responsive compact layout active.",
-			"Matrix navigation arrives next.",
-		}, "\n")),
-		"",
-		m.footer(),
-	}, "\n")
-}
-
-func (m model) renderSmall(width, height int) string {
-	return fmt.Sprintf("%s\nTerminal too small (%dx%d). Resize to at least 36x10.\n%s",
-		compactBanner, width, height, m.footer())
-}
-
-func (m model) statusLine() string {
-	return fmt.Sprintf("Matrix: %s  Cache: %s  Version: %s",
-		m.options.Matrix, m.options.CachePath, m.options.Version)
-}
-
-func (m model) footer() string {
-	return m.mutedStyle().Render("q / Esc / Ctrl+C  quit")
-}
-
-func (m model) titleStyle() lipgloss.Style {
-	style := lipgloss.NewStyle()
-	if !m.options.Plain {
-		style = style.Bold(true).Foreground(lipgloss.Color("#58C7D9"))
+	switch key {
+	case "up", "k":
+		m.moveCursor(-1)
+	case "down", "j":
+		m.moveCursor(1)
+	case "enter":
+		m.selectCurrent()
+	case "b":
+		m.goBack()
 	}
-	return style
+
+	return m, nil
 }
 
-func (m model) headingStyle() lipgloss.Style {
-	style := lipgloss.NewStyle()
-	if !m.options.Plain {
-		style = style.Bold(true).Foreground(lipgloss.Color("#E8B04A"))
+func (m *model) moveCursor(delta int) {
+	var cursor *int
+	var length int
+
+	switch m.screen {
+	case screenTactics:
+		cursor, length = &m.tacticCursor, len(m.tactics)
+	case screenTechniques:
+		cursor, length = &m.techniqueCursor, len(m.techniques)
+	default:
+		return
 	}
-	return style
+
+	if length == 0 {
+		return
+	}
+	*cursor = min(max(*cursor+delta, 0), length-1)
 }
 
-func (m model) mutedStyle() lipgloss.Style {
-	style := lipgloss.NewStyle()
-	if !m.options.Plain {
-		style = style.Foreground(lipgloss.Color("#80878F"))
+func (m *model) selectCurrent() {
+	switch m.screen {
+	case screenTactics:
+		if len(m.tactics) == 0 {
+			return
+		}
+		m.techniques = attack.ListByTactic(m.cache.Techniques, m.tactics[m.tacticCursor])
+		m.techniqueCursor = 0
+		m.screen = screenTechniques
+	case screenTechniques:
+		if len(m.techniques) > 0 {
+			m.screen = screenTechniqueDetail
+		}
 	}
-	return style
 }
 
-func (m model) panelStyle(width, height int) lipgloss.Style {
-	style := lipgloss.NewStyle().
-		Border(lipgloss.ASCIIBorder()).
-		Padding(0, 1).
-		Width(width).
-		Height(height)
-	if !m.options.Plain {
-		style = style.BorderForeground(lipgloss.Color("#3B8793"))
+func (m *model) goBack() {
+	switch m.screen {
+	case screenTechniqueDetail:
+		m.screen = screenTechniques
+	case screenTechniques:
+		m.screen = screenTactics
 	}
-	return style
+}
+
+func (m model) selectedTactic() (string, bool) {
+	if m.tacticCursor < 0 || m.tacticCursor >= len(m.tactics) {
+		return "", false
+	}
+	return m.tactics[m.tacticCursor], true
+}
+
+func (m model) selectedTechnique() (attack.Technique, bool) {
+	if m.techniqueCursor < 0 || m.techniqueCursor >= len(m.techniques) {
+		return attack.Technique{}, false
+	}
+	return m.techniques[m.techniqueCursor], true
 }

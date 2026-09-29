@@ -234,7 +234,7 @@ func TestHelpMatchesCommandBehavior(t *testing.T) {
 		{"analytic", []string{"--components", "--matrix <matrix>"}},
 		{"status", []string{"missing cache is reported as status information", "--matrix <matrix>, --plain"}},
 		{"export", []string{"Output format (default: csv)", "Required only for mapped relationship targets"}},
-		{"tui", []string{"full-screen terminal interface", "q, Esc, Ctrl+C"}},
+		{"tui", []string{"tactic and technique navigation", "Up/k, Down/j", "q, Ctrl+C"}},
 	} {
 		name := tc.target
 		if name == "" {

@@ -214,11 +214,13 @@ func (app *App) printExportHelp() {
 func (app *App) printTUIHelp() {
 	fmt.Fprintln(app.out, "Usage: go run . tui")
 	fmt.Fprintln(app.out)
-	fmt.Fprintln(app.out, "Opens the full-screen terminal interface.")
-	fmt.Fprintln(app.out, "The current foundation previews the responsive layout before data navigation is connected.")
+	fmt.Fprintln(app.out, "Opens the full-screen terminal interface for tactic and technique navigation.")
 	fmt.Fprintln(app.out)
 	fmt.Fprintln(app.out, "Keys:")
-	fmt.Fprintln(app.out, "  q, Esc, Ctrl+C      Exit the TUI")
+	fmt.Fprintln(app.out, "  Up/k, Down/j        Move through the current list")
+	fmt.Fprintln(app.out, "  Enter               Open the selected item")
+	fmt.Fprintln(app.out, "  b, Esc              Return to the previous screen")
+	fmt.Fprintln(app.out, "  q, Ctrl+C           Exit the TUI")
 	fmt.Fprintln(app.out)
 	fmt.Fprintln(app.out, "Global options: --matrix <matrix>, --plain")
 }

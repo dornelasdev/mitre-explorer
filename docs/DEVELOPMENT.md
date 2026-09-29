@@ -38,8 +38,8 @@ go test -race ./...
 ```
 
 Tests use small fixtures and do not require downloaded ATT&CK datasets. They cover
-query behavior, matrix selection, export helpers, version availability, closed
-input handling, conditional downloads, storage, and STIX normalization. HTTP tests
+query behavior, matrix selection, TUI navigation, export helpers, version
+availability, closed input handling, conditional downloads, storage, and STIX normalization. HTTP tests
 use local fixture servers rather than requesting live ATT&CK data. The interactive
 EOF and guided-flow tests use separate processes with timeouts so a loop regression
 cannot hang the suite indefinitely.
@@ -110,10 +110,11 @@ continue to work. `internal/attack` contains terminal-independent data logic;
 them as a public library API.
 
 `internal/tui` owns the Bubble Tea model and Lip Gloss rendering for the optional
-full-screen interface. The CLI passes selected matrix, cache path, version, and
-plain-output state through a small options value; the TUI does not import the CLI.
-This direction keeps command routing separate from full-screen state and avoids an
-import cycle.
+full-screen interface. The CLI passes selected matrix, cache path, tactic order,
+version, and plain-output state through a small options value; the TUI does not
+import the CLI. Cache loading runs as a Bubble Tea command, and navigation reuses
+the `internal/attack` tactic queries. This direction keeps command routing separate
+from full-screen state and avoids an import cycle.
 
 ## Data Layer
 

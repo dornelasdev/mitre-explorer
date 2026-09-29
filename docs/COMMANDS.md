@@ -329,10 +329,10 @@ Open the full-screen interface with:
 go run . tui
 ```
 
-This first TUI foundation provides a responsive layout, selected-matrix context,
-and clean terminal startup and shutdown. ATT&CK navigation will be connected in
-the next implementation section; the existing CLI and guided mode remain fully
-available.
+The TUI loads the selected local cache and provides a responsive path from ordered
+tactics to their techniques and technique details. Move with the arrow keys or
+`j`/`k`, open an item with `Enter`, and return one level with `b` or `Esc`. At the
+tactic root, `Esc` exits. The existing CLI and guided mode remain fully available.
 
 The global `--matrix` and `--plain` options are supported:
 
@@ -340,7 +340,8 @@ The global `--matrix` and `--plain` options are supported:
 go run . tui --matrix mobile --plain
 ```
 
-Use `q`, `Esc`, or `Ctrl+C` to leave the TUI.
+Use `q` or `Ctrl+C` to leave the TUI from any screen. If the selected cache is
+missing, the TUI shows the corresponding matrix update command.
 
 ## Troubleshooting
 

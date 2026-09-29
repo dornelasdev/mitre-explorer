@@ -21,7 +21,7 @@ by default.
 - Technique mappings for groups, mitigations, software, campaigns, and detection
   strategies.
 - Detection strategy, analytic, and data component relationships.
-- Guided explorer and manual command modes.
+- Guided explorer, manual command, and full-screen TUI modes.
 - Matrix-aware, paginated, plain, and detailed terminal output.
 - CSV and Markdown exports, including mapped relationship reports.
 - Automated unit, integration, interactive, and multi-matrix regression tests.
@@ -51,7 +51,7 @@ Start the interactive menu:
 go run .
 ```
 
-Or open the full-screen TUI preview:
+Or browse tactics and techniques in the full-screen TUI:
 
 ```bash
 go run . tui

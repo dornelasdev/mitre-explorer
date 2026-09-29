@@ -8,9 +8,10 @@ func (app *App) handleTUI(args []string) error {
 	}
 
 	return tui.Run(tui.Options{
-		Matrix:    app.matrix.Name,
-		CachePath: app.matrix.CachePath,
-		Version:   app.version,
-		Plain:     !app.useColor,
+		Matrix:      app.matrix.Name,
+		CachePath:   app.matrix.CachePath,
+		TacticOrder: append([]string(nil), app.matrix.TacticOrder...),
+		Version:     app.version,
+		Plain:       !app.useColor,
 	})
 }
