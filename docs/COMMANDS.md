@@ -321,6 +321,27 @@ execute nested shell commands.
 A failed manual command prints its diagnostic and returns to the `manual>` prompt.
 Matrix and `--plain` selections persist until the process exits.
 
+## Full-Screen TUI
+
+Open the full-screen interface with:
+
+```bash
+go run . tui
+```
+
+This first TUI foundation provides a responsive layout, selected-matrix context,
+and clean terminal startup and shutdown. ATT&CK navigation will be connected in
+the next implementation section; the existing CLI and guided mode remain fully
+available.
+
+The global `--matrix` and `--plain` options are supported:
+
+```bash
+go run . tui --matrix mobile --plain
+```
+
+Use `q`, `Esc`, or `Ctrl+C` to leave the TUI.
+
 ## Troubleshooting
 
 If a cache is missing, update the selected matrix first:

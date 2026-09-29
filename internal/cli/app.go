@@ -16,6 +16,7 @@ type App struct {
 	errOut   io.Writer
 	matrix   MatrixConfig
 	useColor bool
+	version  string
 }
 
 // New creates an Enterprise session with its own input buffer and color settings.
@@ -52,6 +53,7 @@ func Run(args []string, version string) int {
 
 // Run returns 0 on success, 1 on command failure, or 2 on invalid usage.
 func (app *App) Run(args []string, version string) int {
+	app.version = version
 	fmt.Fprintf(app.out, "MITRE Explorer %s\n", version)
 
 	filtered, err := app.applyGlobalOptions(args)
