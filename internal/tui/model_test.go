@@ -2,6 +2,7 @@ package tui
 
 import (
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -11,11 +12,28 @@ import (
 )
 
 func testCache() attack.CacheData {
-	return attack.CacheData{Techniques: []attack.Technique{
-		{ID: "T2000", Name: "Second Execution", Description: "Second description", Tactics: []string{"execution"}, Platforms: []string{"Linux"}},
-		{ID: "T3000", Name: "Discovery Example", Description: "Discovery description", Tactics: []string{"discovery"}},
-		{ID: "T1000", Name: "First Execution", Description: "First description", Tactics: []string{"execution"}, DataSources: []string{"Process"}},
-	}}
+	return attack.CacheData{
+		Techniques: []attack.Technique{
+			{ID: "T2000", Name: "Second Execution", Description: "Second description", Tactics: []string{"execution"}, Platforms: []string{"Linux"}},
+			{ID: "T3000", Name: "Discovery Example", Description: "Discovery description", Tactics: []string{"discovery"}},
+			{ID: "T1000", Name: "First Execution", Description: "First description", Tactics: []string{"execution"}, DataSources: []string{"Process"}},
+		},
+		Groups:              []attack.Group{{ID: "G0001", Name: "Example Group", Description: "Group description", Aliases: []string{"Example"}}},
+		Mitigations:         []attack.Mitigation{{ID: "M0001", Name: "Example Mitigation", Description: "Mitigation description"}},
+		Softwares:           []attack.Software{{ID: "S0001", Name: "Example Software", Type: "tool", Description: "Software description"}},
+		Campaigns:           []attack.Campaign{{ID: "C0001", Name: "Example Campaign", Description: "Campaign description"}},
+		DetectionStrategies: []attack.DetectionStrategy{{ID: "DET0001", StixID: "x-mitre-detection-strategy--1", Name: "Example Detection", Description: "Detection description", Analytics: []string{"AN0001"}}},
+		Analytics:           []attack.Analytic{{ID: "AN0001", StixID: "x-mitre-analytic--1", Name: "Example Analytic", Description: "Analytic description", DataComponents: []string{"DC0001"}}},
+		DataComponents:      []attack.DataComponent{{ID: "DC0001", StixID: "x-mitre-data-component--1", Name: "Process Creation", Description: "Component description"}},
+		Relationships: []attack.Relationship{
+			{Type: "uses", SourceType: "group", SourceID: "G0001", TargetType: "technique", TargetID: "T1000"},
+			{Type: "mitigates", SourceType: "mitigation", SourceID: "M0001", TargetType: "technique", TargetID: "T1000"},
+			{Type: "uses", SourceType: "software", SourceID: "S0001", TargetType: "technique", TargetID: "T1000"},
+			{Type: "uses", SourceType: "campaign", SourceID: "C0001", TargetType: "technique", TargetID: "T1000"},
+			{Type: "detects", SourceType: "detection_strategy", SourceID: "DET0001", TargetType: "technique", TargetID: "T1000"},
+			{Type: "has_data_component", SourceType: "technique", SourceID: "T1000", TargetType: "data_component", TargetID: "DC0001"},
+		},
+	}
 }
 
 func testOptions(path string) Options {
@@ -39,21 +57,21 @@ func sendKey(m model, key tea.KeyPressMsg) (model, tea.Cmd) {
 	return updated.(model), command
 }
 
-func TestInitLoadsCache(t *testing.T) {
+func TestInitLoadsCacheAndExploreCategories(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "cache.json")
 	if err := attack.SaveCacheData(path, testCache()); err != nil {
 		t.Fatal(err)
 	}
 
 	m := newModel(testOptions(path))
-	message := m.Init()()
-	updated, _ := m.Update(message)
+	updated, _ := m.Update(m.Init()())
 	got := updated.(model)
-	if got.loading || got.loadErr != nil || len(got.tactics) != 2 {
-		t.Fatalf("cache did not load: loading=%v err=%v tactics=%v", got.loading, got.loadErr, got.tactics)
+	active := got.activePage()
+	if got.loading || got.loadErr != nil || len(got.tactics) != 2 || active == nil || len(active.items) != 8 {
+		t.Fatalf("cache did not initialize explorer: loading=%v err=%v tactics=%v page=%+v", got.loading, got.loadErr, got.tactics, active)
 	}
-	if got.tactics[0] != "Discovery" || got.tactics[1] != "Execution" {
-		t.Fatalf("unexpected tactic order: %v", got.tactics)
+	if got.tactics[0] != "Discovery" || active.items[0].name != "Tactics" || active.items[7].name != "Data Components" {
+		t.Fatalf("unexpected explorer order: tactics=%v categories=%v", got.tactics, active.items)
 	}
 }
 
@@ -70,42 +88,124 @@ func TestMissingCacheShowsRecoveryCommand(t *testing.T) {
 
 func TestTacticTechniqueDetailNavigation(t *testing.T) {
 	m := loadedTestModel()
-
-	m, _ = sendKey(m, tea.KeyPressMsg{Code: tea.KeyUp})
-	if m.tacticCursor != 0 {
-		t.Fatalf("cursor moved above first tactic: %d", m.tacticCursor)
-	}
-	m, _ = sendKey(m, tea.KeyPressMsg{Code: tea.KeyDown})
-	m, _ = sendKey(m, tea.KeyPressMsg{Code: tea.KeyDown})
-	if m.tacticCursor != 1 {
-		t.Fatalf("cursor moved beyond last tactic: %d", m.tacticCursor)
-	}
-
 	m, _ = sendKey(m, tea.KeyPressMsg{Code: tea.KeyEnter})
-	if m.screen != screenTechniques || len(m.techniques) != 2 || m.techniques[0].ID != "T1000" {
-		t.Fatalf("technique screen not selected correctly: screen=%v techniques=%v", m.screen, m.techniques)
+	if active := m.activePage(); active == nil || active.title != "TACTICS" {
+		t.Fatalf("tactics page not opened: %+v", active)
 	}
+
+	m, _ = sendKey(m, tea.KeyPressMsg{Code: tea.KeyDown})
+	m, _ = sendKey(m, tea.KeyPressMsg{Code: tea.KeyDown})
+	if m.activePage().cursor != 1 {
+		t.Fatalf("cursor moved beyond last tactic: %d", m.activePage().cursor)
+	}
+	m, _ = sendKey(m, tea.KeyPressMsg{Code: tea.KeyEnter})
+	active := m.activePage()
+	if active.title != "TECHNIQUES: EXECUTION" || len(active.items) != 2 || active.items[0].id != "T1000" {
+		t.Fatalf("technique page not selected correctly: %+v", active)
+	}
+
 	m, _ = sendKey(m, tea.KeyPressMsg{Code: 'j', Text: "j"})
 	m, _ = sendKey(m, tea.KeyPressMsg{Code: tea.KeyEnter})
-	selected, ok := m.selectedTechnique()
-	if m.screen != screenTechniqueDetail || !ok || selected.ID != "T2000" {
-		t.Fatalf("detail screen not selected correctly: screen=%v selected=%+v", m.screen, selected)
-	}
-	if !strings.Contains(m.View().Content, "Second description") {
-		t.Fatal("selected technique details were not rendered")
+	active = m.activePage()
+	if active.kind != pageDetail || active.detail.id != "T2000" || !strings.Contains(m.View().Content, "Second description") {
+		t.Fatalf("detail page not selected correctly: %+v", active)
 	}
 
 	m, _ = sendKey(m, tea.KeyPressMsg{Code: 'b', Text: "b"})
-	if m.screen != screenTechniques || m.techniqueCursor != 1 {
+	if active = m.activePage(); active.title != "TECHNIQUES: EXECUTION" || active.cursor != 1 {
 		t.Fatal("back did not preserve technique selection")
 	}
 	m, _ = sendKey(m, tea.KeyPressMsg{Code: tea.KeyEscape})
-	if m.screen != screenTactics || m.tacticCursor != 1 {
-		t.Fatal("escape did not return to the selected tactic")
+	if active = m.activePage(); active.title != "TACTICS" || active.cursor != 1 {
+		t.Fatal("escape did not preserve tactic selection")
+	}
+	m, _ = sendKey(m, tea.KeyPressMsg{Code: tea.KeyEscape})
+	if active = m.activePage(); active.title != "EXPLORE" {
+		t.Fatal("escape did not return to explorer root")
 	}
 	_, command := sendKey(m, tea.KeyPressMsg{Code: tea.KeyEscape})
 	if command == nil {
-		t.Fatal("escape at the tactic root did not quit")
+		t.Fatal("escape at the explorer root did not quit")
+	}
+}
+
+func TestEntityRelationshipsUseGenericPages(t *testing.T) {
+	m := loadedTestModel()
+	tests := []struct {
+		category string
+		want     []string
+	}{
+		{"groups", []string{"Mapped Techniques:1"}},
+		{"mitigations", []string{"Mitigated Techniques:1"}},
+		{"software", []string{"Mapped Techniques:1"}},
+		{"campaigns", []string{"Mapped Techniques:1"}},
+		{"detections", []string{"Detected Techniques:1", "Analytics:1", "Data Components:1"}},
+		{"analytics", []string{"Data Components:1"}},
+		{"data-components", []string{"Mapped Techniques:1"}},
+	}
+
+	for _, test := range tests {
+		t.Run(test.category, func(t *testing.T) {
+			items := m.itemsForCategory(test.category)
+			if len(items) != 1 {
+				t.Fatalf("%s items = %d", test.category, len(items))
+			}
+			relations := m.relationItems(items[0])
+			if len(relations) != len(test.want) {
+				t.Fatalf("%s relations = %+v", test.category, relations)
+			}
+			for index, want := range test.want {
+				got := relations[index].name + ":" + strconv.Itoa(relations[index].count)
+				if got != want {
+					t.Fatalf("relation %d = %q, want %q", index, got, want)
+				}
+			}
+		})
+	}
+}
+
+func TestDetectionMappingNavigation(t *testing.T) {
+	m := loadedTestModel()
+	m.activePage().cursor = 5
+	m.selectCurrent()
+	m.selectCurrent()
+	if active := m.activePage(); active.kind != pageDetail || len(active.relations) != 3 {
+		t.Fatalf("detection details missing mappings: %+v", active)
+	}
+	m.selectCurrent()
+	if active := m.activePage(); active.title != "MAPPINGS" || len(active.items) != 3 {
+		t.Fatalf("mapping chooser not opened: %+v", active)
+	}
+	m.activePage().cursor = 1
+	m.selectCurrent()
+	if active := m.activePage(); active.title != "ANALYTICS" || len(active.items) != 1 || active.items[0].id != "AN0001" {
+		t.Fatalf("analytic mapping not opened: %+v", active)
+	}
+}
+
+func TestDetailScrollingStopsAtContentBounds(t *testing.T) {
+	m := loadedTestModel()
+	m.width, m.height = 80, 18
+	m.activePage().cursor = 1
+	m.selectCurrent()
+	m.selectCurrent()
+	m.activePage().detail.description = strings.Repeat("Long description line.\n", 30)
+
+	m, _ = sendKey(m, tea.KeyPressMsg{Code: tea.KeyDown})
+	if m.activePage().offset != 1 {
+		t.Fatalf("detail did not scroll down: %d", m.activePage().offset)
+	}
+	for range 100 {
+		m, _ = sendKey(m, tea.KeyPressMsg{Code: tea.KeyDown})
+	}
+	if got, maxOffset := m.activePage().offset, m.detailMaxOffset(*m.activePage()); got != maxOffset {
+		t.Fatalf("detail offset = %d, want maximum %d", got, maxOffset)
+	}
+	for range 100 {
+		m, _ = sendKey(m, tea.KeyPressMsg{Code: tea.KeyUp})
+	}
+	if m.activePage().offset != 0 {
+		t.Fatalf("detail moved above first line: %d", m.activePage().offset)
 	}
 }
 
@@ -117,25 +217,9 @@ func TestViewAdaptsToTerminalSize(t *testing.T) {
 		want      []string
 		doNotWant string
 	}{
-		{
-			name:   "wide",
-			width:  110,
-			height: 30,
-			want:   []string{"__  __", "TACTICS", "Discovery", "Matrix: enterprise"},
-		},
-		{
-			name:      "compact",
-			width:     60,
-			height:    16,
-			want:      []string{"MITRE EXPLORER", "TACTICS", "Discovery"},
-			doNotWant: "__  __",
-		},
-		{
-			name:   "small",
-			width:  30,
-			height: 8,
-			want:   []string{"Terminal too small", "30x8", "q/Esc"},
-		},
+		{name: "wide", width: 110, height: 30, want: []string{"__  __", "EXPLORE", "Tactics (2)", "Matrix: enterprise"}},
+		{name: "compact", width: 60, height: 16, want: []string{"MITRE EXPLORER", "EXPLORE", "Tactics (2)"}, doNotWant: "__  __"},
+		{name: "small", width: 30, height: 8, want: []string{"Terminal too small", "30x8", "q/Esc"}},
 	}
 
 	for _, test := range tests {
@@ -171,12 +255,7 @@ func TestVisibleRangeKeepsCursorOnScreen(t *testing.T) {
 }
 
 func TestQuitKeys(t *testing.T) {
-	keys := []tea.KeyPressMsg{
-		{Code: 'q', Text: "q"},
-		{Code: tea.KeyEscape},
-		{Code: 'c', Mod: tea.ModCtrl},
-	}
-
+	keys := []tea.KeyPressMsg{{Code: 'q', Text: "q"}, {Code: tea.KeyEscape}, {Code: 'c', Mod: tea.ModCtrl}}
 	for _, key := range keys {
 		_, command := newModel(Options{}).Update(key)
 		if command == nil {

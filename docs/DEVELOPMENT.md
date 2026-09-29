@@ -113,8 +113,14 @@ them as a public library API.
 full-screen interface. The CLI passes selected matrix, cache path, tactic order,
 version, and plain-output state through a small options value; the TUI does not
 import the CLI. Cache loading runs as a Bubble Tea command, and navigation reuses
-the `internal/attack` tactic queries. This direction keeps command routing separate
-from full-screen state and avoids an import cycle.
+the `internal/attack` tactic and relationship queries. This direction keeps
+command routing separate from full-screen state and avoids an import cycle.
+
+The TUI uses one page stack for category lists, entity details, relationship
+choices, and mapped results. Going back pops one page and preserves the cursor on
+the previous page. Entity adapters produce a shared internal item representation;
+relationship data still comes from `internal/attack` rather than duplicated TUI
+queries.
 
 ## Data Layer
 

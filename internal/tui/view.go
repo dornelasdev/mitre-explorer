@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"mitre-explorer/internal/attack"
-
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 )
@@ -91,22 +89,20 @@ func (m model) leftPanel(maxRows, width int) string {
 		return m.headingStyle().Render("CACHE UNAVAILABLE")
 	}
 
-	switch m.screen {
-	case screenTactics:
-		return m.listContent("TACTICS", m.tactics, m.tacticCursor, maxRows, width)
-	case screenTechniques, screenTechniqueDetail:
-		labels := make([]string, 0, len(m.techniques))
-		for _, technique := range m.techniques {
-			labels = append(labels, technique.ID+"  "+technique.Name)
-		}
-		return m.listContent("TECHNIQUES", labels, m.techniqueCursor, maxRows, width)
-	default:
+	current := m.displayListPage()
+	if current == nil {
 		return ""
 	}
+	labels := make([]string, 0, len(current.items))
+	for _, item := range current.items {
+		labels = append(labels, itemLabel(item))
+	}
+	return m.listContent(current.title, labels, current.cursor, maxRows, width)
 }
 
 func (m model) rightPanel(width, height int) string {
 	var content string
+	offset := 0
 	if m.loading {
 		content = strings.Join([]string{
 			m.headingStyle().Render("LOADING CACHE"),
@@ -123,73 +119,132 @@ func (m model) rightPanel(width, height int) string {
 		}, "\n")
 	} else {
 		content = m.contextContent()
+		if active := m.activePage(); active != nil && active.kind == pageDetail {
+			offset = active.offset
+		}
 	}
 
-	return lipgloss.NewStyle().Width(width).MaxWidth(width).MaxHeight(height).Render(content)
+	return renderViewport(content, width, height, offset)
 }
 
 func (m model) singlePanel(width, height int) string {
-	if m.loading || m.loadErr != nil || m.screen == screenTechniqueDetail {
+	active := m.activePage()
+	if m.loading || m.loadErr != nil || (active != nil && active.kind == pageDetail) {
 		return m.rightPanel(width, height)
 	}
 	return m.leftPanel(height, width)
 }
 
 func (m model) contextContent() string {
-	switch m.screen {
-	case screenTactics:
-		tactic, ok := m.selectedTactic()
-		if !ok {
-			return m.headingStyle().Render("NO TACTICS") + "\n\nThe cache contains no tactic-linked techniques."
-		}
-		count := len(attack.ListByTactic(m.cache.Techniques, tactic))
-		return strings.Join([]string{
-			m.headingStyle().Render(tactic),
-			"",
-			fmt.Sprintf("%d technique(s)", count),
-			"",
-			"Press Enter to browse this tactic.",
-		}, "\n")
-	case screenTechniques:
-		technique, ok := m.selectedTechnique()
-		if !ok {
-			return m.headingStyle().Render("NO TECHNIQUES") + "\n\nThis tactic has no techniques."
-		}
-		return strings.Join([]string{
-			m.headingStyle().Render(technique.Name),
-			"",
-			"ID: " + technique.ID,
-			"Platforms: " + joinedOrUnavailable(technique.Platforms),
-			"",
-			"Press Enter for full details.",
-		}, "\n")
-	case screenTechniqueDetail:
-		technique, ok := m.selectedTechnique()
-		if !ok {
-			return m.headingStyle().Render("TECHNIQUE UNAVAILABLE")
-		}
-		return m.techniqueDetails(technique)
-	default:
-		return ""
+	active := m.activePage()
+	if active == nil {
+		return m.headingStyle().Render("NO CONTENT")
 	}
+	if active.kind == pageDetail {
+		return m.itemDetails(active.detail, active.relations)
+	}
+
+	item, ok := selectedPageItem(*active)
+	if !ok {
+		return m.headingStyle().Render("NO ITEMS") + "\n\nNothing is available in this section."
+	}
+	if item.kind == itemCategory || item.kind == itemTactic || item.kind == itemRelation {
+		unit := "item(s)"
+		if item.kind == itemTactic {
+			unit = "technique(s)"
+		}
+		return strings.Join([]string{
+			m.headingStyle().Render(item.name),
+			"",
+			fmt.Sprintf("%d %s", item.count, unit),
+			"",
+			"Press Enter to browse.",
+		}, "\n")
+	}
+
+	return strings.Join([]string{
+		m.headingStyle().Render(item.name),
+		"",
+		"ID: " + item.id,
+		"",
+		"Press Enter for full details.",
+	}, "\n")
 }
 
-func (m model) techniqueDetails(technique attack.Technique) string {
-	description := strings.TrimSpace(technique.Description)
+func (m model) itemDetails(item browseItem, relations []browseItem) string {
+	description := strings.TrimSpace(item.description)
 	if description == "" {
 		description = "Not available"
 	}
-	return strings.Join([]string{
-		m.headingStyle().Render("TECHNIQUE DETAILS"),
+	lines := []string{
+		m.headingStyle().Render(itemKindTitle(item.kind) + " DETAILS"),
 		"",
-		technique.ID + "  " + technique.Name,
-		"Tactics: " + joinedOrUnavailable(technique.Tactics),
-		"Platforms: " + joinedOrUnavailable(technique.Platforms),
-		"Data sources: " + joinedOrUnavailable(technique.DataSources),
+		item.id + "  " + item.name,
+	}
+	for _, field := range item.fields {
+		value := strings.TrimSpace(field.value)
+		if value == "" {
+			value = "Not available"
+		}
+		lines = append(lines, field.label+": "+value)
+	}
+	lines = append(lines,
 		"",
 		"Description:",
 		description,
-	}, "\n")
+	)
+	if len(relations) == 1 {
+		lines = append(lines, "", fmt.Sprintf("Enter: %s (%d)", relations[0].name, relations[0].count))
+	} else if len(relations) > 1 {
+		lines = append(lines, "", "Enter: view mappings")
+	}
+	return strings.Join(lines, "\n")
+}
+
+func (m model) displayListPage() *page {
+	if len(m.pages) == 0 {
+		return nil
+	}
+	index := len(m.pages) - 1
+	if m.pages[index].kind == pageDetail {
+		index--
+	}
+	if index < 0 || m.pages[index].kind != pageList {
+		return nil
+	}
+	return &m.pages[index]
+}
+
+func itemLabel(item browseItem) string {
+	switch item.kind {
+	case itemCategory, itemTactic, itemRelation:
+		return fmt.Sprintf("%s (%d)", item.name, item.count)
+	default:
+		return strings.TrimSpace(item.id + "  " + item.name)
+	}
+}
+
+func itemKindTitle(kind itemKind) string {
+	switch kind {
+	case itemTechnique:
+		return "TECHNIQUE"
+	case itemGroup:
+		return "GROUP"
+	case itemMitigation:
+		return "MITIGATION"
+	case itemSoftware:
+		return "SOFTWARE"
+	case itemCampaign:
+		return "CAMPAIGN"
+	case itemDetection:
+		return "DETECTION STRATEGY"
+	case itemAnalytic:
+		return "ANALYTIC"
+	case itemDataComponent:
+		return "DATA COMPONENT"
+	default:
+		return "ITEM"
+	}
 }
 
 func (m model) listContent(title string, items []string, cursor, maxRows, width int) string {
@@ -252,15 +307,53 @@ func (m model) statusLine() string {
 
 func (m model) footer() string {
 	var text string
+	active := m.activePage()
 	switch {
 	case m.loading || m.loadErr != nil:
 		text = "q / Esc / Ctrl+C  quit"
-	case m.screen == screenTactics:
+	case len(m.pages) <= 1:
 		text = "up/k down/j  move    Enter  select    q/Esc  quit"
+	case active != nil && active.kind == pageDetail && len(active.relations) == 0:
+		text = "up/k down/j  scroll    b/Esc  back    q  quit"
+	case active != nil && active.kind == pageDetail:
+		text = "up/k down/j  scroll    Enter  mappings    b/Esc  back    q  quit"
 	default:
 		text = "up/k down/j  move    Enter  select    b/Esc  back    q  quit"
 	}
 	return m.mutedStyle().Render(text)
+}
+
+func (m model) detailMaxOffset(current page) int {
+	width, height := m.detailViewportSize()
+	content := m.itemDetails(current.detail, current.relations)
+	wrapped := lipgloss.NewStyle().Width(width).MaxWidth(width).Render(content)
+	return max(0, len(strings.Split(wrapped, "\n"))-height)
+}
+
+func (m model) detailViewportSize() (int, int) {
+	width, height := m.width, m.height
+	if width == 0 {
+		width = 100
+	}
+	if height == 0 {
+		height = 30
+	}
+	if width >= 76 && height >= 18 {
+		leftWidth := 34
+		rightWidth := width - leftWidth - 4
+		return rightWidth - 4, max(7, height-13) - 2
+	}
+	panelWidth := max(30, width-4)
+	panelHeight := max(5, height-7)
+	return panelWidth - 4, panelHeight - 2
+}
+
+func renderViewport(content string, width, height, offset int) string {
+	wrapped := lipgloss.NewStyle().Width(width).MaxWidth(width).Render(content)
+	lines := strings.Split(wrapped, "\n")
+	offset = min(max(offset, 0), max(0, len(lines)-height))
+	end := min(offset+height, len(lines))
+	return strings.Join(lines[offset:end], "\n")
 }
 
 func (m model) titleStyle() lipgloss.Style {

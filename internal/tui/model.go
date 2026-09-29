@@ -1,18 +1,29 @@
 package tui
 
 import (
+	"strings"
+
 	"mitre-explorer/internal/attack"
 
 	tea "charm.land/bubbletea/v2"
 )
 
-type screen uint8
+type pageKind uint8
 
 const (
-	screenTactics screen = iota
-	screenTechniques
-	screenTechniqueDetail
+	pageList pageKind = iota
+	pageDetail
 )
+
+type page struct {
+	kind      pageKind
+	title     string
+	items     []browseItem
+	cursor    int
+	offset    int
+	detail    browseItem
+	relations []browseItem
+}
 
 type cacheLoadedMsg struct {
 	cache attack.CacheData
@@ -23,25 +34,18 @@ type cacheLoadFailedMsg struct {
 }
 
 type model struct {
-	options         Options
-	cache           attack.CacheData
-	tactics         []string
-	techniques      []attack.Technique
-	screen          screen
-	tacticCursor    int
-	techniqueCursor int
-	width           int
-	height          int
-	loading         bool
-	loadErr         error
+	options Options
+	cache   attack.CacheData
+	tactics []string
+	pages   []page
+	width   int
+	height  int
+	loading bool
+	loadErr error
 }
 
 func newModel(options Options) model {
-	return model{
-		options: options,
-		screen:  screenTactics,
-		loading: true,
-	}
+	return model{options: options, loading: true}
 }
 
 func (m model) Init() tea.Cmd {
@@ -68,6 +72,7 @@ func (m model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		m.tactics = attack.CollectUniqueTactics(m.cache.Techniques, m.options.TacticOrder)
 		m.loading = false
 		m.loadErr = nil
+		m.pages = []page{m.explorePage()}
 	case cacheLoadFailedMsg:
 		m.loading = false
 		m.loadErr = message.err
@@ -83,13 +88,13 @@ func (m model) handleKey(key string) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	}
 	if key == "esc" {
-		if m.screen == screenTactics || m.loading || m.loadErr != nil {
+		if len(m.pages) <= 1 || m.loading || m.loadErr != nil {
 			return m, tea.Quit
 		}
 		m.goBack()
 		return m, nil
 	}
-	if m.loading || m.loadErr != nil {
+	if m.loading || m.loadErr != nil || len(m.pages) == 0 {
 		return m, nil
 	}
 
@@ -108,59 +113,82 @@ func (m model) handleKey(key string) (tea.Model, tea.Cmd) {
 }
 
 func (m *model) moveCursor(delta int) {
-	var cursor *int
-	var length int
-
-	switch m.screen {
-	case screenTactics:
-		cursor, length = &m.tacticCursor, len(m.tactics)
-	case screenTechniques:
-		cursor, length = &m.techniqueCursor, len(m.techniques)
-	default:
+	active := m.activePage()
+	if active == nil {
 		return
 	}
-
-	if length == 0 {
+	if active.kind == pageDetail {
+		active.offset = min(max(active.offset+delta, 0), m.detailMaxOffset(*active))
 		return
 	}
-	*cursor = min(max(*cursor+delta, 0), length-1)
+	if len(active.items) == 0 {
+		return
+	}
+	active.cursor = min(max(active.cursor+delta, 0), len(active.items)-1)
 }
 
 func (m *model) selectCurrent() {
-	switch m.screen {
-	case screenTactics:
-		if len(m.tactics) == 0 {
-			return
-		}
-		m.techniques = attack.ListByTactic(m.cache.Techniques, m.tactics[m.tacticCursor])
-		m.techniqueCursor = 0
-		m.screen = screenTechniques
-	case screenTechniques:
-		if len(m.techniques) > 0 {
-			m.screen = screenTechniqueDetail
-		}
+	active := m.activePage()
+	if active == nil {
+		return
 	}
+	if active.kind == pageDetail {
+		m.openRelations(active.relations)
+		return
+	}
+	item, ok := selectedPageItem(*active)
+	if !ok {
+		return
+	}
+
+	switch item.kind {
+	case itemCategory:
+		m.pushList(strings.ToUpper(item.name), m.itemsForCategory(item.id))
+	case itemTactic:
+		m.pushList("TECHNIQUES: "+strings.ToUpper(item.name), techniqueItems(attack.ListByTactic(m.cache.Techniques, item.id)))
+	case itemRelation:
+		m.pushList(strings.ToUpper(item.name), item.related)
+	default:
+		m.pages = append(m.pages, page{
+			kind:      pageDetail,
+			title:     "DETAILS",
+			detail:    item,
+			relations: m.relationItems(item),
+		})
+	}
+}
+
+func (m *model) openRelations(relations []browseItem) {
+	switch len(relations) {
+	case 0:
+		return
+	case 1:
+		m.pushList(strings.ToUpper(relations[0].name), relations[0].related)
+	default:
+		m.pushList("MAPPINGS", relations)
+	}
+}
+
+func (m *model) pushList(title string, items []browseItem) {
+	m.pages = append(m.pages, page{kind: pageList, title: title, items: items})
 }
 
 func (m *model) goBack() {
-	switch m.screen {
-	case screenTechniqueDetail:
-		m.screen = screenTechniques
-	case screenTechniques:
-		m.screen = screenTactics
+	if len(m.pages) > 1 {
+		m.pages = m.pages[:len(m.pages)-1]
 	}
 }
 
-func (m model) selectedTactic() (string, bool) {
-	if m.tacticCursor < 0 || m.tacticCursor >= len(m.tactics) {
-		return "", false
+func (m *model) activePage() *page {
+	if len(m.pages) == 0 {
+		return nil
 	}
-	return m.tactics[m.tacticCursor], true
+	return &m.pages[len(m.pages)-1]
 }
 
-func (m model) selectedTechnique() (attack.Technique, bool) {
-	if m.techniqueCursor < 0 || m.techniqueCursor >= len(m.techniques) {
-		return attack.Technique{}, false
+func selectedPageItem(current page) (browseItem, bool) {
+	if current.kind != pageList || current.cursor < 0 || current.cursor >= len(current.items) {
+		return browseItem{}, false
 	}
-	return m.techniques[m.techniqueCursor], true
+	return current.items[current.cursor], true
 }

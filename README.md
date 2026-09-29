@@ -51,7 +51,7 @@ Start the interactive menu:
 go run .
 ```
 
-Or browse tactics and techniques in the full-screen TUI:
+Or browse ATT&CK objects and their relationships in the full-screen TUI:
 
 ```bash
 go run . tui
@@ -79,7 +79,7 @@ Mobile and ICS have independent raw datasets, caches, and update metadata. Run
 | `group`, `mitigation`, `software`, `campaign` | Show an object and optional mappings. |
 | `detection`, `analytic` | Display detection content and linked objects. |
 | `export` | Write cache or relationship data as CSV or Markdown. |
-| `tui` | Open the full-screen terminal interface. |
+| `tui` | Browse cached ATT&CK objects and relationships full-screen. |
 | `help` | Show global or command-specific help. |
 
 Global options:

@@ -329,10 +329,13 @@ Open the full-screen interface with:
 go run . tui
 ```
 
-The TUI loads the selected local cache and provides a responsive path from ordered
-tactics to their techniques and technique details. Move with the arrow keys or
-`j`/`k`, open an item with `Enter`, and return one level with `b` or `Esc`. At the
-tactic root, `Esc` exits. The existing CLI and guided mode remain fully available.
+The TUI loads the selected local cache and opens an Explore menu for tactics,
+groups, mitigations, software, campaigns, detection strategies, analytics, and
+data components. Entity details expose their mapped techniques, analytics, or
+data components where applicable. Move through lists and scroll long details with
+the arrow keys or `j`/`k`, open an item with `Enter`, and return one level with `b`
+or `Esc`. At the Explore root,
+`Esc` exits. The existing CLI and guided mode remain fully available.
 
 The global `--matrix` and `--plain` options are supported:
 
