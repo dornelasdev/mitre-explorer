@@ -11,7 +11,20 @@ func (app *App) handleTUI(args []string) error {
 		Matrix:      app.matrix.Name,
 		CachePath:   app.matrix.CachePath,
 		TacticOrder: append([]string(nil), app.matrix.TacticOrder...),
-		Version:     app.version,
-		Plain:       !app.useColor,
+		Matrices: []tui.MatrixOption{
+			matrixTUIOption(enterpriseMatrix),
+			matrixTUIOption(mobileMatrix),
+			matrixTUIOption(icsMatrix),
+		},
+		Version: app.version,
+		Plain:   !app.useColor,
 	})
+}
+
+func matrixTUIOption(matrix MatrixConfig) tui.MatrixOption {
+	return tui.MatrixOption{
+		Name:        matrix.Name,
+		CachePath:   matrix.CachePath,
+		TacticOrder: append([]string(nil), matrix.TacticOrder...),
+	}
 }

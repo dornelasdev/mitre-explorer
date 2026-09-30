@@ -44,7 +44,7 @@ func (m model) render() string {
 func (m model) renderWide(width, height int) string {
 	leftWidth := 34
 	rightWidth := width - leftWidth - 4
-	bodyHeight := max(7, height-13)
+	bodyHeight := max(7, height-14)
 
 	left := m.panelStyle(leftWidth, bodyHeight).Render(m.leftPanel(bodyHeight-2, leftWidth-4))
 	right := m.panelStyle(rightWidth, bodyHeight).Render(m.rightPanel(rightWidth-4, bodyHeight-2))
@@ -56,29 +56,31 @@ func (m model) renderWide(width, height int) string {
 	return strings.Join([]string{
 		m.titleStyle().Render(header),
 		m.statusLine(),
+		truncateText(m.breadcrumbLine(), width),
 		"",
 		lipgloss.JoinHorizontal(lipgloss.Top, left, right),
 		"",
-		m.footer(),
+		m.footer(width),
 	}, "\n")
 }
 
 func (m model) renderCompact(width, height int) string {
 	panelWidth := max(30, width-4)
-	panelHeight := max(5, height-7)
+	panelHeight := max(5, height-8)
 	return strings.Join([]string{
 		m.titleStyle().Render(compactBanner),
 		truncateText(m.statusLine(), width),
+		truncateText(m.breadcrumbLine(), width),
 		"",
 		m.panelStyle(panelWidth, panelHeight).Render(m.singlePanel(panelWidth-4, panelHeight-2)),
 		"",
-		m.footer(),
+		m.footer(width),
 	}, "\n")
 }
 
 func (m model) renderSmall(width, height int) string {
-	return fmt.Sprintf("%s\nTerminal too small (%dx%d). Resize to at least 36x10.\n%s",
-		compactBanner, width, height, m.footer())
+	return fmt.Sprintf("%s\nTerminal too small (%dx%d). Resize to at least 36x10.\nq/Esc quit",
+		compactBanner, width, height)
 }
 
 func (m model) leftPanel(maxRows, width int) string {
@@ -103,20 +105,36 @@ func (m model) leftPanel(maxRows, width int) string {
 func (m model) rightPanel(width, height int) string {
 	var content string
 	offset := 0
-	if m.loading {
+	if m.helpVisible {
+		content = m.helpContent()
+		offset = m.helpOffset
+	} else if m.matrixPicker.active {
+		content = m.matrixPickerContent()
+	} else if m.loading {
+		matrix := m.options.Matrix
+		if m.loadingMatrix != nil {
+			matrix = m.loadingMatrix.Name
+		}
 		content = strings.Join([]string{
 			m.headingStyle().Render("LOADING CACHE"),
 			"",
-			"Reading the selected matrix cache...",
+			fmt.Sprintf("Reading the %s matrix cache...", matrix),
 		}, "\n")
 	} else if m.loadErr != nil {
-		content = strings.Join([]string{
+		matrix := m.options.Matrix
+		if m.failedMatrix != nil {
+			matrix = m.failedMatrix.Name
+		}
+		lines := []string{
 			m.headingStyle().Render("CACHE UNAVAILABLE"),
 			"",
-			m.loadErr.Error(),
-			"",
-			fmt.Sprintf("Run: go run . update --matrix %s", m.options.Matrix),
-		}, "\n")
+			fmt.Sprintf("Run: go run . update --matrix %s", matrix),
+		}
+		if len(m.pages) > 0 {
+			lines = append(lines, "", "Press Esc to return to the current matrix.")
+		}
+		lines = append(lines, "", "Error:", m.loadErr.Error())
+		content = strings.Join(lines, "\n")
 	} else if m.search.active {
 		content = m.searchContent()
 	} else {
@@ -131,7 +149,7 @@ func (m model) rightPanel(width, height int) string {
 
 func (m model) singlePanel(width, height int) string {
 	active := m.activePage()
-	if m.loading || m.loadErr != nil || m.search.active || (active != nil && active.kind == pageDetail) {
+	if m.loading || m.loadErr != nil || m.search.active || m.matrixPicker.active || m.helpVisible || (active != nil && active.kind == pageDetail) {
 		return m.rightPanel(width, height)
 	}
 	return m.leftPanel(height, width)
@@ -156,6 +174,54 @@ func (m model) searchContent() string {
 		lines = append(lines, "  "+itemLabel(m.search.results[index]))
 	}
 	return strings.Join(lines, "\n")
+}
+
+func (m model) matrixPickerContent() string {
+	lines := []string{
+		m.headingStyle().Render("SELECT MATRIX"),
+		"",
+	}
+	for index, matrix := range m.availableMatrices() {
+		prefix := "  "
+		if index == m.matrixPicker.cursor {
+			prefix = "> "
+		}
+		label := prefix + strings.ToUpper(matrix.Name)
+		if strings.EqualFold(matrix.Name, m.options.Matrix) {
+			label += "  [active]"
+		}
+		if index == m.matrixPicker.cursor {
+			label = m.selectedStyle().Render(label)
+		}
+		lines = append(lines, label)
+	}
+	lines = append(lines, "", "Enter loads an existing local cache.")
+	return strings.Join(lines, "\n")
+}
+
+func (m model) helpContent() string {
+	context := "No active page"
+	if active := m.activePage(); active != nil {
+		context = active.title
+		if active.kind == pageDetail {
+			context = itemKindTitle(active.detail.kind) + " DETAILS"
+		}
+	}
+	return strings.Join([]string{
+		m.headingStyle().Render("KEYBOARD HELP"),
+		"",
+		"Context: " + context,
+		"",
+		"up/k, down/j   Move lists or scroll details",
+		"Enter          Open an item or its mappings",
+		"b, Esc         Return one level",
+		"/              Search cached objects",
+		"m              Select a matrix cache",
+		"?              Open or close this help",
+		"q, Ctrl+C      Exit the TUI",
+		"",
+		"Search: Tab and Shift+Tab change scope.",
+	}, "\n")
 }
 
 func (m model) contextContent() string {
@@ -271,7 +337,11 @@ func itemKindTitle(kind itemKind) string {
 }
 
 func (m model) listContent(title string, items []string, cursor, maxRows, width int) string {
-	lines := []string{m.headingStyle().Render(title), ""}
+	heading := title
+	if len(items) > 0 {
+		heading = fmt.Sprintf("%s  %d/%d", title, cursor+1, len(items))
+	}
+	lines := []string{m.headingStyle().Render(truncateText(heading, width)), ""}
 	if len(items) == 0 {
 		return strings.Join(append(lines, "No items found."), "\n")
 	}
@@ -328,30 +398,70 @@ func (m model) statusLine() string {
 		m.options.Matrix, m.options.CachePath, m.options.Version)
 }
 
-func (m model) footer() string {
+func (m model) breadcrumbLine() string {
+	parts := make([]string, 0, len(m.pages)+1)
+	for _, current := range m.pages {
+		if current.kind == pageDetail {
+			parts = append(parts, current.detail.id)
+			continue
+		}
+		parts = append(parts, current.title)
+	}
+	switch {
+	case m.helpVisible:
+		parts = append(parts, "HELP")
+	case m.matrixPicker.active:
+		parts = append(parts, "MATRIX")
+	case m.search.active:
+		parts = append(parts, "SEARCH")
+	}
+	if len(parts) == 0 {
+		return "Path: loading"
+	}
+	return "Path: " + strings.Join(parts, " > ")
+}
+
+func (m model) footer(width int) string {
 	var text string
 	active := m.activePage()
 	switch {
-	case m.loading || m.loadErr != nil:
+	case m.helpVisible:
+		text = fmt.Sprintf("help %d/%d    up/k down/j scroll    ?/b/Esc close    q quit",
+			m.helpOffset+1, m.helpMaxOffset()+1)
+	case m.matrixPicker.active:
+		text = "up/k down/j  move    Enter  load    m/b/Esc  cancel    q  quit"
+	case m.loading:
 		text = "q / Esc / Ctrl+C  quit"
+	case m.loadErr != nil && len(m.pages) > 0:
+		text = "m  select matrix    Esc  return    q  quit"
+	case m.loadErr != nil:
+		text = "m  select matrix    q / Esc  quit"
 	case m.search.active:
 		text = "Tab / Shift+Tab  scope    Enter  results    Esc  cancel    Ctrl+C  quit"
 	case len(m.pages) <= 1:
-		text = "up/k down/j  move    Enter  select    q/Esc  quit"
+		text = "up/k down/j  move    Enter  open    / search    m matrix    ? help    q/Esc quit"
 	case active != nil && active.kind == pageDetail && len(active.relations) == 0:
-		text = "up/k down/j  scroll    b/Esc  back    q  quit"
+		text = fmt.Sprintf("scroll %d/%d    up/k down/j    b/Esc back    / search    ? help    q quit",
+			active.offset+1, m.detailMaxOffset(*active)+1)
 	case active != nil && active.kind == pageDetail:
-		text = "up/k down/j  scroll    Enter  mappings    b/Esc  back    q  quit"
+		text = fmt.Sprintf("scroll %d/%d    up/k down/j    Enter mappings    b/Esc back    q quit",
+			active.offset+1, m.detailMaxOffset(*active)+1)
 	default:
-		text = "up/k down/j  move    Enter  select    b/Esc  back    q  quit"
+		text = "up/k down/j  move    Enter open    b/Esc back    / search    m matrix    ? help    q quit"
 	}
-	return m.mutedStyle().Render(text)
+	return m.mutedStyle().MaxWidth(width).Render(text)
 }
 
 func (m model) detailMaxOffset(current page) int {
 	width, height := m.detailViewportSize()
 	content := m.itemDetails(current.detail, current.relations)
 	wrapped := lipgloss.NewStyle().Width(width).MaxWidth(width).Render(content)
+	return max(0, len(strings.Split(wrapped, "\n"))-height)
+}
+
+func (m model) helpMaxOffset() int {
+	width, height := m.detailViewportSize()
+	wrapped := lipgloss.NewStyle().Width(width).MaxWidth(width).Render(m.helpContent())
 	return max(0, len(strings.Split(wrapped, "\n"))-height)
 }
 
@@ -366,10 +476,10 @@ func (m model) detailViewportSize() (int, int) {
 	if width >= 76 && height >= 18 {
 		leftWidth := 34
 		rightWidth := width - leftWidth - 4
-		return rightWidth - 4, max(7, height-13) - 2
+		return rightWidth - 4, max(7, height-14) - 2
 	}
 	panelWidth := max(30, width-4)
-	panelHeight := max(5, height-7)
+	panelHeight := max(5, height-8)
 	return panelWidth - 4, panelHeight - 2
 }
 

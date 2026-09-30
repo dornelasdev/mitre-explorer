@@ -221,6 +221,8 @@ func (app *App) printTUIHelp() {
 	fmt.Fprintln(app.out, "  Enter               Open the selected item")
 	fmt.Fprintln(app.out, "  /                   Search cached ATT&CK objects")
 	fmt.Fprintln(app.out, "  Tab, Shift+Tab      Change scope while searching")
+	fmt.Fprintln(app.out, "  m                   Select an existing matrix cache")
+	fmt.Fprintln(app.out, "  ?                   Show contextual keyboard help")
 	fmt.Fprintln(app.out, "  b, Esc              Return to the previous screen")
 	fmt.Fprintln(app.out, "  q, Ctrl+C           Exit the TUI")
 	fmt.Fprintln(app.out)

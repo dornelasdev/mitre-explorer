@@ -26,23 +26,30 @@ type page struct {
 }
 
 type cacheLoadedMsg struct {
-	cache attack.CacheData
+	matrix MatrixOption
+	cache  attack.CacheData
 }
 
 type cacheLoadFailedMsg struct {
-	err error
+	matrix MatrixOption
+	err    error
 }
 
 type model struct {
-	options Options
-	cache   attack.CacheData
-	tactics []string
-	pages   []page
-	search  searchState
-	width   int
-	height  int
-	loading bool
-	loadErr error
+	options       Options
+	cache         attack.CacheData
+	tactics       []string
+	pages         []page
+	search        searchState
+	matrixPicker  matrixPickerState
+	helpVisible   bool
+	helpOffset    int
+	failedMatrix  *MatrixOption
+	loadingMatrix *MatrixOption
+	width         int
+	height        int
+	loading       bool
+	loadErr       error
 }
 
 func newModel(options Options) model {
@@ -50,16 +57,16 @@ func newModel(options Options) model {
 }
 
 func (m model) Init() tea.Cmd {
-	return loadCache(m.options.CachePath)
+	return loadCache(m.currentMatrix())
 }
 
-func loadCache(path string) tea.Cmd {
+func loadCache(matrix MatrixOption) tea.Cmd {
 	return func() tea.Msg {
-		cache, err := attack.LoadCacheData(path)
+		cache, err := attack.LoadCacheData(matrix.CachePath)
 		if err != nil {
-			return cacheLoadFailedMsg{err: err}
+			return cacheLoadFailedMsg{matrix: matrix, err: err}
 		}
-		return cacheLoadedMsg{cache: cache}
+		return cacheLoadedMsg{matrix: matrix, cache: cache}
 	}
 }
 
@@ -70,17 +77,29 @@ func (m model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = message.Height
 		m.setSearchWidth()
 	case cacheLoadedMsg:
-		m.cache = message.cache
-		m.tactics = attack.CollectUniqueTactics(m.cache.Techniques, m.options.TacticOrder)
-		m.loading = false
-		m.loadErr = nil
-		m.pages = []page{m.explorePage()}
+		matrix := message.matrix
+		if matrix.Name == "" {
+			matrix = m.currentMatrix()
+		}
+		m.activateMatrix(matrix, message.cache)
 	case cacheLoadFailedMsg:
 		m.loading = false
+		m.loadingMatrix = nil
 		m.loadErr = message.err
+		failed := message.matrix
+		if failed.Name == "" {
+			failed = m.currentMatrix()
+		}
+		m.failedMatrix = &failed
 	case tea.KeyPressMsg:
 		if m.search.active {
 			return m.updateSearch(message)
+		}
+		if m.matrixPicker.active {
+			return m.updateMatrixPicker(message.String())
+		}
+		if m.helpVisible {
+			return m.updateHelp(message.String())
 		}
 		return m.handleKey(message.String())
 	}
@@ -97,7 +116,21 @@ func (m model) handleKey(key string) (tea.Model, tea.Cmd) {
 	if key == "q" || key == "ctrl+c" {
 		return m, tea.Quit
 	}
+	if key == "?" {
+		m.helpVisible = true
+		m.helpOffset = 0
+		return m, nil
+	}
+	if key == "m" && !m.loading {
+		m.startMatrixPicker()
+		return m, nil
+	}
 	if key == "esc" {
+		if m.loadErr != nil && len(m.pages) > 0 {
+			m.loadErr = nil
+			m.failedMatrix = nil
+			return m, nil
+		}
 		if len(m.pages) <= 1 || m.loading || m.loadErr != nil {
 			return m, tea.Quit
 		}
@@ -122,6 +155,19 @@ func (m model) handleKey(key string) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+func (m *model) activateMatrix(matrix MatrixOption, cache attack.CacheData) {
+	m.options.Matrix = matrix.Name
+	m.options.CachePath = matrix.CachePath
+	m.options.TacticOrder = append([]string(nil), matrix.TacticOrder...)
+	m.cache = cache
+	m.tactics = attack.CollectUniqueTactics(cache.Techniques, matrix.TacticOrder)
+	m.pages = []page{m.explorePage()}
+	m.loading = false
+	m.loadingMatrix = nil
+	m.loadErr = nil
+	m.failedMatrix = nil
 }
 
 func (m *model) moveCursor(delta int) {

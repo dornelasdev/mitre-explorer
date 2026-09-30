@@ -25,6 +25,17 @@ func TestSetActiveMatrix(t *testing.T) {
 	}
 }
 
+func TestMatrixTUIOptionCopiesConfiguration(t *testing.T) {
+	option := matrixTUIOption(mobileMatrix)
+	if option.Name != "mobile" || option.CachePath != mobileMatrix.CachePath || !reflect.DeepEqual(option.TacticOrder, mobileMatrix.TacticOrder) {
+		t.Fatalf("TUI matrix option = %+v", option)
+	}
+	option.TacticOrder[0] = "Changed"
+	if mobileMatrix.TacticOrder[0] == "Changed" {
+		t.Fatal("TUI matrix option shares mutable tactic order")
+	}
+}
+
 func TestSetActiveMatrixRejectsUnknown(t *testing.T) {
 	app := New(nil, io.Discard)
 	before := app.matrix

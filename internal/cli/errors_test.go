@@ -234,7 +234,7 @@ func TestHelpMatchesCommandBehavior(t *testing.T) {
 		{"analytic", []string{"--components", "--matrix <matrix>"}},
 		{"status", []string{"missing cache is reported as status information", "--matrix <matrix>, --plain"}},
 		{"export", []string{"Output format (default: csv)", "Required only for mapped relationship targets"}},
-		{"tui", []string{"object and relationship navigation", "Up/k, Down/j", "Search cached ATT&CK objects", "q, Ctrl+C"}},
+		{"tui", []string{"object and relationship navigation", "Search cached ATT&CK objects", "Select an existing matrix cache", "contextual keyboard help"}},
 	} {
 		name := tc.target
 		if name == "" {

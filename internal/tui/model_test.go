@@ -295,6 +295,105 @@ func TestSearchEmptyAndNoResults(t *testing.T) {
 	}
 }
 
+func TestMatrixPickerLoadsSelectedCache(t *testing.T) {
+	dir := t.TempDir()
+	enterprisePath := filepath.Join(dir, "enterprise.json")
+	mobilePath := filepath.Join(dir, "mobile.json")
+	enterpriseCache := testCache()
+	mobileCache := attack.CacheData{Techniques: []attack.Technique{{ID: "T9000", Name: "Mobile Example", Tactics: []string{"collection"}}}}
+	for path, cache := range map[string]attack.CacheData{enterprisePath: enterpriseCache, mobilePath: mobileCache} {
+		if err := attack.SaveCacheData(path, cache); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	options := testOptions(enterprisePath)
+	options.Matrices = []MatrixOption{
+		{Name: "enterprise", CachePath: enterprisePath, TacticOrder: []string{"Discovery", "Execution"}},
+		{Name: "mobile", CachePath: mobilePath, TacticOrder: []string{"Collection"}},
+	}
+	m := newModel(options)
+	updated, _ := m.Update(m.Init()())
+	m = updated.(model)
+	m, _ = sendKey(m, tea.KeyPressMsg{Code: 'm', Text: "m"})
+	m, _ = sendKey(m, tea.KeyPressMsg{Code: tea.KeyDown})
+	m, command := sendKey(m, tea.KeyPressMsg{Code: tea.KeyEnter})
+	if !m.loading || m.options.Matrix != "enterprise" || command == nil {
+		t.Fatalf("matrix switch did not start safely: loading=%v matrix=%s", m.loading, m.options.Matrix)
+	}
+	updated, _ = m.Update(command())
+	m = updated.(model)
+	if m.loading || m.loadErr != nil || m.options.Matrix != "mobile" || m.options.CachePath != mobilePath {
+		t.Fatalf("mobile matrix did not activate: matrix=%s err=%v", m.options.Matrix, m.loadErr)
+	}
+	if len(m.tactics) != 1 || m.tactics[0] != "Collection" || m.activePage().title != "EXPLORE" {
+		t.Fatalf("mobile explorer was not rebuilt: tactics=%v page=%+v", m.tactics, m.activePage())
+	}
+}
+
+func TestFailedMatrixSwitchPreservesCurrentSession(t *testing.T) {
+	m := loadedTestModel()
+	originalPages := len(m.pages)
+	m.options.Matrices = []MatrixOption{
+		m.currentMatrix(),
+		{Name: "mobile", CachePath: filepath.Join(t.TempDir(), "missing.json"), TacticOrder: []string{"Collection"}},
+	}
+	m.startMatrixPicker()
+	m.matrixPicker.cursor = 1
+	updated, command := m.updateMatrixPicker("enter")
+	m = updated.(model)
+	updated, _ = m.Update(command())
+	m = updated.(model)
+	m.width, m.height = 90, 24
+	if m.options.Matrix != "enterprise" || len(m.pages) != originalPages || m.loadErr == nil || m.failedMatrix == nil || m.failedMatrix.Name != "mobile" {
+		t.Fatalf("failed switch changed active session: matrix=%s pages=%d err=%v failed=%+v", m.options.Matrix, len(m.pages), m.loadErr, m.failedMatrix)
+	}
+	if view := m.View().Content; !strings.Contains(view, "update --matrix mobile") || !strings.Contains(view, "Esc to return") {
+		t.Fatalf("failed switch guidance missing:\n%s", view)
+	}
+	m, _ = sendKey(m, tea.KeyPressMsg{Code: tea.KeyEscape})
+	if m.loadErr != nil || m.failedMatrix != nil || m.activePage().title != "EXPLORE" {
+		t.Fatal("escape did not restore the active session")
+	}
+}
+
+func TestHelpOverlayPreservesNavigation(t *testing.T) {
+	m := loadedTestModel()
+	m.width, m.height = 80, 24
+	m.selectCurrent()
+	pages := len(m.pages)
+	m, _ = sendKey(m, tea.KeyPressMsg{Code: '?', Text: "?"})
+	if !m.helpVisible || !strings.Contains(m.View().Content, "KEYBOARD HELP") || !strings.Contains(m.breadcrumbLine(), "HELP") {
+		t.Fatal("help overlay did not open")
+	}
+	m, _ = sendKey(m, tea.KeyPressMsg{Code: tea.KeyDown})
+	if len(m.pages) != pages || m.helpOffset != 1 {
+		t.Fatal("help scrolling changed navigation or failed to move")
+	}
+	m, _ = sendKey(m, tea.KeyPressMsg{Code: '?', Text: "?"})
+	if m.helpVisible || len(m.pages) != pages || m.activePage().title != "TACTICS" {
+		t.Fatal("help overlay did not restore the current page")
+	}
+}
+
+func TestBreadcrumbsAndPositionIndicators(t *testing.T) {
+	m := loadedTestModel()
+	m.selectCurrent()
+	if got := m.breadcrumbLine(); got != "Path: EXPLORE > TACTICS" {
+		t.Fatalf("breadcrumb = %q", got)
+	}
+	m.width, m.height = 90, 24
+	view := m.View().Content
+	if !strings.Contains(view, "TACTICS  1/2") {
+		t.Fatalf("list position missing:\n%s", view)
+	}
+	m.selectCurrent()
+	m.selectCurrent()
+	if !strings.Contains(m.footer(90), "scroll 1/") || !strings.Contains(m.breadcrumbLine(), "T3000") {
+		t.Fatalf("detail position or breadcrumb missing: %q %q", m.footer(90), m.breadcrumbLine())
+	}
+}
+
 func TestViewAdaptsToTerminalSize(t *testing.T) {
 	tests := []struct {
 		name      string

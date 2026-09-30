@@ -21,7 +21,8 @@ by default.
 - Technique mappings for groups, mitigations, software, campaigns, and detection
   strategies.
 - Detection strategy, analytic, and data component relationships.
-- Guided explorer, manual command, and full-screen TUI modes with scoped search.
+- Guided explorer, manual command, and full-screen TUI modes with scoped search
+  and in-session matrix selection.
 - Matrix-aware, paginated, plain, and detailed terminal output.
 - CSV and Markdown exports, including mapped relationship reports.
 - Automated unit, integration, interactive, and multi-matrix regression tests.

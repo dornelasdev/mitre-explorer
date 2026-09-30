@@ -334,13 +334,19 @@ groups, mitigations, software, campaigns, detection strategies, analytics, and
 data components. Entity details expose their mapped techniques, analytics, or
 data components where applicable. Move through lists and scroll long details with
 the arrow keys or `j`/`k`, open an item with `Enter`, and return one level with `b`
-or `Esc`. At the Explore root,
-`Esc` exits. The existing CLI and guided mode remain fully available.
+or `Esc`. At the Explore root, `Esc` exits. The existing CLI and guided mode remain
+fully available.
 
 Press `/` from any TUI page to search the local cache. `Tab` and `Shift+Tab`
 cycle through all objects or a specific object type. Results update while typing;
 `Enter` opens the result list and `Esc` cancels without changing the current page.
 Search results retain the same detail and mapping navigation as ordinary lists.
+
+Press `m` to select an existing Enterprise, Mobile, or ICS cache without leaving
+the TUI. Switching matrices does not download data. If the selected cache is
+missing, the TUI shows its update command and keeps the previous session available.
+Press `?` for contextual keyboard help. Breadcrumbs show the current path, while
+lists and scrollable details display their current positions.
 
 The global `--matrix` and `--plain` options are supported:
 

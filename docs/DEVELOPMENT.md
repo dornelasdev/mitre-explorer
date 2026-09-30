@@ -109,12 +109,13 @@ continue to work. `internal/attack` contains terminal-independent data logic;
 `internal` rule keeps both packages private to this module rather than presenting
 them as a public library API.
 
-`internal/tui` owns the Bubble Tea model and Lip Gloss rendering for the optional
-full-screen interface. The CLI passes selected matrix, cache path, tactic order,
-version, and plain-output state through a small options value; the TUI does not
-import the CLI. Cache loading runs as a Bubble Tea command, and navigation reuses
-the `internal/attack` tactic and relationship queries. This direction keeps
-command routing separate from full-screen state and avoids an import cycle.
+`internal/tui` owns Bubble Tea state, Bubbles inputs, and Lip Gloss rendering for
+the optional full-screen interface. The CLI passes selected matrix, cache path,
+tactic order, version, and plain-output state through a small options value; the
+TUI does not import the CLI. Cache loading runs as a Bubble Tea command, and
+navigation reuses the `internal/attack` tactic and relationship queries. This
+direction keeps command routing separate from full-screen state and avoids an
+import cycle.
 
 The TUI uses one page stack for category lists, entity details, relationship
 choices, and mapped results. Going back pops one page and preserves the cursor on
@@ -126,6 +127,11 @@ Search uses the Bubbles text-input component as a temporary mode layered over th
 page stack. Cancelling restores the existing page unchanged; submitted results
 become an ordinary list page. Technique and entity matching reuse the attack query
 package, including an explicit exact-ID path for technique IDs.
+
+The matrix picker receives cache paths and tactic orders from the CLI package. A
+new cache is loaded before it replaces active TUI state; a failed switch leaves the
+previous page stack available. Help and matrix selection are temporary modes, like
+search, and do not mutate navigation until the user confirms an action.
 
 ## Data Layer
 
