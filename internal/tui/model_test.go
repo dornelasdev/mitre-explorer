@@ -209,6 +209,92 @@ func TestDetailScrollingStopsAtContentBounds(t *testing.T) {
 	}
 }
 
+func TestSearchInputScopeAndCancellation(t *testing.T) {
+	m := loadedTestModel()
+	m.activePage().cursor = 4
+	var command tea.Cmd
+	m, command = sendKey(m, tea.KeyPressMsg{Code: '/', Text: "/"})
+	if !m.search.active || !m.search.input.Focused() || command == nil {
+		t.Fatal("search input did not open and receive focus")
+	}
+
+	m, command = sendKey(m, tea.KeyPressMsg{Code: 'q', Text: "q"})
+	if command != nil {
+		_ = command()
+	}
+	if !m.search.active || m.search.input.Value() != "q" {
+		t.Fatalf("q did not remain search text: active=%v value=%q", m.search.active, m.search.input.Value())
+	}
+	m, _ = sendKey(m, tea.KeyPressMsg{Code: tea.KeyTab})
+	if m.search.scope != 1 || searchScopes[m.search.scope].name != "Techniques" {
+		t.Fatalf("scope did not advance: %d", m.search.scope)
+	}
+	m, _ = sendKey(m, tea.KeyPressMsg{Code: tea.KeyTab, Mod: tea.ModShift})
+	if m.search.scope != 0 {
+		t.Fatalf("scope did not move backward: %d", m.search.scope)
+	}
+
+	m, _ = sendKey(m, tea.KeyPressMsg{Code: tea.KeyEscape})
+	if m.search.active || m.activePage().title != "EXPLORE" || m.activePage().cursor != 4 {
+		t.Fatal("search cancellation changed the current page")
+	}
+}
+
+func TestSearchExactTechniqueIDAndResultNavigation(t *testing.T) {
+	m := loadedTestModel()
+	m.cache.Techniques[0].Description = "This description references T1000."
+	m, _ = sendKey(m, tea.KeyPressMsg{Code: '/', Text: "/"})
+	m.search.input.SetValue("T1000")
+	m.refreshSearch()
+	if len(m.search.results) != 1 || m.search.results[0].kind != itemTechnique || m.search.results[0].id != "T1000" {
+		t.Fatalf("exact technique search = %+v", m.search.results)
+	}
+	if view := m.View().Content; !strings.Contains(view, "Scope: All") || !strings.Contains(view, "1 result(s)") {
+		t.Fatalf("live search summary missing:\n%s", view)
+	}
+
+	m, _ = sendKey(m, tea.KeyPressMsg{Code: tea.KeyEnter})
+	if m.search.active || m.activePage().title != "SEARCH: T1000 [ALL]" || len(m.activePage().items) != 1 {
+		t.Fatalf("search results page not opened: %+v", m.activePage())
+	}
+	m, _ = sendKey(m, tea.KeyPressMsg{Code: tea.KeyEnter})
+	if m.activePage().kind != pageDetail || m.activePage().detail.id != "T1000" {
+		t.Fatalf("search result details not opened: %+v", m.activePage())
+	}
+}
+
+func TestScopedEntitySearchRetainsMappings(t *testing.T) {
+	m := loadedTestModel()
+	m.startSearch()
+	m.search.scope = 2
+	m.search.input.SetValue("Example Group")
+	m.refreshSearch()
+	if len(m.search.results) != 1 || m.search.results[0].kind != itemGroup {
+		t.Fatalf("group search = %+v", m.search.results)
+	}
+	m.updateSearch(tea.KeyPressMsg{Code: tea.KeyEnter})
+	m.selectCurrent()
+	if active := m.activePage(); active.kind != pageDetail || len(active.relations) != 1 || active.relations[0].count != 1 {
+		t.Fatalf("searched group lost mappings: %+v", active)
+	}
+}
+
+func TestSearchEmptyAndNoResults(t *testing.T) {
+	m := loadedTestModel()
+	m.startSearch()
+	m, _ = sendKey(m, tea.KeyPressMsg{Code: tea.KeyEnter})
+	if !m.search.active || len(m.pages) != 1 {
+		t.Fatal("empty search unexpectedly opened a results page")
+	}
+
+	m.search.input.SetValue("does-not-exist")
+	m.refreshSearch()
+	m, _ = sendKey(m, tea.KeyPressMsg{Code: tea.KeyEnter})
+	if m.search.active || m.activePage().kind != pageList || len(m.activePage().items) != 0 {
+		t.Fatalf("no-result search page = %+v", m.activePage())
+	}
+}
+
 func TestViewAdaptsToTerminalSize(t *testing.T) {
 	tests := []struct {
 		name      string

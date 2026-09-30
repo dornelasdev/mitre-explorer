@@ -21,7 +21,7 @@ by default.
 - Technique mappings for groups, mitigations, software, campaigns, and detection
   strategies.
 - Detection strategy, analytic, and data component relationships.
-- Guided explorer, manual command, and full-screen TUI modes.
+- Guided explorer, manual command, and full-screen TUI modes with scoped search.
 - Matrix-aware, paginated, plain, and detailed terminal output.
 - CSV and Markdown exports, including mapped relationship reports.
 - Automated unit, integration, interactive, and multi-matrix regression tests.
@@ -29,7 +29,8 @@ by default.
 ## Quick Start
 
 Use the Go version declared in [`go.mod`](go.mod). The full-screen interface uses
-Bubble Tea and Lip Gloss; `go mod download` installs the declared dependencies.
+Bubble Tea, Bubbles, and Lip Gloss; `go mod download` installs the declared
+dependencies.
 
 Build the default Enterprise cache:
 

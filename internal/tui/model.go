@@ -38,6 +38,7 @@ type model struct {
 	cache   attack.CacheData
 	tactics []string
 	pages   []page
+	search  searchState
 	width   int
 	height  int
 	loading bool
@@ -45,7 +46,7 @@ type model struct {
 }
 
 func newModel(options Options) model {
-	return model{options: options, loading: true}
+	return model{options: options, search: newSearchState(options.Plain), loading: true}
 }
 
 func (m model) Init() tea.Cmd {
@@ -67,6 +68,7 @@ func (m model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = message.Width
 		m.height = message.Height
+		m.setSearchWidth()
 	case cacheLoadedMsg:
 		m.cache = message.cache
 		m.tactics = attack.CollectUniqueTactics(m.cache.Techniques, m.options.TacticOrder)
@@ -77,7 +79,15 @@ func (m model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		m.loading = false
 		m.loadErr = message.err
 	case tea.KeyPressMsg:
+		if m.search.active {
+			return m.updateSearch(message)
+		}
 		return m.handleKey(message.String())
+	}
+	if m.search.active {
+		var command tea.Cmd
+		m.search.input, command = m.search.input.Update(message)
+		return m, command
 	}
 
 	return m, nil
@@ -107,6 +117,8 @@ func (m model) handleKey(key string) (tea.Model, tea.Cmd) {
 		m.selectCurrent()
 	case "b":
 		m.goBack()
+	case "/":
+		return m, m.startSearch()
 	}
 
 	return m, nil

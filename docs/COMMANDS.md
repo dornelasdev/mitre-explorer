@@ -337,6 +337,11 @@ the arrow keys or `j`/`k`, open an item with `Enter`, and return one level with 
 or `Esc`. At the Explore root,
 `Esc` exits. The existing CLI and guided mode remain fully available.
 
+Press `/` from any TUI page to search the local cache. `Tab` and `Shift+Tab`
+cycle through all objects or a specific object type. Results update while typing;
+`Enter` opens the result list and `Esc` cancels without changing the current page.
+Search results retain the same detail and mapping navigation as ordinary lists.
+
 The global `--matrix` and `--plain` options are supported:
 
 ```bash

@@ -67,49 +67,31 @@ func (m model) itemsForCategory(category string) []browseItem {
 		}
 	case "groups":
 		for _, entity := range m.cache.Groups {
-			items = append(items, browseItem{
-				kind: itemGroup, id: entity.ID, name: entity.Name, description: entity.Description,
-				fields: []detailField{{"Aliases", joinedOrUnavailable(entity.Aliases)}},
-			})
+			items = append(items, groupItem(entity))
 		}
 	case "mitigations":
 		for _, entity := range m.cache.Mitigations {
-			items = append(items, browseItem{kind: itemMitigation, id: entity.ID, name: entity.Name, description: entity.Description})
+			items = append(items, mitigationItem(entity))
 		}
 	case "software":
 		for _, entity := range m.cache.Softwares {
-			items = append(items, browseItem{
-				kind: itemSoftware, id: entity.ID, name: entity.Name, description: entity.Description,
-				fields: []detailField{{"Type", entity.Type}, {"Aliases", joinedOrUnavailable(entity.Aliases)}},
-			})
+			items = append(items, softwareItem(entity))
 		}
 	case "campaigns":
 		for _, entity := range m.cache.Campaigns {
-			items = append(items, browseItem{
-				kind: itemCampaign, id: entity.ID, name: entity.Name, description: entity.Description,
-				fields: []detailField{{"Aliases", joinedOrUnavailable(entity.Aliases)}},
-			})
+			items = append(items, campaignItem(entity))
 		}
 	case "detections":
 		for _, entity := range m.cache.DetectionStrategies {
-			items = append(items, browseItem{
-				kind: itemDetection, id: firstNonEmpty(entity.ID, entity.StixID), name: entity.Name, description: entity.Description,
-				fields: []detailField{{"STIX ID", entity.StixID}},
-			})
+			items = append(items, detectionItem(entity))
 		}
 	case "analytics":
 		for _, entity := range m.cache.Analytics {
-			items = append(items, browseItem{
-				kind: itemAnalytic, id: firstNonEmpty(entity.ID, entity.StixID), name: entity.Name, description: entity.Description,
-				fields: []detailField{{"STIX ID", entity.StixID}},
-			})
+			items = append(items, analyticItem(entity))
 		}
 	case "data-components":
 		for _, entity := range m.cache.DataComponents {
-			items = append(items, browseItem{
-				kind: itemDataComponent, id: firstNonEmpty(entity.ID, entity.StixID), name: entity.Name, description: entity.Description,
-				fields: []detailField{{"STIX ID", entity.StixID}},
-			})
+			items = append(items, dataComponentItem(entity))
 		}
 	}
 
@@ -122,6 +104,52 @@ func (m model) itemsForCategory(category string) []browseItem {
 		})
 	}
 	return items
+}
+
+func groupItem(entity attack.Group) browseItem {
+	return browseItem{
+		kind: itemGroup, id: entity.ID, name: entity.Name, description: entity.Description,
+		fields: []detailField{{"Aliases", joinedOrUnavailable(entity.Aliases)}},
+	}
+}
+
+func mitigationItem(entity attack.Mitigation) browseItem {
+	return browseItem{kind: itemMitigation, id: entity.ID, name: entity.Name, description: entity.Description}
+}
+
+func softwareItem(entity attack.Software) browseItem {
+	return browseItem{
+		kind: itemSoftware, id: entity.ID, name: entity.Name, description: entity.Description,
+		fields: []detailField{{"Type", entity.Type}, {"Aliases", joinedOrUnavailable(entity.Aliases)}},
+	}
+}
+
+func campaignItem(entity attack.Campaign) browseItem {
+	return browseItem{
+		kind: itemCampaign, id: entity.ID, name: entity.Name, description: entity.Description,
+		fields: []detailField{{"Aliases", joinedOrUnavailable(entity.Aliases)}},
+	}
+}
+
+func detectionItem(entity attack.DetectionStrategy) browseItem {
+	return browseItem{
+		kind: itemDetection, id: firstNonEmpty(entity.ID, entity.StixID), name: entity.Name, description: entity.Description,
+		fields: []detailField{{"STIX ID", entity.StixID}},
+	}
+}
+
+func analyticItem(entity attack.Analytic) browseItem {
+	return browseItem{
+		kind: itemAnalytic, id: firstNonEmpty(entity.ID, entity.StixID), name: entity.Name, description: entity.Description,
+		fields: []detailField{{"STIX ID", entity.StixID}},
+	}
+}
+
+func dataComponentItem(entity attack.DataComponent) browseItem {
+	return browseItem{
+		kind: itemDataComponent, id: firstNonEmpty(entity.ID, entity.StixID), name: entity.Name, description: entity.Description,
+		fields: []detailField{{"STIX ID", entity.StixID}},
+	}
 }
 
 func techniqueItems(techniques []attack.Technique) []browseItem {
@@ -143,10 +171,7 @@ func techniqueItems(techniques []attack.Technique) []browseItem {
 func analyticItems(analytics []attack.Analytic) []browseItem {
 	items := make([]browseItem, 0, len(analytics))
 	for _, entity := range analytics {
-		items = append(items, browseItem{
-			kind: itemAnalytic, id: firstNonEmpty(entity.ID, entity.StixID), name: entity.Name, description: entity.Description,
-			fields: []detailField{{"STIX ID", entity.StixID}},
-		})
+		items = append(items, analyticItem(entity))
 	}
 	return items
 }
@@ -154,10 +179,7 @@ func analyticItems(analytics []attack.Analytic) []browseItem {
 func dataComponentItems(components []attack.DataComponent) []browseItem {
 	items := make([]browseItem, 0, len(components))
 	for _, entity := range components {
-		items = append(items, browseItem{
-			kind: itemDataComponent, id: firstNonEmpty(entity.ID, entity.StixID), name: entity.Name, description: entity.Description,
-			fields: []detailField{{"STIX ID", entity.StixID}},
-		})
+		items = append(items, dataComponentItem(entity))
 	}
 	return items
 }

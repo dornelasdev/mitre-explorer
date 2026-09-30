@@ -117,6 +117,8 @@ func (m model) rightPanel(width, height int) string {
 			"",
 			fmt.Sprintf("Run: go run . update --matrix %s", m.options.Matrix),
 		}, "\n")
+	} else if m.search.active {
+		content = m.searchContent()
 	} else {
 		content = m.contextContent()
 		if active := m.activePage(); active != nil && active.kind == pageDetail {
@@ -129,10 +131,31 @@ func (m model) rightPanel(width, height int) string {
 
 func (m model) singlePanel(width, height int) string {
 	active := m.activePage()
-	if m.loading || m.loadErr != nil || (active != nil && active.kind == pageDetail) {
+	if m.loading || m.loadErr != nil || m.search.active || (active != nil && active.kind == pageDetail) {
 		return m.rightPanel(width, height)
 	}
 	return m.leftPanel(height, width)
+}
+
+func (m model) searchContent() string {
+	scope := searchScopes[m.search.scope]
+	lines := []string{
+		m.headingStyle().Render("SEARCH"),
+		"",
+		"Scope: " + scope.name,
+		m.search.input.View(),
+		"",
+	}
+	query := strings.TrimSpace(m.search.input.Value())
+	if query == "" {
+		lines = append(lines, "Type a query to search the local cache.")
+		return strings.Join(lines, "\n")
+	}
+	lines = append(lines, fmt.Sprintf("%d result(s)", len(m.search.results)))
+	for index := 0; index < min(4, len(m.search.results)); index++ {
+		lines = append(lines, "  "+itemLabel(m.search.results[index]))
+	}
+	return strings.Join(lines, "\n")
 }
 
 func (m model) contextContent() string {
@@ -311,6 +334,8 @@ func (m model) footer() string {
 	switch {
 	case m.loading || m.loadErr != nil:
 		text = "q / Esc / Ctrl+C  quit"
+	case m.search.active:
+		text = "Tab / Shift+Tab  scope    Enter  results    Esc  cancel    Ctrl+C  quit"
 	case len(m.pages) <= 1:
 		text = "up/k down/j  move    Enter  select    q/Esc  quit"
 	case active != nil && active.kind == pageDetail && len(active.relations) == 0:

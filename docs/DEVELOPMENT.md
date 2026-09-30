@@ -6,8 +6,8 @@ clearer responsibilities, automated checks, and changes that are easy to review.
 ## Setup
 
 Use the Go version declared in `go.mod`. Run the commands below from the repository
-root. `go mod download` installs the declared dependencies, including Bubble Tea
-and Lip Gloss for the full-screen interface.
+root. `go mod download` installs the declared dependencies, including Bubble Tea,
+Bubbles, and Lip Gloss for the full-screen interface.
 
 ```bash
 go run . help
@@ -121,6 +121,11 @@ choices, and mapped results. Going back pops one page and preserves the cursor o
 the previous page. Entity adapters produce a shared internal item representation;
 relationship data still comes from `internal/attack` rather than duplicated TUI
 queries.
+
+Search uses the Bubbles text-input component as a temporary mode layered over the
+page stack. Cancelling restores the existing page unchanged; submitted results
+become an ordinary list page. Technique and entity matching reuse the attack query
+package, including an explicit exact-ID path for technique IDs.
 
 ## Data Layer
 
