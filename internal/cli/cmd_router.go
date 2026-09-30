@@ -55,6 +55,8 @@ func (app *App) dispatchCommand(args []string) error {
 		return app.handleExport(args)
 	case "help":
 		return app.handleHelp(args)
+	case "tui":
+		return app.handleTUI(args)
 	case "search":
 		return app.handleSearch(args)
 	case "show":

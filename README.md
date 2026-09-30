@@ -21,15 +21,17 @@ by default.
 - Technique mappings for groups, mitigations, software, campaigns, and detection
   strategies.
 - Detection strategy, analytic, and data component relationships.
-- Guided explorer and manual command modes.
+- Guided explorer, manual command, and full-screen TUI modes with scoped search
+  and in-session matrix selection.
 - Matrix-aware, paginated, plain, and detailed terminal output.
 - CSV and Markdown exports, including mapped relationship reports.
 - Automated unit, integration, interactive, and multi-matrix regression tests.
 
 ## Quick Start
 
-Use the Go version declared in [`go.mod`](go.mod). The project currently uses only
-the Go standard library.
+Use the Go version declared in [`go.mod`](go.mod). The full-screen interface uses
+Bubble Tea, Bubbles, and Lip Gloss; `go mod download` installs the declared
+dependencies.
 
 Build the default Enterprise cache:
 
@@ -49,6 +51,12 @@ Start the interactive menu:
 
 ```bash
 go run .
+```
+
+Or browse ATT&CK objects and their relationships in the full-screen TUI:
+
+```bash
+go run . tui
 ```
 
 Select another matrix with a global option:
@@ -73,6 +81,7 @@ Mobile and ICS have independent raw datasets, caches, and update metadata. Run
 | `group`, `mitigation`, `software`, `campaign` | Show an object and optional mappings. |
 | `detection`, `analytic` | Display detection content and linked objects. |
 | `export` | Write cache or relationship data as CSV or Markdown. |
+| `tui` | Browse cached ATT&CK objects and relationships full-screen. |
 | `help` | Show global or command-specific help. |
 
 Global options:
@@ -105,7 +114,8 @@ Running the tool without a command opens a menu:
 |   `-- DEVELOPMENT.md         # Architecture and development workflow
 |-- internal/
 |   |-- attack/                # ATT&CK models, STIX, storage, and queries
-|   `-- cli/                   # Commands, session state, and terminal UI
+|   |-- cli/                   # Commands, session state, and line-oriented UI
+|   `-- tui/                   # Full-screen Bubble Tea interface
 |-- main.go                    # Thin executable entry point
 `-- version.go                 # Build-overridable release version
 ```

@@ -20,6 +20,8 @@ func (app *App) handleHelp(args []string) error {
 		app.printStatusHelp()
 	case "export":
 		app.printExportHelp()
+	case "tui":
+		app.printTUIHelp()
 	case "show":
 		app.printShowHelp()
 	case "list":
@@ -52,6 +54,7 @@ func (app *App) printGlobalHelp() {
 	fmt.Fprintln(app.out, "  show        Show technique details")
 	fmt.Fprintln(app.out, "  list        List targets with pagination")
 	fmt.Fprintln(app.out, "  export      Export cache data as CSV or Markdown")
+	fmt.Fprintln(app.out, "  tui         Open the full-screen terminal interface")
 	fmt.Fprintln(app.out)
 	fmt.Fprintln(app.out, "Entity commands:")
 	fmt.Fprintln(app.out, "  group        Show group details")
@@ -206,4 +209,22 @@ func (app *App) printExportHelp() {
 	fmt.Fprintln(app.out, "  go run . export summary --matrix enterprise --format md --out reports/enterprise-summary.md")
 	fmt.Fprintln(app.out, "  go run . export techniques --matrix mobile --format csv --out reports/mobile-techniques.csv")
 	fmt.Fprintln(app.out, "  go run . export group-techniques --for <group_id_or_name> --matrix enterprise --format md --out reports/group-techniques.md")
+}
+
+func (app *App) printTUIHelp() {
+	fmt.Fprintln(app.out, "Usage: go run . tui")
+	fmt.Fprintln(app.out)
+	fmt.Fprintln(app.out, "Opens the full-screen terminal interface for ATT&CK object and relationship navigation.")
+	fmt.Fprintln(app.out)
+	fmt.Fprintln(app.out, "Keys:")
+	fmt.Fprintln(app.out, "  Up/k, Down/j        Move through lists or scroll details")
+	fmt.Fprintln(app.out, "  Enter               Open the selected item")
+	fmt.Fprintln(app.out, "  /                   Search cached ATT&CK objects")
+	fmt.Fprintln(app.out, "  Tab, Shift+Tab      Change scope while searching")
+	fmt.Fprintln(app.out, "  m                   Select an existing matrix cache")
+	fmt.Fprintln(app.out, "  ?                   Show contextual keyboard help")
+	fmt.Fprintln(app.out, "  b, Esc              Return to the previous screen")
+	fmt.Fprintln(app.out, "  q, Ctrl+C           Exit the TUI")
+	fmt.Fprintln(app.out)
+	fmt.Fprintln(app.out, "Global options: --matrix <matrix>, --plain")
 }

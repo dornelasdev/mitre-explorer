@@ -25,7 +25,7 @@ func TestInvalidCommandsValidateBeforeLoadingCache(t *testing.T) {
 		{"list"}, {"list", "unknown"}, {"list", "groups", "--typo"},
 		{"list", "techniques", "--tactic"}, {"list", "techniques", "--tactic", "--platform", "Linux"},
 		{"list", "techniques", "--platform", ""}, {"list", "techniques", "--data-component"},
-		{"status", "extra"}, {"help", "unknown"}, {"help", "search", "extra"},
+		{"status", "extra"}, {"tui", "extra"}, {"help", "unknown"}, {"help", "search", "extra"},
 		{"update", "--typo"}, {"update", "-f", "extra"},
 		{"export"}, {"export", "techniques"}, {"export", "techniques", "--out", "--format", "md"},
 		{"export", "techniques", "--out", "x", "--format", "invalid"},
@@ -234,6 +234,7 @@ func TestHelpMatchesCommandBehavior(t *testing.T) {
 		{"analytic", []string{"--components", "--matrix <matrix>"}},
 		{"status", []string{"missing cache is reported as status information", "--matrix <matrix>, --plain"}},
 		{"export", []string{"Output format (default: csv)", "Required only for mapped relationship targets"}},
+		{"tui", []string{"object and relationship navigation", "Search cached ATT&CK objects", "Select an existing matrix cache", "contextual keyboard help"}},
 	} {
 		name := tc.target
 		if name == "" {

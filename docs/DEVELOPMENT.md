@@ -6,8 +6,8 @@ clearer responsibilities, automated checks, and changes that are easy to review.
 ## Setup
 
 Use the Go version declared in `go.mod`. Run the commands below from the repository
-root. The project currently uses the Go standard library, so no additional library
-installation is needed.
+root. `go mod download` installs the declared dependencies, including Bubble Tea,
+Bubbles, and Lip Gloss for the full-screen interface.
 
 ```bash
 go run . help
@@ -38,8 +38,8 @@ go test -race ./...
 ```
 
 Tests use small fixtures and do not require downloaded ATT&CK datasets. They cover
-query behavior, matrix selection, export helpers, version availability, closed
-input handling, conditional downloads, storage, and STIX normalization. HTTP tests
+query behavior, matrix selection, TUI navigation, export helpers, version
+availability, closed input handling, conditional downloads, storage, and STIX normalization. HTTP tests
 use local fixture servers rather than requesting live ATT&CK data. The interactive
 EOF and guided-flow tests use separate processes with timeouts so a loop regression
 cannot hang the suite indefinitely.
@@ -80,7 +80,7 @@ generated caches or reports. If exporting to a different directory, check
 
 Work through a coherent implementation section, review the diff, run the relevant
 checks, and manually verify any affected interactive flows. Create commits at
-meaningful checkpoints; a commit is not required for every section.
+meaningful checkpoints; feature branches may use one checkpoint per section.
 
 ```bash
 git status --short --branch
@@ -88,7 +88,7 @@ git diff
 git diff --cached
 ```
 
-Review staged changes as well as unstaged changes. Push the rework branch when it
+Review staged changes as well as unstaged changes. Push the feature branch when it
 is ready for a pull request, then review and merge that pull request.
 
 ## Package Layout
@@ -99,7 +99,8 @@ is ready for a pull request, then review and merge that pull request.
 |-- version.go                 # Build-overridable version
 `-- internal/
     |-- attack/                # Models, STIX, storage, and query rules
-    `-- cli/                   # Commands, session state, and terminal output
+    |-- cli/                   # Commands, session state, and line-oriented UI
+    `-- tui/                   # Full-screen Bubble Tea interface
 ```
 
 The root remains a small `main` package so `go run .` and existing build commands
@@ -107,6 +108,30 @@ continue to work. `internal/attack` contains terminal-independent data logic;
 `internal/cli` owns command parsing, orchestration, and presentation. Go's
 `internal` rule keeps both packages private to this module rather than presenting
 them as a public library API.
+
+`internal/tui` owns Bubble Tea state, Bubbles inputs, and Lip Gloss rendering for
+the optional full-screen interface. The CLI passes selected matrix, cache path,
+tactic order, version, and plain-output state through a small options value; the
+TUI does not import the CLI. Cache loading runs as a Bubble Tea command, and
+navigation reuses the `internal/attack` tactic and relationship queries. This
+direction keeps command routing separate from full-screen state and avoids an
+import cycle.
+
+The TUI uses one page stack for category lists, entity details, relationship
+choices, and mapped results. Going back pops one page and preserves the cursor on
+the previous page. Entity adapters produce a shared internal item representation;
+relationship data still comes from `internal/attack` rather than duplicated TUI
+queries.
+
+Search uses the Bubbles text-input component as a temporary mode layered over the
+page stack. Cancelling restores the existing page unchanged; submitted results
+become an ordinary list page. Technique and entity matching reuse the attack query
+package, including an explicit exact-ID path for technique IDs.
+
+The matrix picker receives cache paths and tactic orders from the CLI package. A
+new cache is loaded before it replaces active TUI state; a failed switch leaves the
+previous page stack available. Help and matrix selection are temporary modes, like
+search, and do not mutate navigation until the user confirms an action.
 
 ## Data Layer
 
