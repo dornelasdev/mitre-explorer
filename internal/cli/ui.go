@@ -303,6 +303,32 @@ func (app *App) printDetails(fields []DetailField) {
 	}
 }
 
+func (app *App) printReferenceIssues(issues []attack.ReferenceIssue) {
+	if len(issues) == 0 {
+		return
+	}
+	fmt.Fprintf(app.out, "%s %d reference(s) could not be resolved in this matrix cache.\n", app.warn("Mapping warning:"), len(issues))
+	for _, issue := range issues {
+		fmt.Fprintln(app.out, "  "+issue.String())
+	}
+}
+
+func hasMissingAnalytics(issues []attack.ReferenceIssue) bool {
+	for _, issue := range issues {
+		if issue.TargetType == "analytic" {
+			return true
+		}
+	}
+	return false
+}
+
+func mappingCount(count int, incomplete bool) string {
+	if incomplete {
+		return fmt.Sprintf("%d resolved (incomplete)", count)
+	}
+	return strconv.Itoa(count)
+}
+
 func (app *App) printInvalidSelection() {
 	fmt.Fprintln(app.out, "Invalid selection.")
 }

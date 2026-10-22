@@ -78,8 +78,12 @@ func (app *App) printTechniqueMapping(titleText string, results []attack.Techniq
 	app.printMappedTechniquesWithMode(results, detailed)
 }
 
-func (app *App) printAnalyticMapping(results []attack.Analytic) {
+func (app *App) printAnalyticMapping(results []attack.Analytic, incomplete bool) {
 	if len(results) == 0 {
+		if incomplete {
+			fmt.Fprintln(app.out, "No analytics could be resolved from this cache.")
+			return
+		}
 		app.printNoMappedResults("analytics", "detection strategy")
 		return
 	}
@@ -88,8 +92,12 @@ func (app *App) printAnalyticMapping(results []attack.Analytic) {
 	app.printAnalyticList(results)
 }
 
-func (app *App) printComponentMapping(source string, results []attack.DataComponent) {
+func (app *App) printComponentMapping(source string, results []attack.DataComponent, incomplete bool) {
 	if len(results) == 0 {
+		if incomplete {
+			fmt.Fprintln(app.out, "No data components could be resolved from this cache.")
+			return
+		}
 		app.printNoMappedResults("data components", source)
 		return
 	}
@@ -258,16 +266,18 @@ func (app *App) handleDetection(args []string) error {
 	techniques := attack.TechniquesDetectedByStrategy(cache, d.ID)
 	analytics := attack.AnalyticsByDetectionStrategy(cache, d.ID)
 	components := attack.DataComponentsByDetectionStrategy(cache, d.ID)
+	issues := attack.DetectionReferenceIssues(cache, d.ID)
 
 	app.printSection("Detection Strategy Details")
 	app.printDetails([]DetailField{
 		{"ID:", d.ID},
 		{"Name:", d.Name},
 		{"Mapped techniques:", fmt.Sprintf("%d", len(techniques))},
-		{"Analytics:", fmt.Sprintf("%d", len(analytics))},
-		{"Data Components:", fmt.Sprintf("%d", len(components))},
+		{"Analytics:", mappingCount(len(analytics), hasMissingAnalytics(issues))},
+		{"Data Components:", mappingCount(len(components), len(issues) > 0)},
 		{"Description:", d.Description},
 	})
+	app.printReferenceIssues(issues)
 
 	if flags.Techniques {
 		app.printSubsection("Mapped Techniques")
@@ -276,12 +286,12 @@ func (app *App) handleDetection(args []string) error {
 
 	if flags.Analytics {
 		app.printSubsection("Analytics")
-		app.printAnalyticMapping(analytics)
+		app.printAnalyticMapping(analytics, hasMissingAnalytics(issues))
 	}
 
 	if flags.Components {
 		app.printSubsection("Data Components")
-		app.printComponentMapping("detection strategy", components)
+		app.printComponentMapping("detection strategy", components, len(issues) > 0)
 	}
 	return nil
 }
@@ -304,18 +314,20 @@ func (app *App) handleAnalytic(args []string) error {
 	}
 
 	components := attack.DataComponentsByAnalytic(cache, a.ID)
+	issues := attack.AnalyticReferenceIssues(cache, a.ID)
 
 	app.printSection("Analytic Details")
 	app.printDetails([]DetailField{
 		{"ID:", a.ID},
 		{"Name:", a.Name},
-		{"Data Components:", fmt.Sprintf("%d", len(components))},
+		{"Data Components:", mappingCount(len(components), len(issues) > 0)},
 		{"Description:", a.Description},
 	})
+	app.printReferenceIssues(issues)
 
 	if flags.Components {
 		app.printSubsection("Data Components")
-		app.printComponentMapping("analytic", components)
+		app.printComponentMapping("analytic", components, len(issues) > 0)
 	}
 	return nil
 }

@@ -1,0 +1,28 @@
+{
+  "type": "bundle",
+  "objects": [
+    {
+      "type": "x-mitre-detection-strategy",
+      "id": "x-mitre-detection-strategy--example",
+      "name": "Partial Detection",
+      "x_mitre_analytic_refs": ["x-mitre-analytic--example"],
+      "external_references": [{"source_name": "mitre-attack", "external_id": "DET0001"}]
+    },
+    {
+      "type": "x-mitre-analytic",
+      "id": "x-mitre-analytic--example",
+      "name": "Partial Analytic",
+      "x_mitre_log_source_references": [
+        {"x_mitre_data_component_ref": "x-mitre-data-component--available", "name": "sysmon", "channel": "1"},
+        {"x_mitre_data_component_ref": "x-mitre-data-component--missing", "name": "unavailable", "channel": "example"}
+      ],
+      "external_references": [{"source_name": "mitre-attack", "external_id": "AN0001"}]
+    },
+    {
+      "type": "x-mitre-data-component",
+      "id": "x-mitre-data-component--available",
+      "name": "Available Component",
+      "external_references": [{"source_name": "mitre-attack", "external_id": "DC0001"}]
+    }
+  ]
+}

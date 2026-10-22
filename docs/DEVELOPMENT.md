@@ -135,6 +135,23 @@ search, and do not mutate navigation until the user confirms an action.
 
 ## Data Layer
 
+`references.go` checks embedded detection-to-analytic and analytic-to-component
+references using the selected cache. It returns sorted, deduplicated diagnostics
+without modifying the cache or fetching another domain. Existing mapping queries
+continue returning resolved objects; CLI, guided, and TUI views distinguish
+unresolved references from genuinely empty mappings. TUI mapping pages retain
+their warnings when opened from object details. The status command checks every
+analytic, including those not linked to an active detection strategy. These are
+targeted detection-reference checks, not validation of every STIX relationship.
+
+ATT&CK v20.0 was checked against all three official pinned bundles using the
+unchanged parser before this diagnostic layer was added. Supported object counts
+matched the release, and 31 CLI smoke checks covered representative queries and
+exports. The ICS bundle contains analytics referring to component objects absent
+from that bundle; diagnostics retain the unresolved IDs rather than inventing
+objects or silently requiring the Enterprise cache. Small offline fixtures cover
+this case in the test suite; downloaded datasets are not test dependencies.
+
 `internal/attack` owns shared entity models, downloading, STIX normalization,
 cache/metadata storage, and query logic. The CLI imports it as
 `mitre-explorer/internal/attack`.

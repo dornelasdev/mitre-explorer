@@ -21,6 +21,8 @@ by default.
 - Technique mappings for groups, mitigations, software, campaigns, and detection
   strategies.
 - Detection strategy, analytic, and data component relationships.
+- Warnings for detection references whose targets are unavailable in the selected
+  matrix cache, including partial mappings.
 - Guided explorer, manual command, and full-screen TUI modes with scoped search
   and in-session matrix selection.
 - Matrix-aware, paginated, plain, and detailed terminal output.

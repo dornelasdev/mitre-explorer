@@ -58,9 +58,10 @@ Useful options:
 go run . status
 ```
 
-Shows cache health, matrix name, update metadata, parsed entity counts, and tactic
-validation. A missing cache is reported as status information rather than a command
-failure.
+Shows cache health, matrix name, update metadata, parsed entity counts, tactic
+validation, and unresolved detection references. These checks cover detection
+strategy-to-analytic and analytic-to-data-component references. A missing cache is
+reported as status information rather than a command failure.
 
 Useful options:
 - `--matrix enterprise|mobile|ics`: checks the status of a specific matrix cache.
@@ -200,6 +201,12 @@ go run . analytic AN1394
 ```
 
 Shows details for an analytic.
+
+Detection and analytic details warn when referenced analytics or data components
+are unavailable in the selected matrix cache. Available results remain visible;
+incomplete counts are marked as resolved. An unresolved reference differs from
+an object having no mapped items. The tool does not automatically fetch another
+matrix to fill missing references.
 
 Useful options:
 - `-c`, `--components`: shows data components used by the analytic.

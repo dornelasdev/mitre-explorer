@@ -23,6 +23,7 @@ type page struct {
 	offset    int
 	detail    browseItem
 	relations []browseItem
+	issues    []attack.ReferenceIssue
 }
 
 type cacheLoadedMsg struct {
@@ -205,8 +206,9 @@ func (m *model) selectCurrent() {
 	case itemTactic:
 		m.pushList("TECHNIQUES: "+strings.ToUpper(item.name), techniqueItems(attack.ListByTactic(m.cache.Techniques, item.id)))
 	case itemRelation:
-		m.pushList(strings.ToUpper(item.name), item.related)
+		m.pushRelation(item)
 	default:
+		item.issues = m.itemReferenceIssues(item)
 		m.pages = append(m.pages, page{
 			kind:      pageDetail,
 			title:     "DETAILS",
@@ -221,10 +223,17 @@ func (m *model) openRelations(relations []browseItem) {
 	case 0:
 		return
 	case 1:
-		m.pushList(strings.ToUpper(relations[0].name), relations[0].related)
+		m.pushRelation(relations[0])
 	default:
 		m.pushList("MAPPINGS", relations)
 	}
+}
+
+func (m *model) pushRelation(relation browseItem) {
+	m.pages = append(m.pages, page{
+		kind: pageList, title: strings.ToUpper(relation.name),
+		items: relation.related, issues: relation.issues,
+	})
 }
 
 func (m *model) pushList(title string, items []browseItem) {

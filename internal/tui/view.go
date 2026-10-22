@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"mitre-explorer/internal/attack"
+
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 )
@@ -98,6 +100,13 @@ func (m model) leftPanel(maxRows, width int) string {
 	labels := make([]string, 0, len(current.items))
 	for _, item := range current.items {
 		labels = append(labels, itemLabel(item))
+	}
+	if len(current.issues) > 0 {
+		notice := fmt.Sprintf("Incomplete: %d unresolved reference(s).", len(current.issues))
+		if len(labels) == 0 {
+			return strings.Join([]string{m.headingStyle().Render(current.title), "", truncateText(notice, width), "No resolved items."}, "\n")
+		}
+		return truncateText(notice, width) + "\n\n" + m.listContent(current.title, labels, current.cursor, max(1, maxRows-2), width)
 	}
 	return m.listContent(current.title, labels, current.cursor, maxRows, width)
 }
@@ -235,6 +244,9 @@ func (m model) contextContent() string {
 
 	item, ok := selectedPageItem(*active)
 	if !ok {
+		if len(active.issues) > 0 {
+			return m.headingStyle().Render("MAPPING INCOMPLETE") + "\n\n" + referenceIssueText(active.issues)
+		}
 		return m.headingStyle().Render("NO ITEMS") + "\n\nNothing is available in this section."
 	}
 	if item.kind == itemCategory || item.kind == itemTactic || item.kind == itemRelation {
@@ -242,22 +254,28 @@ func (m model) contextContent() string {
 		if item.kind == itemTactic {
 			unit = "technique(s)"
 		}
-		return strings.Join([]string{
+		lines := []string{
 			m.headingStyle().Render(item.name),
 			"",
 			fmt.Sprintf("%d %s", item.count, unit),
-			"",
-			"Press Enter to browse.",
-		}, "\n")
+		}
+		if len(item.issues) > 0 {
+			lines = append(lines, "", referenceIssueText(item.issues))
+		}
+		return strings.Join(append(lines, "", "Press Enter to browse."), "\n")
 	}
 
-	return strings.Join([]string{
+	content := strings.Join([]string{
 		m.headingStyle().Render(item.name),
 		"",
 		"ID: " + item.id,
 		"",
 		"Press Enter for full details.",
 	}, "\n")
+	if len(active.issues) > 0 {
+		content = referenceIssueText(active.issues) + "\n\n" + content
+	}
+	return content
 }
 
 func (m model) itemDetails(item browseItem, relations []browseItem) string {
@@ -277,6 +295,9 @@ func (m model) itemDetails(item browseItem, relations []browseItem) string {
 		}
 		lines = append(lines, field.label+": "+value)
 	}
+	if len(item.issues) > 0 {
+		lines = append(lines, "", m.headingStyle().Render("UNRESOLVED REFERENCES"), referenceIssueText(item.issues))
+	}
 	lines = append(lines,
 		"",
 		"Description:",
@@ -286,6 +307,17 @@ func (m model) itemDetails(item browseItem, relations []browseItem) string {
 		lines = append(lines, "", fmt.Sprintf("Enter: %s (%d)", relations[0].name, relations[0].count))
 	} else if len(relations) > 1 {
 		lines = append(lines, "", "Enter: view mappings")
+	}
+	return strings.Join(lines, "\n")
+}
+
+func referenceIssueText(issues []attack.ReferenceIssue) string {
+	if len(issues) == 0 {
+		return ""
+	}
+	lines := []string{fmt.Sprintf("Incomplete mapping: %d unresolved reference(s).", len(issues))}
+	for _, issue := range issues {
+		lines = append(lines, issue.String())
 	}
 	return strings.Join(lines, "\n")
 }
@@ -307,6 +339,9 @@ func (m model) displayListPage() *page {
 func itemLabel(item browseItem) string {
 	switch item.kind {
 	case itemCategory, itemTactic, itemRelation:
+		if len(item.issues) > 0 {
+			return fmt.Sprintf("%s (%d resolved; incomplete)", item.name, item.count)
+		}
 		return fmt.Sprintf("%s (%d)", item.name, item.count)
 	default:
 		return strings.TrimSpace(item.id + "  " + item.name)

@@ -599,16 +599,18 @@ func (app *App) runGuidedDetections(cache attack.CacheData) {
 		techniques := attack.TechniquesDetectedByStrategy(cache, d.ID)
 		analytics := attack.AnalyticsByDetectionStrategy(cache, d.ID)
 		components := attack.DataComponentsByDetectionStrategy(cache, d.ID)
+		issues := attack.DetectionReferenceIssues(cache, d.ID)
 
 		app.printSection("Detection Strategy Details")
 		app.printDetails([]DetailField{
 			{"ID:", d.ID},
 			{"Name:", d.Name},
 			{"Mapped techniques:", strconv.Itoa(len(techniques))},
-			{"Analytics:", strconv.Itoa(len(analytics))},
-			{"Data Components:", strconv.Itoa(len(components))},
+			{"Analytics:", mappingCount(len(analytics), hasMissingAnalytics(issues))},
+			{"Data Components:", mappingCount(len(components), len(issues) > 0)},
 			{"Description:", d.Description},
 		})
+		app.printReferenceIssues(issues)
 
 		viewedAnalytics := false
 		viewedTechniques := false
@@ -654,12 +656,8 @@ func (app *App) runGuidedDetections(cache attack.CacheData) {
 					app.printInvalidSelection()
 					continue
 				}
-				if len(analytics) == 0 {
-					app.printNoMappedResults("analytics", "detection strategy")
-				} else {
-					app.printSubsection("Mapped Analytics")
-					app.printAnalyticList(analytics)
-				}
+				app.printSubsection("Mapped Analytics")
+				app.printAnalyticMapping(analytics, hasMissingAnalytics(issues))
 				viewedAnalytics = true
 
 			case "3":
@@ -667,12 +665,8 @@ func (app *App) runGuidedDetections(cache attack.CacheData) {
 					app.printInvalidSelection()
 					continue
 				}
-				if len(components) == 0 {
-					app.printNoMappedResults("data components", "detection strategy")
-				} else {
-					app.printSubsection("Mapped Data Components")
-					app.printDataComponentList(components)
-				}
+				app.printSubsection("Mapped Data Components")
+				app.printComponentMapping("detection strategy", components, len(issues) > 0)
 				viewedComponents = true
 			case "b":
 				fmt.Fprintln(app.out)
@@ -723,14 +717,16 @@ func (app *App) runGuidedAnalytics(cache attack.CacheData) {
 
 		a := analytics[idx-1]
 		components := attack.DataComponentsByAnalytic(cache, a.ID)
+		issues := attack.AnalyticReferenceIssues(cache, a.ID)
 
 		app.printSection("Analytic Details")
 		app.printDetails([]DetailField{
 			{"ID:", a.ID},
 			{"Name:", a.Name},
-			{"Data Components:", strconv.Itoa(len(components))},
+			{"Data Components:", mappingCount(len(components), len(issues) > 0)},
 			{"Description:", a.Description},
 		})
+		app.printReferenceIssues(issues)
 
 		viewedComponents := false
 
@@ -755,12 +751,8 @@ func (app *App) runGuidedAnalytics(cache attack.CacheData) {
 					app.printInvalidSelection()
 					continue
 				}
-				if len(components) == 0 {
-					app.printNoMappedResults("data components", "analytic")
-				} else {
-					app.printSubsection("Mapped Data Components")
-					app.printDataComponentList(components)
-				}
+				app.printSubsection("Mapped Data Components")
+				app.printComponentMapping("analytic", components, len(issues) > 0)
 				viewedComponents = true
 			case "b":
 				fmt.Fprintln(app.out)

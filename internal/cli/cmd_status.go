@@ -66,6 +66,11 @@ func (app *App) handleStatus(args []string) error {
 	fmt.Fprintf(app.out, "%s %d\n", app.label("Data Components:"), len(cache.DataComponents))
 	fmt.Fprintf(app.out, "%s %d\n", app.label("Relationships:"), len(cache.Relationships))
 	app.printMatrixTacticStatus(cache)
+	fmt.Fprintln(app.out)
+	fmt.Fprintln(app.out, app.title("Detection References"))
+	issues := attack.CacheReferenceIssues(cache)
+	fmt.Fprintf(app.out, "Unresolved references: %d\n", len(issues))
+	app.printReferenceIssues(issues)
 	return nil
 }
 

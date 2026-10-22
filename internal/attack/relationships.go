@@ -108,15 +108,7 @@ func AnalyticsByDetectionStrategy(cache CacheData, detectionID string) []Analyti
 		return nil
 	}
 
-	analyticByID := make(map[string]Analytic, len(cache.Analytics))
-	for _, a := range cache.Analytics {
-		if a.ID != "" {
-			analyticByID[a.ID] = a
-		}
-		if a.StixID != "" {
-			analyticByID[a.StixID] = a
-		}
-	}
+	analyticByID := indexAnalytics(cache.Analytics)
 
 	seen := make(map[string]struct{})
 	var out []Analytic
@@ -208,6 +200,19 @@ func indexComponents(components []DataComponent) map[string]DataComponent {
 		}
 		if component.StixID != "" {
 			index[component.StixID] = component
+		}
+	}
+	return index
+}
+
+func indexAnalytics(analytics []Analytic) map[string]Analytic {
+	index := make(map[string]Analytic, len(analytics)*2)
+	for _, analytic := range analytics {
+		if analytic.ID != "" {
+			index[analytic.ID] = analytic
+		}
+		if analytic.StixID != "" {
+			index[analytic.StixID] = analytic
 		}
 	}
 	return index

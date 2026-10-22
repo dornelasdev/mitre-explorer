@@ -36,6 +36,7 @@ type browseItem struct {
 	fields      []detailField
 	count       int
 	related     []browseItem
+	issues      []attack.ReferenceIssue
 }
 
 func (m model) explorePage() page {
@@ -199,15 +200,37 @@ func (m model) relationItems(source browseItem) []browseItem {
 	case itemCampaign:
 		return []browseItem{relation("Mapped Techniques", techniqueItems(attack.TechniquesUsedByCampaign(m.cache, source.id)))}
 	case itemDetection:
+		issues := attack.DetectionReferenceIssues(m.cache, source.id)
+		analytics := relation("Analytics", analyticItems(attack.AnalyticsByDetectionStrategy(m.cache, source.id)))
+		for _, issue := range issues {
+			if issue.TargetType == "analytic" {
+				analytics.issues = append(analytics.issues, issue)
+			}
+		}
+		components := relation("Data Components", dataComponentItems(attack.DataComponentsByDetectionStrategy(m.cache, source.id)))
+		components.issues = issues
 		return []browseItem{
 			relation("Detected Techniques", techniqueItems(attack.TechniquesDetectedByStrategy(m.cache, source.id))),
-			relation("Analytics", analyticItems(attack.AnalyticsByDetectionStrategy(m.cache, source.id))),
-			relation("Data Components", dataComponentItems(attack.DataComponentsByDetectionStrategy(m.cache, source.id))),
+			analytics,
+			components,
 		}
 	case itemAnalytic:
-		return []browseItem{relation("Data Components", dataComponentItems(attack.DataComponentsByAnalytic(m.cache, source.id)))}
+		components := relation("Data Components", dataComponentItems(attack.DataComponentsByAnalytic(m.cache, source.id)))
+		components.issues = attack.AnalyticReferenceIssues(m.cache, source.id)
+		return []browseItem{components}
 	case itemDataComponent:
 		return []browseItem{relation("Mapped Techniques", techniqueItems(attack.TechniquesByDataComponent(m.cache, source.id)))}
+	default:
+		return nil
+	}
+}
+
+func (m model) itemReferenceIssues(item browseItem) []attack.ReferenceIssue {
+	switch item.kind {
+	case itemDetection:
+		return attack.DetectionReferenceIssues(m.cache, item.id)
+	case itemAnalytic:
+		return attack.AnalyticReferenceIssues(m.cache, item.id)
 	default:
 		return nil
 	}
