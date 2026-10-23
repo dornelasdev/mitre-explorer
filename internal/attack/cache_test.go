@@ -11,12 +11,16 @@ import (
 func TestCacheAndMetadataRoundTrip(t *testing.T) {
 	// Include each entity and relationship to protect the existing cache schema.
 	want := CacheData{
-		Techniques:          []Technique{{ID: "T1059", Name: "Interpreter", Tactics: []string{"execution"}, Platforms: []string{"Linux"}, DataSources: []string{"Process"}, DetectionNotes: "Notes", DataComponents: []string{"Process Creation"}}},
-		Groups:              []Group{{ID: "G0020", Name: "Group", Aliases: []string{"Alias"}}},
-		Mitigations:         []Mitigation{{ID: "M0001", Name: "Mitigation"}},
-		Softwares:           []Software{{ID: "S0002", Name: "Software", Type: "malware"}},
-		Campaigns:           []Campaign{{ID: "C0001", Name: "Campaign"}},
-		Relationships:       []Relationship{{Type: "uses", SourceType: "group", SourceID: "G0020", TargetType: "technique", TargetID: "T1059"}},
+		Techniques:  []Technique{{ID: "T1059", Name: "Interpreter", Tactics: []string{"execution"}, Platforms: []string{"Linux"}, DataSources: []string{"Process"}, DetectionNotes: "Notes", DataComponents: []string{"Process Creation"}}},
+		Groups:      []Group{{ID: "G0020", Name: "Group", Aliases: []string{"Alias"}}},
+		Mitigations: []Mitigation{{ID: "M0001", Name: "Mitigation"}},
+		Softwares:   []Software{{ID: "S0002", Name: "Software", Type: "malware"}},
+		Campaigns:   []Campaign{{ID: "C0001", Name: "Campaign"}},
+		Relationships: []Relationship{{
+			Type: "uses", SourceType: "group", SourceID: "G0020", TargetType: "technique", TargetID: "T1059",
+			StixID: "relationship--example", Description: "Example use. (Citation: Example Report)",
+			References: []ExternalReference{{SourceName: "Example Report", Description: "Report citation", URL: "https://example.invalid/report", ExternalID: "REPORT-1"}},
+		}},
 		DataComponents:      []DataComponent{{ID: "DC0001", StixID: "component-ref", Name: "Process Creation"}},
 		DetectionStrategies: []DetectionStrategy{{ID: "DET0001", StixID: "detection-ref", Analytics: []string{"analytic-ref"}}},
 		Analytics:           []Analytic{{ID: "AN0001", StixID: "analytic-ref", DataComponents: []string{"DC0001"}}},

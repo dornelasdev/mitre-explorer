@@ -33,10 +33,7 @@ type stixObject struct {
 	TargetRef        string   `json:"target_ref"`
 	ObjectRefs       []string `json:"object_refs"`
 
-	ExternalReferences []struct {
-		SourceName string `json:"source_name"`
-		ExternalID string `json:"external_id"`
-	} `json:"external_references"`
+	ExternalReferences []ExternalReference `json:"external_references"`
 }
 
 // BuildCacheDataFromSTIX normalizes supported objects and enriches techniques
@@ -284,11 +281,14 @@ func BuildCacheDataFromSTIX(path string) (CacheData, error) {
 			}
 
 			relationships = append(relationships, Relationship{
-				Type:       obj.RelationshipType,
-				SourceType: sourceType,
-				SourceID:   sourceID,
-				TargetType: targetType,
-				TargetID:   targetID,
+				Type:        obj.RelationshipType,
+				SourceType:  sourceType,
+				SourceID:    sourceID,
+				TargetType:  targetType,
+				TargetID:    targetID,
+				StixID:      obj.ID,
+				Description: obj.Description,
+				References:  obj.ExternalReferences,
 			})
 		case "malware", "tool":
 			sid := stixToExternal[obj.ID]
@@ -457,10 +457,7 @@ func BuildCacheDataFromSTIX(path string) (CacheData, error) {
 	}, nil
 }
 
-func extractExternalID(refs []struct {
-	SourceName string `json:"source_name"`
-	ExternalID string `json:"external_id"`
-}) string {
+func extractExternalID(refs []ExternalReference) string {
 	for _, r := range refs {
 		if r.SourceName == "mitre-attack" && r.ExternalID != "" {
 			return r.ExternalID

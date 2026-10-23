@@ -26,11 +26,22 @@ type Mitigation struct {
 }
 
 type Relationship struct {
-	Type       string `json:"type"`
-	SourceType string `json:"source_type"`
-	SourceID   string `json:"source_id"`
-	TargetType string `json:"target_type"`
-	TargetID   string `json:"target_id"`
+	Type        string              `json:"type"`
+	SourceType  string              `json:"source_type"`
+	SourceID    string              `json:"source_id"`
+	TargetType  string              `json:"target_type"`
+	TargetID    string              `json:"target_id"`
+	StixID      string              `json:"stix_id,omitempty"`
+	Description string              `json:"description,omitempty"`
+	References  []ExternalReference `json:"references,omitempty"`
+}
+
+// ExternalReference retains the citation key and available source metadata.
+type ExternalReference struct {
+	SourceName  string `json:"source_name"`
+	Description string `json:"description,omitempty"`
+	URL         string `json:"url,omitempty"`
+	ExternalID  string `json:"external_id,omitempty"`
 }
 
 type Software struct {

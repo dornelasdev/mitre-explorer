@@ -62,7 +62,8 @@ func TestBuildCacheDataFromSTIX(t *testing.T) {
 	} {
 		matches := 0
 		for _, got := range cache.Relationships {
-			if got == want {
+			if got.Type == want.Type && got.SourceType == want.SourceType && got.SourceID == want.SourceID &&
+				got.TargetType == want.TargetType && got.TargetID == want.TargetID {
 				matches++
 			}
 		}

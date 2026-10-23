@@ -1,0 +1,53 @@
+{
+  "type": "bundle",
+  "objects": [
+    {"type": "attack-pattern", "id": "attack-pattern--parent", "name": "Parent", "external_references": [{"source_name": "mitre-attack", "external_id": "T1000"}]},
+    {"type": "attack-pattern", "id": "attack-pattern--child", "name": "Child", "external_references": [{"source_name": "mitre-attack", "external_id": "T1000.001"}]},
+    {"type": "intrusion-set", "id": "intrusion-set--group", "name": "Example Group", "external_references": [{"source_name": "mitre-attack", "external_id": "G0001"}]},
+    {"type": "tool", "id": "tool--software", "name": "Example Tool", "external_references": [{"source_name": "mitre-attack", "external_id": "S0001"}]},
+    {"type": "campaign", "id": "campaign--campaign", "name": "Example Campaign", "external_references": [{"source_name": "mitre-attack", "external_id": "C0001"}]},
+    {"type": "course-of-action", "id": "course-of-action--mitigation", "name": "Example Mitigation", "external_references": [{"source_name": "mitre-attack", "external_id": "M0001"}]},
+    {
+      "type": "relationship", "id": "relationship--group-parent", "relationship_type": "uses",
+      "source_ref": "intrusion-set--group", "target_ref": "attack-pattern--parent",
+      "description": "The group implemented the technique. (Citation: Example Report)",
+      "external_references": [
+        {"source_name": "Example Report", "description": "Example Author. Example Report.", "url": "https://example.invalid/report", "external_id": "REPORT-1"},
+        {"source_name": "Offline Reference", "description": "An offline publication with no URL."}
+      ]
+    },
+    {
+      "type": "relationship", "id": "relationship--software-child", "relationship_type": "uses",
+      "source_ref": "tool--software", "target_ref": "attack-pattern--child",
+      "description": "The tool implemented the sub-technique. (Citation: Tool Report)",
+      "external_references": [{"source_name": "Tool Report", "url": "https://example.invalid/tool"}]
+    },
+    {
+      "type": "relationship", "id": "relationship--campaign-parent", "relationship_type": "uses",
+      "source_ref": "campaign--campaign", "target_ref": "attack-pattern--parent",
+      "description": "The campaign implemented the technique without a supplied citation."
+    },
+    {
+      "type": "relationship", "id": "relationship--group-software", "relationship_type": "uses",
+      "source_ref": "intrusion-set--group", "target_ref": "tool--software",
+      "description": "Software usage is not itself a technique procedure."
+    },
+    {
+      "type": "relationship", "id": "relationship--mitigation", "relationship_type": "mitigates",
+      "source_ref": "course-of-action--mitigation", "target_ref": "attack-pattern--parent",
+      "description": "Mitigation guidance is not a procedure."
+    },
+    {
+      "type": "relationship", "id": "relationship--empty", "relationship_type": "uses",
+      "source_ref": "intrusion-set--group", "target_ref": "attack-pattern--parent"
+    },
+    {
+      "type": "relationship", "id": "relationship--revoked", "relationship_type": "uses", "revoked": true,
+      "source_ref": "intrusion-set--group", "target_ref": "attack-pattern--parent", "description": "Revoked procedure."
+    },
+    {
+      "type": "relationship", "id": "relationship--deprecated", "relationship_type": "uses", "x_mitre_deprecated": true,
+      "source_ref": "intrusion-set--group", "target_ref": "attack-pattern--parent", "description": "Deprecated procedure."
+    }
+  ]
+}
