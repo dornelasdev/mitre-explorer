@@ -104,10 +104,13 @@ func (app *App) printSearchHelp() {
 
 func (app *App) printShowHelp() {
 	fmt.Fprintln(app.out, "Usage:")
-	fmt.Fprintln(app.out, "  go run . show <technique_id>")
+	fmt.Fprintln(app.out, "  go run . show <technique_id> [mapping flags]")
 	fmt.Fprintln(app.out, "  go run . show detection <technique_id>")
 	fmt.Fprintln(app.out)
 	fmt.Fprintln(app.out, "Shows technique details or detection notes for a technique.")
+	fmt.Fprintln(app.out, "Mapping flags: --groups, --software, --campaigns, --mitigations, --detections, --all")
+	fmt.Fprintln(app.out, "Mapping flags can be combined; they apply only to show <technique_id>.")
+	fmt.Fprintln(app.out, "Mappings use direct relationships to the exact technique or sub-technique.")
 	fmt.Fprintln(app.out, "Global options: --matrix <matrix>, --plain")
 }
 

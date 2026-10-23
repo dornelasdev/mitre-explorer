@@ -107,13 +107,8 @@ func (app *App) handleSearch(args []string) error {
 }
 
 func (app *App) handleShow(args []string) error {
-	if len(args) != 2 && !(len(args) == 3 && strings.EqualFold(args[1], "detection")) {
-		return invalidUsage("show requires <technique_id> or detection <technique_id>")
-	}
-	if len(args) == 2 && strings.EqualFold(args[1], "detection") {
-		return invalidUsage("show detection requires a technique ID")
-	}
-	if err := requireOperand(args[len(args)-1], "technique ID"); err != nil {
+	options, err := parseShowOptions(args)
+	if err != nil {
 		return err
 	}
 	cache, err := app.loadCacheForCommand()
@@ -121,7 +116,7 @@ func (app *App) handleShow(args []string) error {
 		return err
 	}
 	techniques := cache.Techniques
-	id := args[len(args)-1]
+	id := options.techniqueID
 	technique, found := attack.FindTechniqueByID(techniques, id)
 
 	if !found {
@@ -130,7 +125,7 @@ func (app *App) handleShow(args []string) error {
 
 	fmt.Fprintf(app.out, "%s %s\n", app.label("ID:"), technique.ID)
 	fmt.Fprintf(app.out, "%s %s\n", app.label("Name:"), technique.Name)
-	if len(args) == 3 {
+	if options.detectionOnly {
 		fmt.Fprintf(app.out, "%s %s\n", app.label("Detection Notes:"), technique.DetectionNotes)
 		return nil
 	}
@@ -140,6 +135,11 @@ func (app *App) handleShow(args []string) error {
 	fmt.Fprintf(app.out, "%s %s\n", app.label("Data Sources:"), strings.Join(technique.DataSources, ", "))
 	fmt.Fprintf(app.out, "%s %s\n", app.label("Detection Notes:"), technique.DetectionNotes)
 	fmt.Fprintf(app.out, "%s %s\n", app.label("Data Components:"), strings.Join(technique.DataComponents, ", "))
+	for _, kind := range techniqueMappingKinds {
+		if options.mappings[kind.target] {
+			app.printTechniqueEntities(cache, technique.ID, kind.target)
+		}
+	}
 	return nil
 }
 

@@ -107,14 +107,12 @@ func (app *App) runGuidedExplorer() {
 					}
 
 					selected := results[pick-1]
-					app.printSection("Technique Details")
-					app.printTechniqueDetails(selected)
-
-					fmt.Fprintln(app.out)
-					fmt.Fprintln(app.out, "Press Enter to return to the technique list.")
-					fmt.Fprint(app.out, "> ")
-					if _, err := readLine(reader); err != nil {
+					backToMenu, err := app.runGuidedTechnique(cache, selected)
+					if err != nil {
 						return
+					}
+					if backToMenu {
+						goto guidedMenu
 					}
 
 				}

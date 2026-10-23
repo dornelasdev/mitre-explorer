@@ -191,6 +191,14 @@ func (m model) relationItems(source browseItem) []browseItem {
 	}
 
 	switch source.kind {
+	case itemTechnique:
+		return []browseItem{
+			relation("Groups", entityItems(attack.GroupsUsingTechnique(m.cache, source.id), groupItem)),
+			relation("Software", entityItems(attack.SoftwareUsingTechnique(m.cache, source.id), softwareItem)),
+			relation("Campaigns", entityItems(attack.CampaignsUsingTechnique(m.cache, source.id), campaignItem)),
+			relation("Mitigations", entityItems(attack.MitigationsForTechnique(m.cache, source.id), mitigationItem)),
+			relation("Detection Strategies", entityItems(attack.DetectionStrategiesForTechnique(m.cache, source.id), detectionItem)),
+		}
 	case itemGroup:
 		return []browseItem{relation("Mapped Techniques", techniqueItems(attack.TechniquesUsedByGroup(m.cache, source.id)))}
 	case itemMitigation:
@@ -223,6 +231,14 @@ func (m model) relationItems(source browseItem) []browseItem {
 	default:
 		return nil
 	}
+}
+
+func entityItems[T any](entities []T, item func(T) browseItem) []browseItem {
+	items := make([]browseItem, 0, len(entities))
+	for _, entity := range entities {
+		items = append(items, item(entity))
+	}
+	return items
 }
 
 func (m model) itemReferenceIssues(item browseItem) []attack.ReferenceIssue {
