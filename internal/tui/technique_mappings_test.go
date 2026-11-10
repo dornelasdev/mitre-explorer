@@ -24,7 +24,7 @@ func TestTechniqueReverseMappingPages(t *testing.T) {
 			m.pushList("TECHNIQUES", techniqueItems(m.cache.Techniques))
 			m.activePage().cursor = 2 // T1000 carries all five reverse relationships.
 			m.selectCurrent()
-			if active := m.activePage(); active.kind != pageDetail || len(active.relations) != 5 {
+			if active := m.activePage(); active.kind != pageDetail || len(active.relations) != 6 {
 				t.Fatalf("technique detail lacks mappings: %+v", active)
 			}
 			m.selectCurrent()

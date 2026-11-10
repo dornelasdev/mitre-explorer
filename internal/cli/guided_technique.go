@@ -35,6 +35,14 @@ func (app *App) runGuidedTechnique(cache attack.CacheData, technique attack.Tech
 			app.printInvalidSelection()
 			continue
 		}
-		app.printTechniqueEntities(cache, technique.ID, techniqueMappingKinds[choice-1].target)
+		target := techniqueMappingKinds[choice-1].target
+		if target == "procedures" {
+			menu, err := app.runGuidedProcedures(attack.ProcedureExamplesForTechnique(cache, technique.ID))
+			if menu || err != nil {
+				return menu, err
+			}
+		} else {
+			app.printTechniqueEntities(cache, technique.ID, target)
+		}
 	}
 }

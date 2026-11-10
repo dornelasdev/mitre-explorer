@@ -12,11 +12,23 @@ func (app *App) handleUpdate(args []string) error {
 	rawPath := app.matrix.RawPath
 
 	force := len(args) >= 2 && (args[1] == "-f" || args[1] == "--force")
+	rebuild := len(args) == 2 && args[1] == "--rebuild"
 	if len(args) > 2 {
-		return invalidUsage("update accepts only -f/--force")
+		return invalidUsage("update accepts either -f/--force or --rebuild")
 	}
-	if len(args) == 2 && args[1] != "-f" && args[1] != "--force" {
-		return invalidUsage("update accepts only -f/--force")
+	if len(args) == 2 && !force && !rebuild {
+		return invalidUsage("update accepts either -f/--force or --rebuild")
+	}
+	if rebuild {
+		cache, err := app.buildAndSaveCache()
+		if err != nil {
+			return err
+		}
+		fmt.Fprintln(app.out, app.ok("Cache rebuilt from local dataset."))
+		fmt.Fprintf(app.out, "Matrix: %s\nRaw dataset: %s\nCache: %s\n", app.activeMatrixName(), rawPath, app.matrix.CachePath)
+		app.printParsedCounts(cache)
+		fmt.Fprintln(app.out, "No download performed; update metadata unchanged.")
+		return nil
 	}
 
 	meta, err := app.loadUpdateMetaForCommand()
@@ -58,13 +70,9 @@ func (app *App) handleUpdate(args []string) error {
 		dl.Bytes = info.Size()
 	}
 
-	cache, err := attack.BuildCacheDataFromSTIX(rawPath)
+	cache, err := app.buildAndSaveCache()
 	if err != nil {
-		return fmt.Errorf("parse dataset: %w", err)
-	}
-
-	if err := attack.SaveCacheData(app.matrix.CachePath, cache); err != nil {
-		return fmt.Errorf("write cache: %w", err)
+		return err
 	}
 
 	if err := attack.SaveUpdateMeta(app.matrix.MetaPath, attack.UpdateMeta{
@@ -80,13 +88,7 @@ func (app *App) handleUpdate(args []string) error {
 	fmt.Fprintf(app.out, "Saved: %s\n", rawPath)
 	fmt.Fprintf(app.out, "Size: %s (%d bytes)\n", humanSize(dl.Bytes), dl.Bytes)
 	fmt.Fprintf(app.out, "Cache: %s\n", app.matrix.CachePath)
-	fmt.Fprintf(app.out, "Parsed techniques: %d\n", len(cache.Techniques))
-	fmt.Fprintf(app.out, "Parsed groups: %d\n", len(cache.Groups))
-	fmt.Fprintf(app.out, "Parsed mitigations: %d\n", len(cache.Mitigations))
-	fmt.Fprintf(app.out, "Parsed campaigns: %d\n", len(cache.Campaigns))
-	fmt.Fprintf(app.out, "Parsed relationships: %d\n", len(cache.Relationships))
-	fmt.Fprintf(app.out, "Parsed data components: %d\n", len(cache.DataComponents))
-	fmt.Fprintf(app.out, "Parsed detection strategies: %d\n", len(cache.DetectionStrategies))
+	app.printParsedCounts(cache)
 
 	if dl.Downloaded {
 		fmt.Fprintln(app.out, "Download status: downloaded new dataset")
@@ -94,4 +96,28 @@ func (app *App) handleUpdate(args []string) error {
 		fmt.Fprintln(app.out, "Download status: reused local raw dataset")
 	}
 	return nil
+}
+
+func (app *App) buildAndSaveCache() (attack.CacheData, error) {
+	cache, err := attack.BuildCacheDataFromSTIX(app.matrix.RawPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return attack.CacheData{}, fmt.Errorf("raw dataset missing; run: go run . update --matrix %s", app.activeMatrixName())
+		}
+		return attack.CacheData{}, fmt.Errorf("parse dataset: %w", err)
+	}
+	if err := attack.SaveCacheData(app.matrix.CachePath, cache); err != nil {
+		return attack.CacheData{}, fmt.Errorf("write cache: %w", err)
+	}
+	return cache, nil
+}
+
+func (app *App) printParsedCounts(cache attack.CacheData) {
+	fmt.Fprintf(app.out, "Parsed techniques: %d\n", len(cache.Techniques))
+	fmt.Fprintf(app.out, "Parsed groups: %d\n", len(cache.Groups))
+	fmt.Fprintf(app.out, "Parsed mitigations: %d\n", len(cache.Mitigations))
+	fmt.Fprintf(app.out, "Parsed campaigns: %d\n", len(cache.Campaigns))
+	fmt.Fprintf(app.out, "Parsed relationships: %d\n", len(cache.Relationships))
+	fmt.Fprintf(app.out, "Parsed data components: %d\n", len(cache.DataComponents))
+	fmt.Fprintf(app.out, "Parsed detection strategies: %d\n", len(cache.DetectionStrategies))
 }

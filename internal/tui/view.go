@@ -303,6 +303,24 @@ func (m model) itemDetails(item browseItem, relations []browseItem) string {
 		"Description:",
 		description,
 	)
+	if item.kind == itemProcedure {
+		lines = append(lines, "", "Citations:")
+		if len(item.citations) == 0 {
+			lines = append(lines, "No citation metadata supplied.")
+		}
+		for index, reference := range item.citations {
+			lines = append(lines, fmt.Sprintf("[%d] %s", index+1, reference.SourceName))
+			if reference.Description != "" {
+				lines = append(lines, reference.Description)
+			}
+			if reference.URL != "" {
+				lines = append(lines, "URL: "+reference.URL)
+			}
+			if reference.ExternalID != "" {
+				lines = append(lines, "External ID: "+reference.ExternalID)
+			}
+		}
+	}
 	if len(relations) == 1 {
 		lines = append(lines, "", fmt.Sprintf("Enter: %s (%d)", relations[0].name, relations[0].count))
 	} else if len(relations) > 1 {
@@ -366,6 +384,8 @@ func itemKindTitle(kind itemKind) string {
 		return "ANALYTIC"
 	case itemDataComponent:
 		return "DATA COMPONENT"
+	case itemProcedure:
+		return "PROCEDURE EXAMPLE"
 	default:
 		return "ITEM"
 	}

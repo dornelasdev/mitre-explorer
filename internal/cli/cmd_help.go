@@ -74,12 +74,14 @@ func (app *App) printGlobalHelp() {
 }
 
 func (app *App) printUpdateHelp() {
-	fmt.Fprintln(app.out, "Usage: go run . update [-f|--force] [--matrix enterprise|mobile|ics] [--plain]")
+	fmt.Fprintln(app.out, "Usage: go run . update [-f|--force|--rebuild] [--matrix enterprise|mobile|ics] [--plain]")
 	fmt.Fprintln(app.out)
 	fmt.Fprintln(app.out, "Downloads and normalizes the ATT&CK dataset into the local cache.")
 	fmt.Fprintln(app.out)
 	fmt.Fprintln(app.out, "Flags:")
 	fmt.Fprintln(app.out, "  -f, --force          Force dataset download and cache rebuild")
+	fmt.Fprintln(app.out, "  --rebuild            Rebuild from the local raw dataset without network access")
+	fmt.Fprintln(app.out, "                       Leaves update metadata unchanged; cannot be combined with -f")
 	fmt.Fprintln(app.out, "  --matrix <matrix>    Select ATT&CK matrix source: enterprise, mobile, or ics")
 	fmt.Fprintln(app.out, "  --plain              Disable colored output")
 }
@@ -108,9 +110,11 @@ func (app *App) printShowHelp() {
 	fmt.Fprintln(app.out, "  go run . show detection <technique_id>")
 	fmt.Fprintln(app.out)
 	fmt.Fprintln(app.out, "Shows technique details or detection notes for a technique.")
-	fmt.Fprintln(app.out, "Mapping flags: --groups, --software, --campaigns, --mitigations, --detections, --all")
+	fmt.Fprintln(app.out, "Mapping flags: --groups, --software, --campaigns, --mitigations, --detections, --procedures, --all")
 	fmt.Fprintln(app.out, "Mapping flags can be combined; they apply only to show <technique_id>.")
 	fmt.Fprintln(app.out, "Mappings use direct relationships to the exact technique or sub-technique.")
+	fmt.Fprintln(app.out, "--procedures shows example descriptions and supplied citations; --all includes them.")
+	fmt.Fprintln(app.out, "For caches created before procedure support: update --rebuild --matrix <matrix>")
 	fmt.Fprintln(app.out, "Global options: --matrix <matrix>, --plain")
 }
 

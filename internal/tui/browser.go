@@ -21,6 +21,7 @@ const (
 	itemAnalytic
 	itemDataComponent
 	itemRelation
+	itemProcedure
 )
 
 type detailField struct {
@@ -37,6 +38,7 @@ type browseItem struct {
 	count       int
 	related     []browseItem
 	issues      []attack.ReferenceIssue
+	citations   []attack.ExternalReference
 }
 
 func (m model) explorePage() page {
@@ -198,6 +200,7 @@ func (m model) relationItems(source browseItem) []browseItem {
 			relation("Campaigns", entityItems(attack.CampaignsUsingTechnique(m.cache, source.id), campaignItem)),
 			relation("Mitigations", entityItems(attack.MitigationsForTechnique(m.cache, source.id), mitigationItem)),
 			relation("Detection Strategies", entityItems(attack.DetectionStrategiesForTechnique(m.cache, source.id), detectionItem)),
+			relation("Procedure Examples", procedureItems(attack.ProcedureExamplesForTechnique(m.cache, source.id))),
 		}
 	case itemGroup:
 		return []browseItem{relation("Mapped Techniques", techniqueItems(attack.TechniquesUsedByGroup(m.cache, source.id)))}
@@ -231,6 +234,21 @@ func (m model) relationItems(source browseItem) []browseItem {
 	default:
 		return nil
 	}
+}
+
+func procedureItems(examples []attack.ProcedureExample) []browseItem {
+	items := make([]browseItem, 0, len(examples))
+	for _, example := range examples {
+		items = append(items, browseItem{
+			kind: itemProcedure, id: example.SourceID, name: example.SourceName,
+			description: example.Description, citations: example.References,
+			fields: []detailField{
+				{"Source type", example.SourceType}, {"Technique", example.TechniqueID},
+				{"Relationship", example.StixID},
+			},
+		})
+	}
+	return items
 }
 
 func entityItems[T any](entities []T, item func(T) browseItem) []browseItem {

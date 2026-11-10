@@ -225,9 +225,9 @@ func TestHelpMatchesCommandBehavior(t *testing.T) {
 		want   []string
 	}{
 		{"", []string{"Exit codes: 0 success, 1 operation failed, 2 invalid usage"}},
-		{"update", []string{"-f, --force", "--plain"}},
+		{"update", []string{"-f, --force", "--plain", "--rebuild", "without network access"}},
 		{"search", []string{"--in-detection     Search technique detection notes", "--detailed"}},
-		{"show", []string{"show detection <technique_id>", "--matrix <matrix>, --plain"}},
+		{"show", []string{"show detection <technique_id>", "--matrix <matrix>, --plain", "--procedures", "--all includes them"}},
 		{"list", []string{"Only techniques accept filters", "data-components"}},
 		{"group", []string{"requires -t", "--matrix <matrix>"}},
 		{"detection", []string{"--analytics", "--components"}},

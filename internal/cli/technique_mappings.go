@@ -16,6 +16,7 @@ var techniqueMappingKinds = []struct {
 	{"campaigns", "Campaigns"},
 	{"mitigations", "Mitigations"},
 	{"detections", "Detection Strategies"},
+	{"procedures", "Procedure Examples"},
 }
 
 type showOptions struct {
@@ -74,6 +75,8 @@ func (app *App) printTechniqueEntities(cache attack.CacheData, techniqueID, targ
 		printTechniqueEntityTable(app, "Mitigations", attack.MitigationsForTechnique(cache, techniqueID), app.printMitigationTable)
 	case "detections":
 		printTechniqueEntityTable(app, "Detection Strategies", attack.DetectionStrategiesForTechnique(cache, techniqueID), app.printDetectionTable)
+	case "procedures":
+		app.printProcedures(attack.ProcedureExamplesForTechnique(cache, techniqueID))
 	}
 }
 
