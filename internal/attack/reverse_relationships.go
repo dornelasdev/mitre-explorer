@@ -59,7 +59,11 @@ func sourcesForTechnique[T any](cache CacheData, techniqueID, relationshipType, 
 	if len(sources) == 0 {
 		return nil
 	}
+	return resolveRelationshipEntities(sources, entities, ids)
+}
 
+// Matching IDs are normalized; returned records and cache order are preserved.
+func resolveRelationshipEntities[T any](references map[string]struct{}, entities []T, ids func(T) (string, string)) []T {
 	type match struct {
 		entity T
 		id     string
@@ -69,8 +73,8 @@ func sourcesForTechnique[T any](cache CacheData, techniqueID, relationshipType, 
 	seen := make(map[string]struct{})
 	for _, entity := range entities {
 		id, stixID := ids(entity)
-		_, externalMatch := sources[strings.ToLower(id)]
-		_, stixMatch := sources[strings.ToLower(stixID)]
+		_, externalMatch := references[strings.ToLower(id)]
+		_, stixMatch := references[strings.ToLower(stixID)]
 		if !externalMatch && !stixMatch {
 			continue
 		}
