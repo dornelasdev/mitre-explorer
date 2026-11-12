@@ -39,7 +39,7 @@ func TestTechniqueReverseMappingPages(t *testing.T) {
 			}
 			// Follow the mapped object back to the same technique using its forward mapping.
 			m.selectCurrent()
-			if tc.kind == itemDetection {
+			if m.activePage().title == "MAPPINGS" {
 				m.selectCurrent()
 			}
 			if active := m.activePage(); len(active.items) != 1 || active.items[0].id != "T1000" {

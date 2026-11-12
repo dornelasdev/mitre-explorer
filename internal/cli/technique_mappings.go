@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"fmt"
 	"strings"
 
 	"mitre-explorer/internal/attack"
@@ -66,26 +65,16 @@ func parseShowOptions(args []string) (showOptions, error) {
 func (app *App) printTechniqueEntities(cache attack.CacheData, techniqueID, target string) {
 	switch target {
 	case "groups":
-		printTechniqueEntityTable(app, "Groups", attack.GroupsUsingTechnique(cache, techniqueID), app.printGroupTable)
+		printMappedEntityTable(app, "Groups", "technique", attack.GroupsUsingTechnique(cache, techniqueID), app.printGroupTable)
 	case "software":
-		printTechniqueEntityTable(app, "Software", attack.SoftwareUsingTechnique(cache, techniqueID), app.printSoftwareTable)
+		printMappedEntityTable(app, "Software", "technique", attack.SoftwareUsingTechnique(cache, techniqueID), app.printSoftwareTable)
 	case "campaigns":
-		printTechniqueEntityTable(app, "Campaigns", attack.CampaignsUsingTechnique(cache, techniqueID), app.printCampaignTable)
+		printMappedEntityTable(app, "Campaigns", "technique", attack.CampaignsUsingTechnique(cache, techniqueID), app.printCampaignTable)
 	case "mitigations":
-		printTechniqueEntityTable(app, "Mitigations", attack.MitigationsForTechnique(cache, techniqueID), app.printMitigationTable)
+		printMappedEntityTable(app, "Mitigations", "technique", attack.MitigationsForTechnique(cache, techniqueID), app.printMitigationTable)
 	case "detections":
-		printTechniqueEntityTable(app, "Detection Strategies", attack.DetectionStrategiesForTechnique(cache, techniqueID), app.printDetectionTable)
+		printMappedEntityTable(app, "Detection Strategies", "technique", attack.DetectionStrategiesForTechnique(cache, techniqueID), app.printDetectionTable)
 	case "procedures":
 		app.printProcedures(attack.ProcedureExamplesForTechnique(cache, techniqueID))
 	}
-}
-
-func printTechniqueEntityTable[T any](app *App, title string, entities []T, printTable func([]T)) {
-	app.printSubsection(title)
-	if len(entities) == 0 {
-		app.printNoMappedResults(strings.ToLower(title), "technique")
-		return
-	}
-	fmt.Fprintf(app.out, "%s %d mapped item(s)\n", app.ok("Found"), len(entities))
-	printTable(entities)
 }

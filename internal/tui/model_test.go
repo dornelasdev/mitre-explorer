@@ -135,10 +135,10 @@ func TestEntityRelationshipsUseGenericPages(t *testing.T) {
 		category string
 		want     []string
 	}{
-		{"groups", []string{"Mapped Techniques:1"}},
+		{"groups", []string{"Mapped Techniques:1", "Software:0", "Attributed Campaigns:0"}},
 		{"mitigations", []string{"Mitigated Techniques:1"}},
-		{"software", []string{"Mapped Techniques:1"}},
-		{"campaigns", []string{"Mapped Techniques:1"}},
+		{"software", []string{"Mapped Techniques:1", "Groups:0", "Campaigns:0"}},
+		{"campaigns", []string{"Mapped Techniques:1", "Software:0", "Attributed Groups:0"}},
 		{"detections", []string{"Detected Techniques:1", "Analytics:1", "Data Components:1"}},
 		{"analytics", []string{"Data Components:1"}},
 		{"data-components", []string{"Mapped Techniques:1"}},
@@ -274,7 +274,7 @@ func TestScopedEntitySearchRetainsMappings(t *testing.T) {
 	}
 	m.updateSearch(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m.selectCurrent()
-	if active := m.activePage(); active.kind != pageDetail || len(active.relations) != 1 || active.relations[0].count != 1 {
+	if active := m.activePage(); active.kind != pageDetail || len(active.relations) != 3 || active.relations[0].count != 1 {
 		t.Fatalf("searched group lost mappings: %+v", active)
 	}
 }

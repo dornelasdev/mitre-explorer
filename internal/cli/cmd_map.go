@@ -12,6 +12,9 @@ type EntityFlags struct {
 	Analytics  bool
 	Components bool
 	Detailed   bool
+	Groups     bool
+	Software   bool
+	Campaigns  bool
 }
 
 func parseEntityFlags(args []string) (EntityFlags, error) {
@@ -27,6 +30,12 @@ func parseEntityFlags(args []string) (EntityFlags, error) {
 			flags.Components = true
 		case "-d", "--detailed":
 			flags.Detailed = true
+		case "--groups":
+			flags.Groups = true
+		case "--software":
+			flags.Software = true
+		case "--campaigns":
+			flags.Campaigns = true
 		default:
 			return EntityFlags{}, fmt.Errorf("unknown option: %s", arg)
 		}
@@ -65,7 +74,7 @@ func validateEntityFlags(entity string, flags EntityFlags) error {
 	default:
 		return fmt.Errorf("unknown entity type: %s", entity)
 	}
-	return nil
+	return validateEntityConnections(entity, flags)
 }
 
 func (app *App) printTechniqueMapping(titleText string, results []attack.Technique, detailed bool) {
@@ -138,6 +147,7 @@ func (app *App) handleGroup(args []string) error {
 		app.printSubsection("Mapped Techniques")
 		app.printTechniqueMapping("group", related, flags.Detailed)
 	}
+	app.printSelectedEntityConnections(cache, "group", g.ID, flags)
 	return nil
 }
 
@@ -208,6 +218,7 @@ func (app *App) handleSoftware(args []string) error {
 		app.printSubsection("Mapped Techniques")
 		app.printTechniqueMapping("software", related, flags.Detailed)
 	}
+	app.printSelectedEntityConnections(cache, "software", s.ID, flags)
 	return nil
 }
 
@@ -243,6 +254,7 @@ func (app *App) handleCampaign(args []string) error {
 		app.printSubsection("Mapped Techniques")
 		app.printTechniqueMapping("campaign", related, flags.Detailed)
 	}
+	app.printSelectedEntityConnections(cache, "campaign", c.ID, flags)
 	return nil
 }
 

@@ -128,6 +128,16 @@ func (app *App) printTechniqueTable(techniques []attack.Technique) {
 	)
 }
 
+func printMappedEntityTable[T any](app *App, title, source string, entities []T, printTable func([]T)) {
+	app.printSubsection(title)
+	if len(entities) == 0 {
+		app.printNoMappedResults(strings.ToLower(title), source)
+		return
+	}
+	fmt.Fprintf(app.out, "%s %d mapped item(s)\n", app.ok("Found"), len(entities))
+	printTable(entities)
+}
+
 func truncateText(s string, max int) string {
 	if max <= 0 {
 		return s

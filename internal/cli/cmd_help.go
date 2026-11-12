@@ -1,6 +1,9 @@
 package cli
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 func (app *App) handleHelp(args []string) error {
 	if len(args) > 2 {
@@ -166,9 +169,14 @@ func (app *App) printEntityHelp(entity, idName string, supportsTechniques, suppo
 	if supportsComponents {
 		fmt.Fprintln(app.out, "  -c, --components  Show mapped data components")
 	}
-
+	for _, choice := range entityConnectionChoices(entity) {
+		fmt.Fprintf(app.out, "  --%-15s Show %s\n", choice.target, strings.ToLower(choice.title))
+	}
 	fmt.Fprintln(app.out, "  --plain           Disable colored output")
 	fmt.Fprintln(app.out, "  --matrix <matrix> Select ATT&CK matrix")
+	if len(entityConnectionChoices(entity)) > 0 {
+		fmt.Fprintln(app.out, "\nConnections follow direct relationships in the selected matrix cache.")
+	}
 }
 
 func (app *App) printStatusHelp() {

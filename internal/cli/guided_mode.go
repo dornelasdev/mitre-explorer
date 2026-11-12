@@ -160,46 +160,13 @@ func (app *App) runGuidedExplorer() {
 					{"Description:", g.Description},
 				})
 
-				viewedMapped := false
-
-				for {
-					fmt.Fprintln(app.out, "\nNext:")
-					if !viewedMapped {
-						fmt.Fprintln(app.out, "  [1] View mapped techniques")
-					}
-					fmt.Fprintln(app.out, "  [b] Back to groups")
-					fmt.Fprintln(app.out, "  [q] Return to guided menu")
-					fmt.Fprint(app.out, "> ")
-
-					next, err := readLine(reader)
-					if err != nil {
-						return
-					}
-					next = strings.ToLower(next)
-					switch next {
-					case "1":
-						if viewedMapped {
-							app.printInvalidSelection()
-							continue
-						}
-						if len(related) == 0 {
-							app.printNoMappedResults("techniques", "group")
-						} else {
-							app.printSubsection("Mapped Techniques")
-							app.printTechniqueTable(related)
-						}
-						viewedMapped = true
-
-					case "b":
-						fmt.Fprintln(app.out)
-						goto groupList
-					case "q":
-						goto guidedMenu
-					default:
-						app.printInvalidSelection()
-					}
+				menu, err := app.runGuidedEntityMappings(cache, "group", g.ID, related)
+				if err != nil {
+					return
 				}
-			groupList:
+				if menu {
+					goto guidedMenu
+				}
 			}
 
 		case "3":
@@ -328,45 +295,13 @@ func (app *App) runGuidedExplorer() {
 					{"Description:", s.Description},
 				})
 
-				viewedMapped := false
-				for {
-					fmt.Fprintln(app.out, "\nNext:")
-					if !viewedMapped {
-						fmt.Fprintln(app.out, "  [1] View mapped techniques")
-					}
-					fmt.Fprintln(app.out, "  [b] Back to software list")
-					fmt.Fprintln(app.out, "  [q] Return to guided menu")
-					fmt.Fprint(app.out, "> ")
-
-					next, err := readLine(reader)
-					if err != nil {
-						return
-					}
-					next = strings.ToLower(next)
-					switch next {
-					case "1":
-						if viewedMapped {
-							app.printInvalidSelection()
-							continue
-						}
-						if len(related) == 0 {
-							app.printNoMappedResults("techniques", "software")
-						} else {
-							app.printSubsection("Mapped Techniques")
-							app.printTechniqueTable(related)
-						}
-						viewedMapped = true
-
-					case "b":
-						fmt.Fprintln(app.out)
-						goto softwareList
-					case "q":
-						goto guidedMenu
-					default:
-						app.printInvalidSelection()
-					}
+				menu, err := app.runGuidedEntityMappings(cache, "software", s.ID, related)
+				if err != nil {
+					return
 				}
-			softwareList:
+				if menu {
+					goto guidedMenu
+				}
 			}
 		case "5":
 			if len(cache.Campaigns) == 0 {
@@ -411,44 +346,13 @@ func (app *App) runGuidedExplorer() {
 					{"Description:", c.Description},
 				})
 
-				viewedMapped := false
-				for {
-					fmt.Fprintln(app.out, "\nNext:")
-					if !viewedMapped {
-						fmt.Fprintln(app.out, "  [1] View mapped techniques")
-					}
-					fmt.Fprintln(app.out, "  [b] Back to campaigns")
-					fmt.Fprintln(app.out, "  [q] Return to guided menu")
-					fmt.Fprint(app.out, "> ")
-
-					next, err := readLine(reader)
-					if err != nil {
-						return
-					}
-					next = strings.ToLower(next)
-					switch next {
-					case "1":
-						if viewedMapped {
-							app.printInvalidSelection()
-							continue
-						}
-						if len(related) == 0 {
-							app.printNoMappedResults("techniques", "campaign")
-						} else {
-							app.printSubsection("Mapped Techniques")
-							app.printTechniqueTable(related)
-						}
-						viewedMapped = true
-					case "b":
-						fmt.Fprintln(app.out)
-						goto campaignList
-					case "q":
-						goto guidedMenu
-					default:
-						app.printInvalidSelection()
-					}
+				menu, err := app.runGuidedEntityMappings(cache, "campaign", c.ID, related)
+				if err != nil {
+					return
 				}
-			campaignList:
+				if menu {
+					goto guidedMenu
+				}
 			}
 		case "6":
 			app.runGuidedDataComponents(cache)

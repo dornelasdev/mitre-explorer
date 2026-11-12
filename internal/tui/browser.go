@@ -203,13 +203,25 @@ func (m model) relationItems(source browseItem) []browseItem {
 			relation("Procedure Examples", procedureItems(attack.ProcedureExamplesForTechnique(m.cache, source.id))),
 		}
 	case itemGroup:
-		return []browseItem{relation("Mapped Techniques", techniqueItems(attack.TechniquesUsedByGroup(m.cache, source.id)))}
+		return []browseItem{
+			relation("Mapped Techniques", techniqueItems(attack.TechniquesUsedByGroup(m.cache, source.id))),
+			relation("Software", entityItems(attack.SoftwareUsedByGroup(m.cache, source.id), softwareItem)),
+			relation("Attributed Campaigns", entityItems(attack.CampaignsAttributedToGroup(m.cache, source.id), campaignItem)),
+		}
 	case itemMitigation:
 		return []browseItem{relation("Mitigated Techniques", techniqueItems(attack.TechniquesMitigatedBy(m.cache, source.id)))}
 	case itemSoftware:
-		return []browseItem{relation("Mapped Techniques", techniqueItems(attack.TechniquesUsedBySoftware(m.cache, source.id)))}
+		return []browseItem{
+			relation("Mapped Techniques", techniqueItems(attack.TechniquesUsedBySoftware(m.cache, source.id))),
+			relation("Groups", entityItems(attack.GroupsUsingSoftware(m.cache, source.id), groupItem)),
+			relation("Campaigns", entityItems(attack.CampaignsUsingSoftware(m.cache, source.id), campaignItem)),
+		}
 	case itemCampaign:
-		return []browseItem{relation("Mapped Techniques", techniqueItems(attack.TechniquesUsedByCampaign(m.cache, source.id)))}
+		return []browseItem{
+			relation("Mapped Techniques", techniqueItems(attack.TechniquesUsedByCampaign(m.cache, source.id))),
+			relation("Software", entityItems(attack.SoftwareUsedByCampaign(m.cache, source.id), softwareItem)),
+			relation("Attributed Groups", entityItems(attack.GroupsForCampaign(m.cache, source.id), groupItem)),
+		}
 	case itemDetection:
 		issues := attack.DetectionReferenceIssues(m.cache, source.id)
 		analytics := relation("Analytics", analyticItems(attack.AnalyticsByDetectionStrategy(m.cache, source.id)))
