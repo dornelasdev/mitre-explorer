@@ -328,14 +328,7 @@ func (app *App) handleAnalytic(args []string) error {
 	components := attack.DataComponentsByAnalytic(cache, a.ID)
 	issues := attack.AnalyticReferenceIssues(cache, a.ID)
 
-	app.printSection("Analytic Details")
-	app.printDetails([]DetailField{
-		{"ID:", a.ID},
-		{"Name:", a.Name},
-		{"Data Components:", mappingCount(len(components), len(issues) > 0)},
-		{"Description:", a.Description},
-	})
-	app.printReferenceIssues(issues)
+	app.printAnalyticDetails(a, len(components), issues)
 
 	if flags.Components {
 		app.printSubsection("Data Components")

@@ -75,11 +75,28 @@ type DetectionStrategy struct {
 }
 
 type Analytic struct {
-	ID             string   `json:"id"`
-	StixID         string   `json:"stix_id"`
-	Name           string   `json:"name"`
-	Description    string   `json:"description"`
-	DataComponents []string `json:"data_components"`
+	ID              string              `json:"id"`
+	StixID          string              `json:"stix_id"`
+	Name            string              `json:"name"`
+	Description     string              `json:"description"`
+	DataComponents  []string            `json:"data_components"`
+	Platforms       []string            `json:"platforms,omitempty"`
+	LogSources      []AnalyticLogSource `json:"log_sources,omitempty"`
+	MutableElements []MutableElement    `json:"mutable_elements,omitempty"`
+}
+
+// AnalyticLogSource retains each source/channel pair and its original STIX
+// component reference, even when the component is absent from this matrix.
+type AnalyticLogSource struct {
+	DataComponentRef string `json:"data_component_ref,omitempty"`
+	Name             string `json:"name,omitempty"`
+	Channel          string `json:"channel,omitempty"`
+}
+
+// MutableElement describes an analytic field that can be tuned by the user.
+type MutableElement struct {
+	Field       string `json:"field,omitempty"`
+	Description string `json:"description,omitempty"`
 }
 
 type CacheData struct {

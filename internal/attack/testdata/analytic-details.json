@@ -1,0 +1,77 @@
+{
+  "type": "bundle",
+  "objects": [
+    {
+      "type": "x-mitre-analytic",
+      "id": "x-mitre-analytic--details",
+      "name": "Inspect process activity",
+      "description": "Correlate process events with suspicious network activity.",
+      "external_references": [{"source_name": "mitre-attack", "external_id": "AN0001"}],
+      "x_mitre_platforms": ["Linux", "Windows"],
+      "x_mitre_log_source_references": [
+        {"x_mitre_data_component_ref": "x-mitre-data-component--process", "name": "auditd:SYSCALL", "channel": "execve"},
+        {"x_mitre_data_component_ref": "x-mitre-data-component--process", "name": "auditd:SYSCALL", "channel": "socket/connect"},
+        {"x_mitre_data_component_ref": "x-mitre-data-component--fallback", "name": "linux:syslog"},
+        {"x_mitre_data_component_ref": "x-mitre-data-component--unavailable", "name": "Remote collector", "channel": "network"},
+        {"name": "Supplementary source", "channel": "events"},
+        {"x_mitre_data_component_ref": "x-mitre-data-component--process", "channel": "process events"}
+      ],
+      "x_mitre_mutable_elements": [
+        {"field": "ProcessWhitelist", "description": "Known safe processes; tune to the local environment."},
+        {"field": "TimeWindow", "description": "Time window used for correlation.\nStart with five minutes."}
+      ]
+    },
+    {
+      "type": "x-mitre-analytic",
+      "id": "x-mitre-analytic--minimal",
+      "name": "Minimal analytic",
+      "external_references": [{"source_name": "mitre-attack", "external_id": "AN0002"}]
+    },
+    {
+      "type": "x-mitre-analytic",
+      "id": "x-mitre-analytic--inactive",
+      "x_mitre_deprecated": true,
+      "x_mitre_platforms": ["Inactive platform"],
+      "x_mitre_log_source_references": [{"name": "Inactive source"}],
+      "x_mitre_mutable_elements": [{"field": "InactiveField"}]
+    },
+    {
+      "type": "x-mitre-analytic",
+      "id": "x-mitre-analytic--revoked",
+      "revoked": true,
+      "x_mitre_platforms": ["Revoked platform"],
+      "x_mitre_log_source_references": [{"name": "Revoked source"}],
+      "x_mitre_mutable_elements": [{"field": "RevokedField"}]
+    },
+    {
+      "type": "x-mitre-data-component",
+      "id": "x-mitre-data-component--process",
+      "name": "Process Creation",
+      "external_references": [{"source_name": "mitre-attack", "external_id": "DC0001"}]
+    },
+    {
+      "type": "x-mitre-data-component",
+      "id": "x-mitre-data-component--fallback",
+      "name": "Network Connection"
+    },
+    {
+      "type": "x-mitre-detection-strategy",
+      "id": "x-mitre-detection-strategy--details",
+      "name": "Inspect process behavior",
+      "external_references": [{"source_name": "mitre-attack", "external_id": "DET0001"}],
+      "x_mitre_analytic_refs": ["x-mitre-analytic--details"]
+    },
+    {
+      "type": "attack-pattern",
+      "id": "attack-pattern--details",
+      "name": "Example technique",
+      "external_references": [{"source_name": "mitre-attack", "external_id": "T0001"}]
+    },
+    {
+      "type": "relationship",
+      "relationship_type": "detects",
+      "source_ref": "x-mitre-detection-strategy--details",
+      "target_ref": "attack-pattern--details"
+    }
+  ]
+}

@@ -177,6 +177,10 @@ func (app *App) printEntityHelp(entity, idName string, supportsTechniques, suppo
 	if len(entityConnectionChoices(entity)) > 0 {
 		fmt.Fprintln(app.out, "\nConnections follow direct relationships in the selected matrix cache.")
 	}
+	if entity == "analytic" {
+		fmt.Fprintln(app.out, "\nDetails include platforms, log sources, and mutable elements when present in the cache.")
+		fmt.Fprintln(app.out, "For older caches: update --rebuild --matrix <matrix>")
+	}
 }
 
 func (app *App) printStatusHelp() {

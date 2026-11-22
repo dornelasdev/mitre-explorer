@@ -621,14 +621,7 @@ func (app *App) runGuidedAnalytics(cache attack.CacheData) {
 		components := attack.DataComponentsByAnalytic(cache, a.ID)
 		issues := attack.AnalyticReferenceIssues(cache, a.ID)
 
-		app.printSection("Analytic Details")
-		app.printDetails([]DetailField{
-			{"ID:", a.ID},
-			{"Name:", a.Name},
-			{"Data Components:", mappingCount(len(components), len(issues) > 0)},
-			{"Description:", a.Description},
-		})
-		app.printReferenceIssues(issues)
+		app.printAnalyticDetails(a, len(components), issues)
 
 		viewedComponents := false
 

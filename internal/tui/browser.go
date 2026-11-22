@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"mitre-explorer/internal/attack"
+	"mitre-explorer/internal/detailtext"
 )
 
 type itemKind uint8
@@ -35,6 +36,7 @@ type browseItem struct {
 	name        string
 	description string
 	fields      []detailField
+	sections    []detailtext.Section
 	count       int
 	related     []browseItem
 	issues      []attack.ReferenceIssue
@@ -142,9 +144,13 @@ func detectionItem(entity attack.DetectionStrategy) browseItem {
 }
 
 func analyticItem(entity attack.Analytic) browseItem {
+	fields := []detailField{{"STIX ID", entity.StixID}}
+	if platforms := strings.Join(entity.Platforms, ", "); strings.TrimSpace(platforms) != "" {
+		fields = append(fields, detailField{"Platforms", platforms})
+	}
 	return browseItem{
 		kind: itemAnalytic, id: firstNonEmpty(entity.ID, entity.StixID), name: entity.Name, description: entity.Description,
-		fields: []detailField{{"STIX ID", entity.StixID}},
+		fields: fields, sections: detailtext.AnalyticSections(entity),
 	}
 }
 

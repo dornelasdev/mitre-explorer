@@ -24,8 +24,11 @@ type stixObject struct {
 	XMitreAnalyticRefs        []string `json:"x_mitre_analytic_refs"`
 	XMitreLogSourceReferences []struct {
 		XMitreDataComponentRef string `json:"x_mitre_data_component_ref"`
+		Name                   string `json:"name"`
+		Channel                string `json:"channel"`
 	} `json:"x_mitre_log_source_references"`
-	Revoked bool `json:"revoked"`
+	XMitreMutableElements []MutableElement `json:"x_mitre_mutable_elements"`
+	Revoked               bool             `json:"revoked"`
 
 	ID               string   `json:"id"`
 	RelationshipType string   `json:"relationship_type"`
@@ -363,12 +366,24 @@ func BuildCacheDataFromSTIX(path string) (CacheData, error) {
 				componentIDs = append(componentIDs, componentID)
 			}
 
+			var logSources []AnalyticLogSource
+			for _, source := range obj.XMitreLogSourceReferences {
+				logSources = append(logSources, AnalyticLogSource{
+					DataComponentRef: strings.TrimSpace(source.XMitreDataComponentRef),
+					Name:             source.Name,
+					Channel:          source.Channel,
+				})
+			}
+
 			analytics = append(analytics, Analytic{
-				ID:             analyticID,
-				StixID:         obj.ID,
-				Name:           obj.Name,
-				Description:    obj.Description,
-				DataComponents: componentIDs,
+				ID:              analyticID,
+				StixID:          obj.ID,
+				Name:            obj.Name,
+				Description:     obj.Description,
+				DataComponents:  componentIDs,
+				Platforms:       obj.XMitrePlatforms,
+				LogSources:      logSources,
+				MutableElements: obj.XMitreMutableElements,
 			})
 		}
 	}

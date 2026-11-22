@@ -303,6 +303,12 @@ func (m model) itemDetails(item browseItem, relations []browseItem) string {
 		"Description:",
 		description,
 	)
+	for _, section := range item.sections {
+		lines = append(lines, "", section.Title+":")
+		for _, entry := range section.Entries {
+			lines = append(lines, "- "+strings.ReplaceAll(entry, "\n", "\n  "))
+		}
+	}
 	if item.kind == itemProcedure {
 		lines = append(lines, "", "Citations:")
 		if len(item.citations) == 0 {
