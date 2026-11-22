@@ -30,6 +30,13 @@ type stixObject struct {
 	XMitreMutableElements []MutableElement `json:"x_mitre_mutable_elements"`
 	Revoked               bool             `json:"revoked"`
 
+	XMitreSectors       []string `json:"x_mitre_sectors"`
+	XMitreRelatedAssets []struct {
+		Name        string   `json:"name"`
+		Description string   `json:"description"`
+		Sectors     []string `json:"related_asset_sectors"`
+	} `json:"x_mitre_related_assets"`
+
 	ID               string   `json:"id"`
 	RelationshipType string   `json:"relationship_type"`
 	SourceRef        string   `json:"source_ref"`
@@ -77,6 +84,8 @@ func BuildCacheDataFromSTIX(path string) (CacheData, error) {
 			stixToType[obj.ID] = "detection_strategy"
 		case "x-mitre-analytic":
 			stixToType[obj.ID] = "analytic"
+		case "x-mitre-asset":
+			stixToType[obj.ID] = "asset"
 		}
 
 	}
@@ -95,6 +104,7 @@ func BuildCacheDataFromSTIX(path string) (CacheData, error) {
 	techDetectionText := make(map[string][]string)
 	detectionStrategies := make([]DetectionStrategy, 0)
 	analytics := make([]Analytic, 0)
+	var assets []Asset
 
 	for _, obj := range bundle.Objects {
 		if obj.XMitreDeprecated || obj.Revoked {
@@ -217,6 +227,23 @@ func BuildCacheDataFromSTIX(path string) (CacheData, error) {
 				Name:        obj.Name,
 				Description: obj.Description,
 			})
+		case "x-mitre-asset":
+			id := stixToExternal[obj.ID]
+			if !hasIDPrefix(id, "A") {
+				continue
+			}
+			var related []RelatedAsset
+			for _, entry := range obj.XMitreRelatedAssets {
+				related = append(related, RelatedAsset{
+					Name:        entry.Name,
+					Description: entry.Description,
+					Sectors:     entry.Sectors,
+				})
+			}
+			assets = append(assets, Asset{
+				ID: id, StixID: obj.ID, Name: obj.Name, Description: obj.Description,
+				Platforms: obj.XMitrePlatforms, Sectors: obj.XMitreSectors, RelatedAssets: related,
+			})
 		case "relationship":
 			sourceID := stixToExternal[obj.SourceRef]
 			targetID := stixToExternal[obj.TargetRef]
@@ -232,6 +259,8 @@ func BuildCacheDataFromSTIX(path string) (CacheData, error) {
 			}
 
 			switch sourceType {
+			case "asset":
+				continue
 			case "technique":
 				if !hasIDPrefix(sourceID, "T") {
 					continue
@@ -259,6 +288,10 @@ func BuildCacheDataFromSTIX(path string) (CacheData, error) {
 			}
 
 			switch targetType {
+			case "asset":
+				if obj.RelationshipType != "targets" || sourceType != "technique" || !hasIDPrefix(targetID, "A") {
+					continue
+				}
 			case "technique":
 				if !hasIDPrefix(targetID, "T") {
 					continue
@@ -469,6 +502,7 @@ func BuildCacheDataFromSTIX(path string) (CacheData, error) {
 		DataComponents:      dataComponents,
 		DetectionStrategies: detectionStrategies,
 		Analytics:           analytics,
+		Assets:              assets,
 	}, nil
 }
 

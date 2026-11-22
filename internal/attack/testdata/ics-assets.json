@@ -1,0 +1,48 @@
+{
+  "type": "bundle",
+  "objects": [
+    {"type":"x-mitre-asset","id":"x-mitre-asset--second","name":"Monitoring Workstation","external_references":[{"source_name":"mitre-attack","external_id":"A0002"}]},
+    {
+      "type": "x-mitre-asset",
+      "id": "x-mitre-asset--first",
+      "name": "Example Controller",
+      "description": "A representative asset class for inventory.",
+      "x_mitre_platforms": ["Embedded", "Linux"],
+      "x_mitre_sectors": ["General"],
+      "x_mitre_related_assets": [
+        {"name":"Monitoring Workstation","description":"An inventory example.","related_asset_sectors":["Water"]},
+        {"name":"Standalone monitor","description":"An example without a specified sector."}
+      ],
+      "external_references": [{"source_name":"mitre-attack","external_id":"A0001"}]
+    },
+    {"type":"x-mitre-asset","id":"x-mitre-asset--third","name":"Spare Workstation","external_references":[{"source_name":"mitre-attack","external_id":"A0003"}]},
+    {"type":"x-mitre-asset","id":"x-mitre-asset--deprecated","x_mitre_deprecated":true,"external_references":[{"source_name":"mitre-attack","external_id":"A0004"}]},
+    {"type":"x-mitre-asset","id":"x-mitre-asset--revoked","revoked":true,"external_references":[{"source_name":"mitre-attack","external_id":"A0005"}]},
+    {"type":"x-mitre-asset","id":"x-mitre-asset--unidentified"},
+    {"type":"x-mitre-asset","id":"x-mitre-asset--wrong-id","external_references":[{"source_name":"mitre-attack","external_id":"DC0001"}]},
+    {"type":"attack-pattern","id":"attack-pattern--first","name":"First technique","external_references":[{"source_name":"mitre-attack","external_id":"T0001"}]},
+    {"type":"attack-pattern","id":"attack-pattern--second","name":"Second technique","external_references":[{"source_name":"mitre-attack","external_id":"T0002"}]},
+    {"type":"attack-pattern","id":"attack-pattern--child","name":"Child technique","external_references":[{"source_name":"mitre-attack","external_id":"T0001.001"}]},
+    {"type":"attack-pattern","id":"attack-pattern--revoked","revoked":true,"external_references":[{"source_name":"mitre-attack","external_id":"T0003"}]},
+    {"type":"intrusion-set","id":"intrusion-set--group","external_references":[{"source_name":"mitre-attack","external_id":"G0001"}]},
+
+    {"type":"relationship","id":"relationship--second","relationship_type":"targets","source_ref":"attack-pattern--second","target_ref":"x-mitre-asset--first"},
+    {"type":"relationship","id":"relationship--first","relationship_type":"targets","source_ref":"attack-pattern--first","target_ref":"x-mitre-asset--second"},
+    {"type":"relationship","id":"relationship--annotated","relationship_type":"targets","source_ref":"attack-pattern--first","target_ref":"x-mitre-asset--first","description":"An example ATT&CK mapping.","external_references":[{"source_name":"Example reference"}]},
+    {"type":"relationship","id":"relationship--duplicate-pair","relationship_type":"targets","source_ref":"attack-pattern--first","target_ref":"x-mitre-asset--first"},
+    {"type":"relationship","id":"relationship--child","relationship_type":"targets","source_ref":"attack-pattern--child","target_ref":"x-mitre-asset--third"},
+    {"type":"relationship","relationship_type":"subtechnique-of","source_ref":"attack-pattern--child","target_ref":"attack-pattern--first"},
+
+    {"type":"relationship","relationship_type":"targets","source_ref":"attack-pattern--revoked","target_ref":"x-mitre-asset--first"},
+    {"type":"relationship","relationship_type":"targets","source_ref":"attack-pattern--first","target_ref":"x-mitre-asset--deprecated"},
+    {"type":"relationship","relationship_type":"targets","source_ref":"attack-pattern--first","target_ref":"x-mitre-asset--revoked"},
+    {"type":"relationship","relationship_type":"targets","source_ref":"attack-pattern--first","target_ref":"x-mitre-asset--unknown"},
+    {"type":"relationship","relationship_type":"targets","source_ref":"attack-pattern--first","target_ref":"x-mitre-asset--unidentified"},
+    {"type":"relationship","relationship_type":"targets","source_ref":"attack-pattern--first","target_ref":"x-mitre-asset--wrong-id"},
+    {"type":"relationship","relationship_type":"targets","source_ref":"attack-pattern--second","target_ref":"x-mitre-asset--third","revoked":true},
+    {"type":"relationship","relationship_type":"targets","source_ref":"attack-pattern--second","target_ref":"x-mitre-asset--third","x_mitre_deprecated":true},
+    {"type":"relationship","relationship_type":"uses","source_ref":"attack-pattern--second","target_ref":"x-mitre-asset--third"},
+    {"type":"relationship","relationship_type":"targets","source_ref":"x-mitre-asset--first","target_ref":"attack-pattern--second"},
+    {"type":"relationship","relationship_type":"targets","source_ref":"intrusion-set--group","target_ref":"x-mitre-asset--third"}
+  ]
+}

@@ -57,6 +57,9 @@ func TestLoadExistingCacheSchema(t *testing.T) {
 	if len(cache.Techniques) != 1 || cache.Techniques[0].DetectionNotes != "Notes" || cache.Techniques[0].DataSources[0] != "Process" || cache.DataComponents[0].StixID != "component-ref" || cache.DetectionStrategies[0].Analytics[0] != "analytic-ref" || cache.Analytics[0].DataComponents[0] != "DC0001" {
 		t.Fatalf("existing cache fields were lost: %+v", cache)
 	}
+	if cache.Assets != nil || len(AssetsTargetedByTechnique(cache, "T1059")) != 0 {
+		t.Fatal("legacy cache unexpectedly gained asset data")
+	}
 }
 
 func TestLoadStorageErrors(t *testing.T) {

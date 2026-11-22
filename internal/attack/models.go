@@ -66,6 +66,24 @@ type DataComponent struct {
 	Description string `json:"description"`
 }
 
+// Asset represents an ATT&CK for ICS asset class.
+type Asset struct {
+	ID            string         `json:"id"`
+	StixID        string         `json:"stix_id"`
+	Name          string         `json:"name"`
+	Description   string         `json:"description"`
+	Platforms     []string       `json:"platforms,omitempty"`
+	Sectors       []string       `json:"sectors,omitempty"`
+	RelatedAssets []RelatedAsset `json:"related_assets,omitempty"`
+}
+
+// RelatedAsset is descriptive metadata, not a reference to another asset object.
+type RelatedAsset struct {
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	Sectors     []string `json:"sectors,omitempty"`
+}
+
 type DetectionStrategy struct {
 	ID          string   `json:"id"`
 	StixID      string   `json:"stix_id"`
@@ -109,6 +127,7 @@ type CacheData struct {
 	DataComponents      []DataComponent     `json:"data_components"`
 	DetectionStrategies []DetectionStrategy `json:"detection_strategies"`
 	Analytics           []Analytic          `json:"analytics"`
+	Assets              []Asset             `json:"assets,omitempty"`
 }
 
 type UpdateMeta struct {
