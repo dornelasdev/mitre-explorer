@@ -75,6 +75,8 @@ func (app *App) dispatchCommand(args []string) error {
 		return app.handleDetection(args)
 	case "analytic":
 		return app.handleAnalytic(args)
+	case "asset":
+		return app.handleAsset(args)
 	default:
 		return invalidUsage("unknown command: %s", args[0])
 	}

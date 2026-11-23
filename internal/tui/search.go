@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"mitre-explorer/internal/attack"
@@ -26,6 +27,15 @@ var searchScopes = []searchScope{
 	{name: "Detections", target: "detections"},
 	{name: "Analytics", target: "analytics"},
 	{name: "Data Components", target: "data-components"},
+}
+
+var icsSearchScopes = append(slices.Clone(searchScopes), searchScope{name: "Assets", target: "assets"})
+
+func (m model) availableSearchScopes() []searchScope {
+	if m.options.Matrix == "ics" {
+		return icsSearchScopes
+	}
+	return searchScopes
 }
 
 type searchState struct {
@@ -69,6 +79,7 @@ func (m *model) startSearch() tea.Cmd {
 }
 
 func (m *model) updateSearch(message tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	scopes := m.availableSearchScopes()
 	switch message.String() {
 	case "ctrl+c":
 		return *m, tea.Quit
@@ -78,11 +89,11 @@ func (m *model) updateSearch(message tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.search.results = nil
 		return *m, nil
 	case "tab":
-		m.search.scope = (m.search.scope + 1) % len(searchScopes)
+		m.search.scope = (m.search.scope + 1) % len(scopes)
 		m.refreshSearch()
 		return *m, nil
 	case "shift+tab":
-		m.search.scope = (m.search.scope - 1 + len(searchScopes)) % len(searchScopes)
+		m.search.scope = (m.search.scope - 1 + len(scopes)) % len(scopes)
 		m.refreshSearch()
 		return *m, nil
 	case "enter":
@@ -90,7 +101,7 @@ func (m *model) updateSearch(message tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if query == "" {
 			return *m, nil
 		}
-		scope := searchScopes[m.search.scope]
+		scope := scopes[m.search.scope]
 		results := append([]browseItem(nil), m.search.results...)
 		m.search.input.Blur()
 		m.search.active = false
@@ -111,7 +122,7 @@ func (m *model) refreshSearch() {
 		m.search.results = nil
 		return
 	}
-	m.search.results = m.searchItems(query, searchScopes[m.search.scope].target)
+	m.search.results = m.searchItems(query, m.availableSearchScopes()[m.search.scope].target)
 }
 
 func (m model) searchItems(query, target string) []browseItem {
@@ -169,6 +180,11 @@ func (m model) itemForSearchResult(result attack.EntitySearchResult) (browseItem
 	case "analytic":
 		entity, ok := attack.FindAnalytic(m.cache, key)
 		return analyticItem(entity), ok
+	case "asset":
+		if m.options.Matrix == "ics" {
+			entity, ok := attack.FindAsset(m.cache, key)
+			return assetItem(entity), ok
+		}
 	case "data-component":
 		for _, entity := range m.cache.DataComponents {
 			if strings.EqualFold(entity.ID, key) || strings.EqualFold(entity.StixID, key) || strings.EqualFold(entity.Name, result.Name) {

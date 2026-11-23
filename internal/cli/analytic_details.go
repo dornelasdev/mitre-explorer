@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"fmt"
 	"strings"
 
 	"mitre-explorer/internal/attack"
@@ -21,10 +20,5 @@ func (app *App) printAnalyticDetails(a attack.Analytic, componentCount int, issu
 	app.printDetails(fields)
 	app.printReferenceIssues(issues)
 
-	for _, section := range detailtext.AnalyticSections(a) {
-		app.printSubsection(section.Title)
-		for _, entry := range section.Entries {
-			fmt.Fprintf(app.out, "  - %s\n", strings.ReplaceAll(entry, "\n", "\n    "))
-		}
-	}
+	app.printDetailSections(detailtext.AnalyticSections(a))
 }

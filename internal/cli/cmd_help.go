@@ -41,6 +41,8 @@ func (app *App) handleHelp(args []string) error {
 		app.printEntityHelp("detection", "detection_id_or_name", true, true, true)
 	case "analytic":
 		app.printEntityHelp("analytic", "analytic_id_or_name", false, false, true)
+	case "asset":
+		app.printEntityHelp("asset", "asset_id_or_name", true, false, false)
 	default:
 		return invalidUsage("unknown help target: %s", args[1])
 	}
@@ -66,6 +68,7 @@ func (app *App) printGlobalHelp() {
 	fmt.Fprintln(app.out, "  campaign     Show campaign details")
 	fmt.Fprintln(app.out, "  detection    Show detection details")
 	fmt.Fprintln(app.out, "  analytic     Show analytic details")
+	fmt.Fprintln(app.out, "  asset        Show asset details (ICS only)")
 	fmt.Fprintln(app.out)
 	fmt.Fprintln(app.out, "Use: go run . help <command>")
 	fmt.Fprintln(app.out)
@@ -96,6 +99,7 @@ func (app *App) printSearchHelp() {
 	fmt.Fprintln(app.out)
 	fmt.Fprintln(app.out, "Targets:")
 	fmt.Fprintln(app.out, "  techniques, groups, mitigations, software, campaigns, detections, analytics, data-components, all")
+	fmt.Fprintln(app.out, "  assets (ICS only; also included in all on ICS)")
 	fmt.Fprintln(app.out)
 	fmt.Fprintln(app.out, "Options:")
 	fmt.Fprintln(app.out, "  --target <target>  Search a specific target")
@@ -117,6 +121,7 @@ func (app *App) printShowHelp() {
 	fmt.Fprintln(app.out, "Mapping flags can be combined; they apply only to show <technique_id>.")
 	fmt.Fprintln(app.out, "Mappings use direct relationships to the exact technique or sub-technique.")
 	fmt.Fprintln(app.out, "--procedures shows example descriptions and supplied citations; --all includes them.")
+	fmt.Fprintln(app.out, "On ICS, --assets shows directly mapped assets; --all includes them.")
 	fmt.Fprintln(app.out, "For caches created before procedure support: update --rebuild --matrix <matrix>")
 	fmt.Fprintln(app.out, "Global options: --matrix <matrix>, --plain")
 }
@@ -133,6 +138,7 @@ func (app *App) printListHelp() {
 	fmt.Fprintln(app.out, "  detections (aliases: det, dets)")
 	fmt.Fprintln(app.out, "  analytics")
 	fmt.Fprintln(app.out, "  data-components (aliases: dc, dcs)")
+	fmt.Fprintln(app.out, "  assets (ICS only)")
 	fmt.Fprintln(app.out, "  tactics")
 	fmt.Fprintln(app.out, "  platforms")
 	fmt.Fprintln(app.out)
@@ -180,6 +186,10 @@ func (app *App) printEntityHelp(entity, idName string, supportsTechniques, suppo
 	if entity == "analytic" {
 		fmt.Fprintln(app.out, "\nDetails include platforms, log sources, and mutable elements when present in the cache.")
 		fmt.Fprintln(app.out, "For older caches: update --rebuild --matrix <matrix>")
+	}
+	if entity == "asset" {
+		fmt.Fprintln(app.out, "\nRequires --matrix ics. Details include sectors, platforms, and related asset examples.")
+		fmt.Fprintln(app.out, "For older ICS caches: go run . update --rebuild --matrix ics")
 	}
 }
 

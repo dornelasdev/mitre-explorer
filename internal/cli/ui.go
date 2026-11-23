@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"mitre-explorer/internal/attack"
+	"mitre-explorer/internal/detailtext"
 )
 
 func (app *App) printMappedTechniquesWithMode(results []attack.Technique, detailed bool) {
@@ -310,6 +311,15 @@ type DetailField struct {
 func (app *App) printDetails(fields []DetailField) {
 	for _, f := range fields {
 		fmt.Fprintf(app.out, "%s %s\n", app.label(f.Label), f.Value)
+	}
+}
+
+func (app *App) printDetailSections(sections []detailtext.Section) {
+	for _, section := range sections {
+		app.printSubsection(section.Title)
+		for _, entry := range section.Entries {
+			fmt.Fprintf(app.out, "  - %s\n", strings.ReplaceAll(entry, "\n", "\n    "))
+		}
 	}
 }
 

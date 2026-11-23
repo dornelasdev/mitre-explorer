@@ -34,6 +34,9 @@ func (app *App) runGuidedExplorer() {
 		fmt.Fprintln(app.out, "  [6] Explore Data Components")
 		fmt.Fprintln(app.out, "  [7] Explore Detection Strategies")
 		fmt.Fprintln(app.out, "  [8] Explore Analytics")
+		if app.activeMatrixName() == "ics" {
+			fmt.Fprintln(app.out, "  [9] Explore Assets")
+		}
 		fmt.Fprintln(app.out, "  [q] Exit guided mode")
 		fmt.Fprintf(app.out, "> ")
 
@@ -362,6 +365,13 @@ func (app *App) runGuidedExplorer() {
 
 		case "8":
 			app.runGuidedAnalytics(cache)
+
+		case "9":
+			if app.activeMatrixName() != "ics" {
+				app.printInvalidSelection()
+				continue
+			}
+			app.runGuidedAssets(cache)
 
 		case "q":
 			fmt.Fprintln(app.out, "Exiting guided explorer.")

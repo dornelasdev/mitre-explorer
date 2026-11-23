@@ -23,6 +23,7 @@ const (
 	itemDataComponent
 	itemRelation
 	itemProcedure
+	itemAsset
 )
 
 type detailField struct {
@@ -44,7 +45,7 @@ type browseItem struct {
 }
 
 func (m model) explorePage() page {
-	return page{
+	root := page{
 		kind:  pageList,
 		title: "EXPLORE",
 		items: []browseItem{
@@ -58,6 +59,10 @@ func (m model) explorePage() page {
 			{kind: itemCategory, id: "data-components", name: "Data Components", count: len(m.cache.DataComponents)},
 		},
 	}
+	if m.options.Matrix == "ics" {
+		root.items = append(root.items, browseItem{kind: itemCategory, id: "assets", name: "Assets", count: len(m.cache.Assets)})
+	}
+	return root
 }
 
 func (m model) itemsForCategory(category string) []browseItem {
@@ -97,6 +102,10 @@ func (m model) itemsForCategory(category string) []browseItem {
 	case "data-components":
 		for _, entity := range m.cache.DataComponents {
 			items = append(items, dataComponentItem(entity))
+		}
+	case "assets":
+		for _, asset := range m.cache.Assets {
+			items = append(items, assetItem(asset))
 		}
 	}
 
@@ -161,6 +170,20 @@ func dataComponentItem(entity attack.DataComponent) browseItem {
 	}
 }
 
+func assetItem(asset attack.Asset) browseItem {
+	fields := []detailField{{"STIX ID", asset.StixID}}
+	if platforms := strings.Join(asset.Platforms, ", "); platforms != "" {
+		fields = append(fields, detailField{"Platforms", platforms})
+	}
+	if sectors := strings.Join(asset.Sectors, ", "); sectors != "" {
+		fields = append(fields, detailField{"Sectors", sectors})
+	}
+	return browseItem{
+		kind: itemAsset, id: asset.ID, name: asset.Name, description: asset.Description,
+		fields: fields, sections: detailtext.AssetSections(asset),
+	}
+}
+
 func techniqueItems(techniques []attack.Technique) []browseItem {
 	items := make([]browseItem, 0, len(techniques))
 	for _, technique := range techniques {
@@ -200,7 +223,7 @@ func (m model) relationItems(source browseItem) []browseItem {
 
 	switch source.kind {
 	case itemTechnique:
-		return []browseItem{
+		mappings := []browseItem{
 			relation("Groups", entityItems(attack.GroupsUsingTechnique(m.cache, source.id), groupItem)),
 			relation("Software", entityItems(attack.SoftwareUsingTechnique(m.cache, source.id), softwareItem)),
 			relation("Campaigns", entityItems(attack.CampaignsUsingTechnique(m.cache, source.id), campaignItem)),
@@ -208,6 +231,10 @@ func (m model) relationItems(source browseItem) []browseItem {
 			relation("Detection Strategies", entityItems(attack.DetectionStrategiesForTechnique(m.cache, source.id), detectionItem)),
 			relation("Procedure Examples", procedureItems(attack.ProcedureExamplesForTechnique(m.cache, source.id))),
 		}
+		if m.options.Matrix == "ics" {
+			mappings = append(mappings, relation("Targeted Assets", entityItems(attack.AssetsTargetedByTechnique(m.cache, source.id), assetItem)))
+		}
+		return mappings
 	case itemGroup:
 		return []browseItem{
 			relation("Mapped Techniques", techniqueItems(attack.TechniquesUsedByGroup(m.cache, source.id))),
@@ -249,6 +276,8 @@ func (m model) relationItems(source browseItem) []browseItem {
 		return []browseItem{components}
 	case itemDataComponent:
 		return []browseItem{relation("Mapped Techniques", techniqueItems(attack.TechniquesByDataComponent(m.cache, source.id)))}
+	case itemAsset:
+		return []browseItem{relation("Mapped Techniques", techniqueItems(attack.TechniquesTargetingAsset(m.cache, source.id)))}
 	default:
 		return nil
 	}

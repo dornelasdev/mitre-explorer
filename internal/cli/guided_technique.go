@@ -12,9 +12,10 @@ import (
 func (app *App) runGuidedTechnique(cache attack.CacheData, technique attack.Technique) (bool, error) {
 	app.printSection("Technique Details")
 	app.printTechniqueDetails(technique)
+	kinds := app.techniqueMappings()
 	for {
 		fmt.Fprintln(app.out, "\nTechnique mappings:")
-		for index, kind := range techniqueMappingKinds {
+		for index, kind := range kinds {
 			fmt.Fprintf(app.out, "  [%d] View %s\n", index+1, strings.ToLower(kind.title))
 		}
 		fmt.Fprintln(app.out, "  [Enter/b] Back to the technique list")
@@ -31,11 +32,11 @@ func (app *App) runGuidedTechnique(cache attack.CacheData, technique attack.Tech
 			return true, nil
 		}
 		choice, err := strconv.Atoi(input)
-		if err != nil || choice < 1 || choice > len(techniqueMappingKinds) {
+		if err != nil || choice < 1 || choice > len(kinds) {
 			app.printInvalidSelection()
 			continue
 		}
-		target := techniqueMappingKinds[choice-1].target
+		target := kinds[choice-1].target
 		if target == "procedures" {
 			menu, err := app.runGuidedProcedures(attack.ProcedureExamplesForTechnique(cache, technique.ID))
 			if menu || err != nil {

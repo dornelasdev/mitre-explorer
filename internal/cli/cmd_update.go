@@ -119,5 +119,8 @@ func (app *App) printParsedCounts(cache attack.CacheData) {
 	fmt.Fprintf(app.out, "Parsed campaigns: %d\n", len(cache.Campaigns))
 	fmt.Fprintf(app.out, "Parsed relationships: %d\n", len(cache.Relationships))
 	fmt.Fprintf(app.out, "Parsed data components: %d\n", len(cache.DataComponents))
+	if app.activeMatrixName() == "ics" {
+		fmt.Fprintf(app.out, "Parsed assets: %d\n", len(cache.Assets))
+	}
 	fmt.Fprintf(app.out, "Parsed detection strategies: %d\n", len(cache.DetectionStrategies))
 }

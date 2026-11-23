@@ -144,6 +144,12 @@ func SearchEntities(cache CacheData, target, term string, limit int) []EntitySea
 		}
 	}
 
+	if target == "assets" || target == "all" {
+		for _, asset := range cache.Assets {
+			results = appendEntitySearchResult(results, "asset", asset.ID, asset.Name, asset.Description, term)
+		}
+	}
+
 	sort.Slice(results, func(i, j int) bool {
 		if results[i].Type != results[j].Type {
 			return results[i].Type < results[j].Type

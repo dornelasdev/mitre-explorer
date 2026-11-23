@@ -45,7 +45,7 @@ func parseEntityFlags(args []string) (EntityFlags, error) {
 
 func validateEntityFlags(entity string, flags EntityFlags) error {
 	switch entity {
-	case "group", "mitigation", "software", "campaign":
+	case "group", "mitigation", "software", "campaign", "asset":
 		if flags.Analytics {
 			return fmt.Errorf("%s does not support -a/--analytics", entity)
 		}

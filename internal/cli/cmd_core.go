@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"mitre-explorer/internal/attack"
+	"mitre-explorer/internal/detailtext"
 )
 
 func (app *App) printEntitySearchResults(results []attack.EntitySearchResult) {
@@ -68,6 +69,10 @@ func (app *App) handleSearch(args []string) error {
 	}
 	switch target {
 	case "techniques", "groups", "mitigations", "software", "campaigns", "detections", "analytics", "data-components", "all":
+	case "assets":
+		if err := app.requireICSAssets(); err != nil {
+			return err
+		}
 	default:
 		return invalidUsage("unknown search target: %s", target)
 	}
@@ -77,6 +82,10 @@ func (app *App) handleSearch(args []string) error {
 	cache, err := app.loadCacheForCommand()
 	if err != nil {
 		return err
+	}
+	if target == "assets" && len(cache.Assets) == 0 {
+		fmt.Fprintln(app.out, detailtext.AssetCacheHint)
+		return nil
 	}
 	techniques := cache.Techniques
 	if target == "techniques" {
@@ -107,7 +116,7 @@ func (app *App) handleSearch(args []string) error {
 }
 
 func (app *App) handleShow(args []string) error {
-	options, err := parseShowOptions(args)
+	options, err := app.parseShowOptions(args)
 	if err != nil {
 		return err
 	}
@@ -135,7 +144,7 @@ func (app *App) handleShow(args []string) error {
 	fmt.Fprintf(app.out, "%s %s\n", app.label("Data Sources:"), strings.Join(technique.DataSources, ", "))
 	fmt.Fprintf(app.out, "%s %s\n", app.label("Detection Notes:"), technique.DetectionNotes)
 	fmt.Fprintf(app.out, "%s %s\n", app.label("Data Components:"), strings.Join(technique.DataComponents, ", "))
-	for _, kind := range techniqueMappingKinds {
+	for _, kind := range app.techniqueMappings() {
 		if options.mappings[kind.target] {
 			app.printTechniqueEntities(cache, technique.ID, kind.target)
 		}
@@ -159,6 +168,8 @@ func normalizeListTarget(target string) string {
 		return "detections"
 	case "analytic", "analytics":
 		return "analytics"
+	case "asset", "assets":
+		return "assets"
 	case "data-component", "data-components", "dc", "dcs":
 		return "data-components"
 	case "tactic", "tactics":
@@ -218,9 +229,14 @@ func (app *App) handleList(args []string) error {
 		if err != nil {
 			return invalidUsage("list techniques: %v", err)
 		}
-	case "groups", "mitigations", "software", "campaigns", "detections", "analytics", "data-components", "tactics", "platforms":
+	case "groups", "mitigations", "software", "campaigns", "detections", "analytics", "data-components", "tactics", "platforms", "assets":
 		if len(args) > 2 {
 			return invalidUsage("list %s does not accept filters", entity)
+		}
+		if entity == "assets" {
+			if err := app.requireICSAssets(); err != nil {
+				return err
+			}
 		}
 	default:
 		return invalidUsage("unknown list target: %s", args[1])
@@ -378,6 +394,13 @@ func (app *App) handleList(args []string) error {
 			[]int{72},
 			pageSize,
 		)
+
+	case "assets":
+		if len(cache.Assets) == 0 {
+			fmt.Fprintln(app.out, detailtext.AssetCacheHint)
+			return nil
+		}
+		app.printPaginatedTable("Assets", []string{"ID", "Name"}, assetRows(sortedAssets(cache.Assets), false), []int{10, 60}, pageSize)
 
 	case "tactics":
 		tactics := attack.CollectUniqueTactics(cache.Techniques, app.matrix.TacticOrder)

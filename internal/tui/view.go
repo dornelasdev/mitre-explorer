@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"mitre-explorer/internal/attack"
+	"mitre-explorer/internal/detailtext"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -165,7 +166,7 @@ func (m model) singlePanel(width, height int) string {
 }
 
 func (m model) searchContent() string {
-	scope := searchScopes[m.search.scope]
+	scope := m.availableSearchScopes()[m.search.scope]
 	lines := []string{
 		m.headingStyle().Render("SEARCH"),
 		"",
@@ -179,6 +180,9 @@ func (m model) searchContent() string {
 		return strings.Join(lines, "\n")
 	}
 	lines = append(lines, fmt.Sprintf("%d result(s)", len(m.search.results)))
+	if scope.target == "assets" && len(m.cache.Assets) == 0 {
+		lines = append(lines, detailtext.AssetCacheHint)
+	}
 	for index := 0; index < min(4, len(m.search.results)); index++ {
 		lines = append(lines, "  "+itemLabel(m.search.results[index]))
 	}
@@ -216,7 +220,7 @@ func (m model) helpContent() string {
 			context = itemKindTitle(active.detail.kind) + " DETAILS"
 		}
 	}
-	return strings.Join([]string{
+	lines := []string{
 		m.headingStyle().Render("KEYBOARD HELP"),
 		"",
 		"Context: " + context,
@@ -230,7 +234,15 @@ func (m model) helpContent() string {
 		"q, Ctrl+C      Exit the TUI",
 		"",
 		"Search: Tab and Shift+Tab change scope.",
-	}, "\n")
+	}
+	if m.options.Matrix == "ics" && len(m.cache.Assets) == 0 {
+		lines = append(lines, "", detailtext.AssetCacheHint)
+	}
+	return strings.Join(lines, "\n")
+}
+
+func (m model) missingAssetList(title string) bool {
+	return m.options.Matrix == "ics" && len(m.cache.Assets) == 0 && (title == "ASSETS" || title == "TARGETED ASSETS")
 }
 
 func (m model) contextContent() string {
@@ -244,6 +256,9 @@ func (m model) contextContent() string {
 
 	item, ok := selectedPageItem(*active)
 	if !ok {
+		if m.missingAssetList(active.title) {
+			return m.headingStyle().Render("NO CACHED ASSETS") + "\n\n" + detailtext.AssetCacheHint
+		}
 		if len(active.issues) > 0 {
 			return m.headingStyle().Render("MAPPING INCOMPLETE") + "\n\n" + referenceIssueText(active.issues)
 		}
@@ -390,6 +405,8 @@ func itemKindTitle(kind itemKind) string {
 		return "ANALYTIC"
 	case itemDataComponent:
 		return "DATA COMPONENT"
+	case itemAsset:
+		return "ASSET"
 	case itemProcedure:
 		return "PROCEDURE EXAMPLE"
 	default:
@@ -404,6 +421,9 @@ func (m model) listContent(title string, items []string, cursor, maxRows, width 
 	}
 	lines := []string{m.headingStyle().Render(truncateText(heading, width)), ""}
 	if len(items) == 0 {
+		if m.missingAssetList(title) {
+			return strings.Join(append(lines, "No cached assets.", "Press ? for rebuild help."), "\n")
+		}
 		return strings.Join(append(lines, "No items found."), "\n")
 	}
 

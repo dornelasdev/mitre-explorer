@@ -64,6 +64,9 @@ func (app *App) handleStatus(args []string) error {
 	fmt.Fprintf(app.out, "%s %d\n", app.label("Detection Strategies:"), len(cache.DetectionStrategies))
 	fmt.Fprintf(app.out, "%s %d\n", app.label("Analytics:"), len(cache.Analytics))
 	fmt.Fprintf(app.out, "%s %d\n", app.label("Data Components:"), len(cache.DataComponents))
+	if app.activeMatrixName() == "ics" {
+		fmt.Fprintf(app.out, "%s %d\n", app.label("Assets:"), len(cache.Assets))
+	}
 	fmt.Fprintf(app.out, "%s %d\n", app.label("Relationships:"), len(cache.Relationships))
 	app.printMatrixTacticStatus(cache)
 	fmt.Fprintln(app.out)

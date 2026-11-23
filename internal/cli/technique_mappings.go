@@ -1,15 +1,20 @@
 package cli
 
 import (
+	"fmt"
+	"slices"
 	"strings"
 
 	"mitre-explorer/internal/attack"
+	"mitre-explorer/internal/detailtext"
 )
 
-var techniqueMappingKinds = []struct {
+type techniqueMappingKind struct {
 	target string
 	title  string
-}{
+}
+
+var techniqueMappingKinds = []techniqueMappingKind{
 	{"groups", "Groups"},
 	{"software", "Software"},
 	{"campaigns", "Campaigns"},
@@ -18,13 +23,22 @@ var techniqueMappingKinds = []struct {
 	{"procedures", "Procedure Examples"},
 }
 
+var icsTechniqueMappings = append(slices.Clone(techniqueMappingKinds), techniqueMappingKind{"assets", "Targeted Assets"})
+
+func (app *App) techniqueMappings() []techniqueMappingKind {
+	if app.activeMatrixName() == "ics" {
+		return icsTechniqueMappings
+	}
+	return techniqueMappingKinds
+}
+
 type showOptions struct {
 	techniqueID   string
 	detectionOnly bool
 	mappings      map[string]bool
 }
 
-func parseShowOptions(args []string) (showOptions, error) {
+func (app *App) parseShowOptions(args []string) (showOptions, error) {
 	var options showOptions
 	if len(args) < 2 {
 		return options, invalidUsage("show requires <technique_id> or detection <technique_id>")
@@ -47,9 +61,15 @@ func parseShowOptions(args []string) (showOptions, error) {
 	}
 
 	options.mappings = make(map[string]bool)
+	kinds := app.techniqueMappings()
 	for _, flag := range args[2:] {
+		if flag == "--assets" {
+			if err := app.requireICSAssets(); err != nil {
+				return showOptions{}, err
+			}
+		}
 		matched := false
-		for _, kind := range techniqueMappingKinds {
+		for _, kind := range kinds {
 			if flag == "--all" || flag == "--"+kind.target {
 				options.mappings[kind.target] = true
 				matched = true
@@ -76,5 +96,22 @@ func (app *App) printTechniqueEntities(cache attack.CacheData, techniqueID, targ
 		printMappedEntityTable(app, "Detection Strategies", "technique", attack.DetectionStrategiesForTechnique(cache, techniqueID), app.printDetectionTable)
 	case "procedures":
 		app.printProcedures(attack.ProcedureExamplesForTechnique(cache, techniqueID))
+	case "assets":
+		app.printAssetMapping(cache, techniqueID)
 	}
+}
+
+func (app *App) printAssetMapping(cache attack.CacheData, techniqueID string) {
+	app.printSubsection("Targeted Assets")
+	if len(cache.Assets) == 0 {
+		fmt.Fprintln(app.out, detailtext.AssetCacheHint)
+		return
+	}
+	assets := attack.AssetsTargetedByTechnique(cache, techniqueID)
+	if len(assets) == 0 {
+		app.printNoMappedResults("assets", "technique")
+		return
+	}
+	fmt.Fprintf(app.out, "%s %d asset(s)\n", app.ok("Found"), len(assets))
+	app.printAssetTable(assets)
 }
