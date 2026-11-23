@@ -16,11 +16,15 @@ by default.
 
 ## Features
 
-- Conditional dataset updates using ETag and Last-Modified metadata.
+- Conditional dataset updates using ETag and Last-Modified metadata, plus offline
+  cache rebuilds from an existing download.
 - Offline technique and entity searches after the selected cache is built.
-- Technique mappings for groups, mitigations, software, campaigns, and detection
-  strategies.
-- Detection strategy, analytic, and data component relationships.
+- Direct technique mappings in both directions, with ATT&CK procedure examples
+  and their supplied citations.
+- Connections between groups, software, and campaigns.
+- Detection strategy, analytic, and data component relationships, with platforms,
+  log-source channels, and tunable fields in analytic details.
+- ICS asset details, sectors, related asset examples, and technique mappings.
 - Warnings for detection references whose targets are unavailable in the selected
   matrix cache, including partial mappings.
 - Guided explorer, manual command, and full-screen TUI modes with scoped search
@@ -32,7 +36,7 @@ by default.
 ## Quick Start
 
 Use the Go version declared in [`go.mod`](go.mod). The full-screen interface uses
-Bubble Tea, Bubbles, and Lip Gloss; `go mod download` installs the declared
+Bubble Tea, Bubbles, and Lip Gloss; `go mod download` fetches the declared
 dependencies.
 
 Build the default Enterprise cache:
@@ -45,7 +49,7 @@ Search it or inspect a technique:
 
 ```bash
 go run . search powershell
-go run . show T1059
+go run . show T1059 --detections
 go run . group G0020 --techniques
 ```
 
@@ -71,17 +75,26 @@ go run . list tactics --matrix mobile
 Mobile and ICS have independent raw datasets, caches, and update metadata. Run
 `update --matrix <name>` before querying a matrix for the first time.
 
+Already have the raw dataset? Rebuild its cache offline to populate fields added
+since your last rebuild. For example, to load ICS assets:
+
+```bash
+go run . update --rebuild --matrix ics
+go run . list assets --matrix ics
+```
+
 ## Commands
 
 | Command | Purpose |
 | --- | --- |
-| `update` | Download or refresh a matrix dataset and normalized cache. |
-| `status` | Inspect cache, metadata, entity counts, and tactic validation. |
+| `update` | Refresh a matrix dataset or rebuild its cache offline. |
+| `status` | Inspect cache metadata, object counts, tactics, and unresolved detection references. |
 | `search` | Search techniques or another cached ATT&CK object type. |
-| `show` | Display technique details or its detection notes. |
+| `show` | Display a technique, its detection notes, or its direct mappings and procedure examples. |
 | `list` | Browse cache objects with pagination and optional technique filters. |
 | `group`, `mitigation`, `software`, `campaign` | Show an object and optional mappings. |
 | `detection`, `analytic` | Display detection content and linked objects. |
+| `asset` | Show asset details and optional technique mappings (ICS only). |
 | `export` | Write cache or relationship data as CSV or Markdown. |
 | `tui` | Browse cached ATT&CK objects and relationships full-screen. |
 | `help` | Show global or command-specific help. |
@@ -117,6 +130,7 @@ Running the tool without a command opens a menu:
 |-- internal/
 |   |-- attack/                # ATT&CK models, STIX, storage, and queries
 |   |-- cli/                   # Commands, session state, and line-oriented UI
+|   |-- detailtext/            # Shared content for terminal detail views
 |   `-- tui/                   # Full-screen Bubble Tea interface
 |-- main.go                    # Thin executable entry point
 `-- version.go                 # Build-overridable release version
@@ -151,9 +165,10 @@ For architecture decisions, race checks, fixtures, and the branch/PR workflow, s
 
 ## Project Status
 
-The released baseline is `v1.0`. Development after v1.0 improves package boundaries,
-state management, validation, failure handling, and regression coverage while
-preserving valid command syntax and the cache schema.
+`v1.0` is the release baseline. Post-v1.0 development added the full-screen TUI,
+expanded ATT&CK coverage, and handling for unresolved references found during the
+v20.0 compatibility check. Older caches still load; an offline rebuild makes the
+newly supported fields available.
 
 ## ATT&CK Data And Trademarks
 

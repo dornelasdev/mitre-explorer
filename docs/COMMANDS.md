@@ -42,17 +42,31 @@ be quoted so the shell passes them as one value.
 
 ## Cache Management
 
-Before searching or exploring a matrix, download and build its local cache.
+Before searching or exploring a matrix, build its local cache.
 
 ```bash
 go run . update
 ```
 
-Downloads and normalizes the Enterprise matrix by default.
+Downloads and normalizes the Enterprise matrix by default. A normal update can
+skip the download and leave the cache unchanged when the remote dataset has not
+changed.
 
 Useful options:
+
 - `-f`, `--force`: forces a fresh download and cache rebuild.
+- `--rebuild`: rebuilds from the local raw dataset without a download or a change
+  to update metadata. Cannot be combined with `--force`.
 - `--matrix enterprise|mobile|ics`: updates a specific matrix cache.
+
+If an older cache is missing procedure citations, enriched analytic fields, or
+ICS assets, rebuild the affected matrix from its existing dataset:
+
+```bash
+go run . update --rebuild --matrix ics
+```
+
+If you do not have the raw dataset yet, run a normal update for that matrix first.
 
 ```bash
 go run . status
@@ -80,16 +94,17 @@ go run . search powershell
 Searches technique names and descriptions by default.
 
 Useful options:
+
 - `--name-only`: searches only technique names.
 - `--in-detection`: searches technique detection notes instead of names and descriptions.
 - `--limit <number>`: limits the number of returned results.
-- `--target <target>`: searches another cached object type or `all`.
-
-Search targets are `groups`, `mitigations`, `software`, `campaigns`, `detections`,
-`analytics`, `data-components`, and `all`.
+- `--target <target>`: selects a search scope.
 - `--detailed`: shows detailed technique results.
 - `--matrix enterprise|mobile|ics`: searches a specific matrix cache.
 
+Targets include `techniques`, `groups`, `mitigations`, `software`, `campaigns`,
+`detections`, `analytics`, `data-components`, and `assets` (ICS only).
+`--target all` searches non-technique entities in the selected cache.
 `--name-only`, `--in-detection`, and `--detailed` apply only to technique searches.
 
 ### Show
@@ -98,15 +113,20 @@ Search targets are `groups`, `mitigations`, `software`, `campaigns`, `detections
 go run . show T1059
 ```
 
-Shows detailed information for one technique.
+Shows detailed information for one technique. Add mapping flags to explore its
+direct relationships, for example `show T1059 --mitigations --detections`.
 
-Alternative form:
+- `--groups`, `--software`, `--campaigns`, `--mitigations`, and `--detections`:
+  expand the corresponding mapped objects.
+- `--procedures`: shows descriptions of recorded uses by groups, software, and
+  campaigns, with citations supplied by ATT&CK when available.
+- `--assets`: shows directly mapped assets (ICS only).
+- `--all`: includes every mapping supported by the selected matrix.
 
-- `show detection <technique_id>`: shows the technique ID, name, and detection notes.
-
-Global option:
-
-- `--matrix enterprise|mobile|ics`: shows the technique from a specific matrix cache.
+Flags can be combined. Mappings apply to the exact technique or sub-technique ID;
+they are not inherited between a parent technique and its sub-techniques.
+`show detection <technique_id>` shows only the ID, name, and detection notes. It
+does not accept these mapping flags.
 
 ### List
 
@@ -126,6 +146,9 @@ Useful filters:
 
 Entities are ATT&CK objects that can be connected to techniques or other objects.
 The tool can show details for each entity and optionally expand mapped relationships.
+Group, software, and campaign connections follow direct relationships in the
+selected cache. Shared techniques do not imply that two objects are connected;
+in particular, campaign attribution is not inferred from shared software.
 
 ### Groups
 
@@ -137,6 +160,8 @@ Shows details for a group, intrusion set, or actor-like object in the cache.
 
 Useful options:
 - `-t`, `--techniques`: shows techniques mapped to the group.
+- `--software`: shows software linked directly to the group.
+- `--campaigns`: shows campaigns attributed to the group.
 - `-d`, `--detailed`: shows detailed technique output when used with `-t`.
 - `--matrix enterprise|mobile|ics`: queries a specific matrix cache.
 
@@ -163,6 +188,7 @@ Shows details for software, malware, or tools represented in ATT&CK.
 
 Useful options:
 - `-t`, `--techniques`: shows techniques mapped to the software.
+- `--groups` and `--campaigns`: show groups and campaigns directly linked to the software.
 - `-d`, `--detailed`: shows detailed technique output when used with `-t`.
 - `--matrix enterprise|mobile|ics`: queries a specific matrix cache.
 
@@ -176,6 +202,8 @@ Shows details for a campaign when campaign data is available in the selected mat
 
 Useful options:
 - `-t`, `--techniques`: shows techniques mapped to the campaign.
+- `--software`: shows software linked directly to the campaign.
+- `--groups`: shows groups to which the campaign is attributed.
 - `-d`, `--detailed`: shows detailed technique output when used with `-t`.
 - `--matrix enterprise|mobile|ics`: queries a specific matrix cache.
 
@@ -200,7 +228,8 @@ Useful options:
 go run . analytic AN1394
 ```
 
-Shows details for an analytic.
+Shows details for an analytic, including platforms, log-source names and channels,
+and mutable elements (tunable fields described by ATT&CK), when the cache has them.
 
 Detection and analytic details warn when referenced analytics or data components
 are unavailable in the selected matrix cache. Available results remain visible;
@@ -211,6 +240,22 @@ matrix to fill missing references.
 Useful options:
 - `-c`, `--components`: shows data components used by the analytic.
 - `--matrix enterprise|mobile|ics`: queries a specific matrix cache.
+
+### ICS Assets
+
+```bash
+go run . asset A0011 --matrix ics
+```
+
+Shows an asset's description, platforms, sectors, and related asset examples.
+Use an ATT&CK ID, STIX ID, or exact name. Add `-t` or `--techniques` to list directly
+mapped techniques; add `-d` or `--detailed` for detailed technique output (requires
+`-t` or `--techniques`).
+
+Use `list assets --matrix ics` to browse assets or
+`search <term> --target assets --matrix ics` to find one. Start from a technique
+with `show <technique_id> --assets --matrix ics` to explore the reverse mapping.
+Related asset examples are descriptions, not additional technique mappings.
 
 ## Lists
 
@@ -231,6 +276,7 @@ Available targets:
 - `detections`: lists detection strategies.
 - `analytics`: lists analytics.
 - `data-components`: lists data components.
+- `assets`: lists assets (ICS only).
 - `tactics`: lists tactics in matrix-specific order.
 - `platforms`: lists platforms found in the selected matrix cache.
 
@@ -295,6 +341,9 @@ go run . export group-techniques --for G0020 --format md --out reports/group-tec
 
 Exports techniques mapped to the selected group.
 
+The export targets above do not include ICS assets, procedure citations, or
+group/software/campaign connections.
+
 ## Matrix Examples
 
 Enterprise is the default matrix, so these two commands use the same cache:
@@ -328,6 +377,11 @@ execute nested shell commands.
 A failed manual command prints its diagnostic and returns to the `manual>` prompt.
 Matrix and `--plain` selections persist until the process exits.
 
+In the guided explorer, select a technique to see its mapping menu, including
+procedure examples, or select a group, software item, or campaign to see its
+connections. Start with `go run . --matrix ics`, then choose **Guided Explorer**
+and **Explore Assets** to browse asset details and mapped techniques.
+
 ## Full-Screen TUI
 
 Open the full-screen interface with:
@@ -338,15 +392,18 @@ go run . tui
 
 The TUI loads the selected local cache and opens an Explore menu for tactics,
 groups, mitigations, software, campaigns, detection strategies, analytics, and
-data components. Entity details expose their mapped techniques, analytics, or
-data components where applicable. Move through lists and scroll long details with
-the arrow keys or `j`/`k`, open an item with `Enter`, and return one level with `b`
-or `Esc`. At the Explore root, `Esc` exits. The existing CLI and guided mode remain
-fully available.
+data components. With ICS selected, the Explore menu and search scopes also
+include assets. Open an object's details and press `Enter` to follow its mappings.
+Techniques expose reverse mappings and procedure examples; in ICS you can move
+from an asset to a mapped technique and back to the technique's linked assets.
+Move through lists and scroll long details with the arrow keys or `j`/`k`, open an
+item with `Enter`, and return one level with `b` or `Esc`. At the Explore root,
+`Esc` exits.
 
-Press `/` from any TUI page to search the local cache. `Tab` and `Shift+Tab`
-cycle through all objects or a specific object type. Results update while typing;
-`Enter` opens the result list and `Esc` cancels without changing the current page.
+Press `/` from an explorer page to search the local cache. `Tab` and `Shift+Tab`
+cycle through the `All` scope (including techniques) or a specific object type.
+Results update while typing. `Enter` opens the result list and `Esc` cancels
+without changing the current page.
 Search results retain the same detail and mapping navigation as ordinary lists.
 
 Press `m` to select an existing Enterprise, Mobile, or ICS cache without leaving
@@ -361,8 +418,7 @@ The global `--matrix` and `--plain` options are supported:
 go run . tui --matrix mobile --plain
 ```
 
-Use `q` or `Ctrl+C` to leave the TUI from any screen. If the selected cache is
-missing, the TUI shows the corresponding matrix update command.
+Use `q` to leave the explorer or `Ctrl+C` to exit from any screen.
 
 ## Troubleshooting
 
@@ -373,6 +429,9 @@ go run . update --matrix ics
 ```
 
 If a matrix name is not supported, the command will stop and show the supported options.
+
+If your ICS cache loads but has no assets, use the
+[offline rebuild](#cache-management) command rather than forcing a download.
 
 If colored output looks strange in your terminal, add `--plain`.
 

@@ -6,7 +6,7 @@ clearer responsibilities, automated checks, and changes that are easy to review.
 ## Setup
 
 Use the Go version declared in `go.mod`. Run the commands below from the repository
-root. `go mod download` installs the declared dependencies, including Bubble Tea,
+root. `go mod download` fetches the declared dependencies, including Bubble Tea,
 Bubbles, and Lip Gloss for the full-screen interface.
 
 ```bash
@@ -39,10 +39,10 @@ go test -race ./...
 
 Tests use small fixtures and do not require downloaded ATT&CK datasets. They cover
 query behavior, matrix selection, TUI navigation, export helpers, version
-availability, closed input handling, conditional downloads, storage, and STIX normalization. HTTP tests
-use local fixture servers rather than requesting live ATT&CK data. The interactive
-EOF and guided-flow tests use separate processes with timeouts so a loop regression
-cannot hang the suite indefinitely.
+availability, closed input handling, conditional downloads, storage, and STIX
+normalization. HTTP tests use local fixture servers rather than requesting live
+ATT&CK data. Bounded subprocess tests exercise EOF and guided flows so a loop
+regression cannot hang the suite indefinitely.
 
 `go vet` checks for suspicious Go code. Passing these checks helps catch
 regressions, but manual checks are still useful for terminal layout, colors,
@@ -76,6 +76,13 @@ Keep test fixtures small and separate from downloaded datasets. Do not commit
 generated caches or reports. If exporting to a different directory, check
 `git status` before staging because that directory may not be ignored.
 
+Use `go run . update --rebuild --matrix <matrix>` after adding normalized fields
+when you already have that matrix's raw bundle. This replaces the cache without
+downloading data or rewriting update metadata. To verify against a real bundle
+without replacing a working cache, build the binary and run it from a scratch
+directory with a `data/` entry for the raw bundle. Dataset and cache paths are
+relative to the process working directory.
+
 ## Change Workflow
 
 Work through a coherent implementation section, review the diff, run the relevant
@@ -100,14 +107,16 @@ is ready for a pull request, then review and merge that pull request.
 `-- internal/
     |-- attack/                # Models, STIX, storage, and query rules
     |-- cli/                   # Commands, session state, and line-oriented UI
+    |-- detailtext/            # Shared analytic and asset detail sections
     `-- tui/                   # Full-screen Bubble Tea interface
 ```
 
 The root remains a small `main` package so `go run .` and existing build commands
 continue to work. `internal/attack` contains terminal-independent data logic;
 `internal/cli` owns command parsing, orchestration, and presentation. Go's
-`internal` rule keeps both packages private to this module rather than presenting
-them as a public library API.
+`internal` rule keeps these packages private to this module. CLI and TUI both use
+`internal/detailtext` to format analytic and asset sections, then render those
+sections in their own layouts.
 
 `internal/tui` owns Bubble Tea state, Bubbles inputs, and Lip Gloss rendering for
 the optional full-screen interface. The CLI passes selected matrix, cache path,
@@ -161,6 +170,26 @@ package boundary; STIX decoding types and implementation helpers remain private.
 Matrix selection and terminal rendering stay in the CLI. Data-layer functions
 receive explicit paths and return values or errors without printing. This lets
 tests use temporary directories and small fixtures instead of application data.
+
+### Cache Additions After V1.0
+
+- Reverse technique queries follow explicit, typed relationships to the exact
+  technique ID. Group, software, and campaign queries also follow direct `uses`
+  and `attributed-to` links. Queries resolve endpoints in the current cache,
+  deduplicate results, and do not infer transitive or parent/child mappings.
+- Procedure examples use descriptions and citations on direct `uses`
+  relationships. Relationship metadata is stored alongside the existing IDs.
+- Analytics retain platforms, log-source names and channels with their original
+  component references, and descriptions of mutable elements. These additions
+  do not alter existing component mappings or unresolved-reference diagnostics.
+- ICS assets retain platforms, sectors, and related asset examples. Technique
+  mappings use explicit technique-to-asset `targets` relationships. Related asset
+  examples remain metadata, not links. The CLI and TUI limit asset browsing and
+  asset-specific commands or search scopes to ICS.
+
+These cache fields are additive. Older caches still load and serve their existing
+data, but the new metadata and mappings require an offline rebuild (or a newly
+downloaded dataset). Tests cover both older cache files and new cache round trips.
 
 ### Update Pipeline Rework
 
@@ -320,11 +349,11 @@ including cache/metadata write errors; no production dataset is downloaded.
   relationship, detection/analytic/component, and export commands. This protects
   the boundary between parser output and command behavior rather than testing
   those layers only in isolation.
-- Every guided explorer branch is driven with bounded subprocess input for all
-  three matrices. Tests cover details, mapped results, hiding already-viewed
-  options, empty sections, invalid selections, missing-cache recovery, and clean
-  returns to the guided menu. A timeout prevents a navigation regression from
-  hanging CI or producing unbounded output.
+- Shared guided flows run in bounded subprocesses for all three matrices.
+  Targeted fixtures also cover the ICS-only asset branch and navigation in both
+  directions through TUI mappings. Guided tests exercise already-viewed options,
+  empty sections, invalid selections, missing-cache recovery, and returns to the
+  guided menu.
 - Pagination tests cover next/previous navigation, first/last-page boundaries,
   invalid choices, default page size, and empty rows.
 - Manual mode now parses quoted multiword arguments and backslash escapes, making
