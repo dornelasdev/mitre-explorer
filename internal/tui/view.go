@@ -109,7 +109,19 @@ func (m model) leftPanel(maxRows, width int) string {
 		}
 		return truncateText(notice, width) + "\n\n" + m.listContent(current.title, labels, current.cursor, max(1, maxRows-2), width)
 	}
-	return m.listContent(current.title, labels, current.cursor, maxRows, width)
+	var filters []string
+	if current.filters.Sector != "" {
+		filters = append(filters, "Sector: "+current.filters.Sector)
+	}
+	if current.filters.Platform != "" {
+		filters = append(filters, "Platform: "+current.filters.Platform)
+	}
+	if maxRows < 4 && len(filters) > 1 {
+		sector := truncateText(current.filters.Sector, width/2-4)
+		platform := truncateText(current.filters.Platform, width-width/2-3)
+		filters = []string{"S: " + sector + " P: " + platform}
+	}
+	return m.listContent(current.title, labels, current.cursor, maxRows, width, filters...)
 }
 
 func (m model) rightPanel(width, height int) string {
@@ -120,6 +132,8 @@ func (m model) rightPanel(width, height int) string {
 		offset = m.helpOffset
 	} else if m.matrixPicker.active {
 		content = m.matrixPickerContent()
+	} else if m.assetPicker.active {
+		content = m.assetFilterPickerContent(width)
 	} else if m.loading {
 		matrix := m.options.Matrix
 		if m.loadingMatrix != nil {
@@ -159,10 +173,27 @@ func (m model) rightPanel(width, height int) string {
 
 func (m model) singlePanel(width, height int) string {
 	active := m.activePage()
-	if m.loading || m.loadErr != nil || m.search.active || m.matrixPicker.active || m.helpVisible || (active != nil && active.kind == pageDetail) {
+	if m.loading || m.loadErr != nil || m.search.active || m.matrixPicker.active || m.assetPicker.active || m.helpVisible || (active != nil && active.kind == pageDetail) {
 		return m.rightPanel(width, height)
 	}
 	return m.leftPanel(height, width)
+}
+
+func (m model) assetFilterPickerContent(width int) string {
+	lines := []string{m.headingStyle().Render("ASSET FILTERS")}
+	for i, label := range []string{"Sector", "Platform"} {
+		value := m.assetPicker.values[i][m.assetPicker.selected[i]]
+		if value == "" {
+			value = "Any"
+		}
+		line := label + ": " + value
+		if i == m.assetPicker.field {
+			lines = append(lines, m.selectedStyle().Render(truncateText("> "+line, width)))
+		} else {
+			lines = append(lines, truncateText("  "+line, width))
+		}
+	}
+	return strings.Join(lines, "\n")
 }
 
 func (m model) searchContent() string {
@@ -238,6 +269,11 @@ func (m model) helpContent() string {
 	if m.options.Matrix == "ics" && len(m.cache.Assets) == 0 {
 		lines = append(lines, "", detailtext.AssetCacheHint)
 	}
+	if m.canFilterAssets(m.activePage()) {
+		lines = append(lines, "", "Assets: f opens filters; c clears them.",
+			"Tab changes field; Left/Right changes value.",
+			"Enter applies; Esc cancels.")
+	}
 	return strings.Join(lines, "\n")
 }
 
@@ -258,6 +294,9 @@ func (m model) contextContent() string {
 	if !ok {
 		if m.missingAssetList(active.title) {
 			return m.headingStyle().Render("NO CACHED ASSETS") + "\n\n" + detailtext.AssetCacheHint
+		}
+		if active.assetList && active.filters != (attack.AssetFilters{}) {
+			return m.headingStyle().Render("NO MATCHING ASSETS") + "\n\nPress f to change filters or c to clear them."
 		}
 		if len(active.issues) > 0 {
 			return m.headingStyle().Render("MAPPING INCOMPLETE") + "\n\n" + referenceIssueText(active.issues)
@@ -414,15 +453,24 @@ func itemKindTitle(kind itemKind) string {
 	}
 }
 
-func (m model) listContent(title string, items []string, cursor, maxRows, width int) string {
+func (m model) listContent(title string, items []string, cursor, maxRows, width int, filters ...string) string {
 	heading := title
 	if len(items) > 0 {
 		heading = fmt.Sprintf("%s  %d/%d", title, cursor+1, len(items))
 	}
-	lines := []string{m.headingStyle().Render(truncateText(heading, width)), ""}
+	lines := []string{m.headingStyle().Render(truncateText(heading, width))}
+	for _, filter := range filters {
+		lines = append(lines, m.mutedStyle().Render(truncateText(filter, width)))
+	}
+	if len(filters) == 0 {
+		lines = append(lines, "")
+	}
 	if len(items) == 0 {
 		if m.missingAssetList(title) {
 			return strings.Join(append(lines, "No cached assets.", "Press ? for rebuild help."), "\n")
+		}
+		if len(filters) > 0 {
+			return strings.Join(append(lines, "No assets match filters."), "\n")
 		}
 		return strings.Join(append(lines, "No items found."), "\n")
 	}
@@ -493,6 +541,8 @@ func (m model) breadcrumbLine() string {
 		parts = append(parts, "HELP")
 	case m.matrixPicker.active:
 		parts = append(parts, "MATRIX")
+	case m.assetPicker.active:
+		parts = append(parts, "FILTERS")
 	case m.search.active:
 		parts = append(parts, "SEARCH")
 	}
@@ -511,6 +561,11 @@ func (m model) footer(width int) string {
 			m.helpOffset+1, m.helpMaxOffset()+1)
 	case m.matrixPicker.active:
 		text = "up/k down/j  move    Enter  load    m/b/Esc  cancel    q  quit"
+	case m.assetPicker.active:
+		text = "Tab field  Left/Right value  Enter apply  Esc cancel"
+		if width < len(text) {
+			text = "Tab field  arrows  Enter  Esc"
+		}
 	case m.loading:
 		text = "q / Esc / Ctrl+C  quit"
 	case m.loadErr != nil && len(m.pages) > 0:
@@ -527,6 +582,8 @@ func (m model) footer(width int) string {
 	case active != nil && active.kind == pageDetail:
 		text = fmt.Sprintf("scroll %d/%d    up/k down/j    Enter mappings    b/Esc back    q quit",
 			active.offset+1, m.detailMaxOffset(*active)+1)
+	case m.canFilterAssets(active):
+		text = "f filters  c clear  Enter open  b/Esc back  / search  ? help  q quit"
 	default:
 		text = "up/k down/j  move    Enter open    b/Esc back    / search    m matrix    ? help    q quit"
 	}

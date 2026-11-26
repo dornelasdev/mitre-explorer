@@ -18,6 +18,30 @@ func (app *App) requireICSAssets() error {
 	return nil
 }
 
+func parseAssetListFilters(args []string) (attack.AssetFilters, error) {
+	var filters attack.AssetFilters
+	for i := 0; i < len(args); i += 2 {
+		var field *string
+		switch args[i] {
+		case "--sector":
+			field = &filters.Sector
+		case "--platform":
+			field = &filters.Platform
+		default:
+			return attack.AssetFilters{}, invalidUsage("list assets: unknown option %s", args[i])
+		}
+		if *field != "" {
+			return attack.AssetFilters{}, invalidUsage("list assets: %s can only be set once", args[i])
+		}
+		value, err := optionValue(args, i)
+		if err != nil {
+			return attack.AssetFilters{}, err
+		}
+		*field = strings.TrimSpace(value)
+	}
+	return filters, nil
+}
+
 func (app *App) handleAsset(args []string) error {
 	flags, err := entityOptions("asset", args)
 	if err != nil {

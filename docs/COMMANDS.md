@@ -257,6 +257,16 @@ Use `list assets --matrix ics` to browse assets or
 with `show <technique_id> --assets --matrix ics` to explore the reverse mapping.
 Related asset examples are descriptions, not additional technique mappings.
 
+Filter the asset list by sector, platform, or both:
+
+```bash
+go run . list assets --matrix ics --sector "Water and Wastewater" --platform Embedded
+```
+
+Both filters match complete names, ignoring case and surrounding whitespace.
+When combined, both must match the asset's own metadata. A sector mentioned only
+in a related asset example does not count.
+
 ## Lists
 
 Use `list` to browse available cache objects without knowing a specific ID.
@@ -280,8 +290,9 @@ Available targets:
 - `tactics`: lists tactics in matrix-specific order.
 - `platforms`: lists platforms found in the selected matrix cache.
 
-Only `list techniques` accepts `--tactic`, `--platform`, and `--data-component`
-filters. Other list targets reject filters.
+`list techniques` accepts `--tactic`, `--platform`, and `--data-component`.
+`list assets` accepts `--sector` and `--platform` on ICS. Other list targets
+reject filters.
 
 Global options:
 - `--matrix enterprise|mobile|ics`: lists targets from a specific matrix cache.
@@ -416,6 +427,12 @@ data components. With ICS selected, the Explore menu and search scopes also
 include assets. Open an object's details and press `Enter` to follow its mappings.
 Techniques expose reverse mappings and procedure examples; in ICS you can move
 from an asset to a mapped technique and back to the technique's linked assets.
+On the main **Assets** list, press `f` to open its filters. Use `Tab` to switch
+between sector and platform, Left/Right to choose a cached value (or **Any**),
+`Enter` to apply, and `Esc` to cancel. Active filters appear above the results.
+Press `c` on the list to clear both. Filters stay applied when you open an asset
+and go back, but do not change search results or mapping pages.
+
 Move through lists and scroll long details with the arrow keys or `j`/`k`, open an
 item with `Enter`, and return one level with `b` or `Esc`. At the Explore root,
 `Esc` exits.
@@ -466,7 +483,8 @@ Standalone commands write failure diagnostics to stderr and return:
   or unsupported flag combinations.
 
 Arguments and flags are validated before cache access. Extra arguments are rejected
-rather than silently ignored; filters are supported only by `list techniques`.
+rather than silently ignored; list filters are supported only by
+`list techniques` and `list assets`.
 Export `--for` is required for mapped relationship targets and rejected for ordinary
 entity/summary exports. Option values must be nonempty and cannot be another flag.
 

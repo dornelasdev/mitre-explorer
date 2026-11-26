@@ -149,7 +149,10 @@ func (app *App) printListHelp() {
 	fmt.Fprintln(app.out, "  go run . list techniques --platform <platform_name>")
 	fmt.Fprintln(app.out, "  go run . list techniques --data-component <data_component_name>")
 	fmt.Fprintln(app.out)
-	fmt.Fprintln(app.out, "Only techniques accept filters. Global options: --matrix <matrix>, --plain")
+	fmt.Fprintln(app.out, "Asset filters (ICS only):")
+	fmt.Fprintln(app.out, "  go run . list assets --matrix ics [--sector <name>] [--platform <name>]")
+	fmt.Fprintln(app.out, "  Sector and platform can be combined. Use exact names (case-insensitive).")
+	fmt.Fprintln(app.out, "Global options: --matrix <matrix>, --plain")
 }
 
 func (app *App) printEntityHelp(entity, idName string, supportsTechniques, supportsAnalytics, supportsComponents bool) {
@@ -257,6 +260,7 @@ func (app *App) printTUIHelp() {
 	fmt.Fprintln(app.out, "  Up/k, Down/j        Move through lists or scroll details")
 	fmt.Fprintln(app.out, "  Enter               Open the selected item")
 	fmt.Fprintln(app.out, "  /                   Search cached ATT&CK objects")
+	fmt.Fprintln(app.out, "  f, c                 Open or clear filters on the ICS Assets list")
 	fmt.Fprintln(app.out, "  Tab, Shift+Tab      Change scope while searching")
 	fmt.Fprintln(app.out, "  m                   Select an existing matrix cache")
 	fmt.Fprintln(app.out, "  ?                   Show contextual keyboard help")

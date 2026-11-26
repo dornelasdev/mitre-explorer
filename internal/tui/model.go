@@ -24,6 +24,8 @@ type page struct {
 	detail    browseItem
 	relations []browseItem
 	issues    []attack.ReferenceIssue
+	assetList bool
+	filters   attack.AssetFilters
 }
 
 type cacheLoadedMsg struct {
@@ -43,6 +45,7 @@ type model struct {
 	pages         []page
 	search        searchState
 	matrixPicker  matrixPickerState
+	assetPicker   assetFilterPicker
 	helpVisible   bool
 	helpOffset    int
 	failedMatrix  *MatrixOption
@@ -93,6 +96,9 @@ func (m model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.failedMatrix = &failed
 	case tea.KeyPressMsg:
+		if m.assetPicker.active {
+			return m.updateAssetFilterPicker(message.String())
+		}
 		if m.search.active {
 			return m.updateSearch(message)
 		}
@@ -153,6 +159,10 @@ func (m model) handleKey(key string) (tea.Model, tea.Cmd) {
 		m.goBack()
 	case "/":
 		return m, m.startSearch()
+	case "f":
+		m.startAssetFilterPicker()
+	case "c":
+		m.applyAssetFilters(attack.AssetFilters{})
 	}
 
 	return m, nil
@@ -165,6 +175,7 @@ func (m *model) activateMatrix(matrix MatrixOption, cache attack.CacheData) {
 	m.cache = cache
 	m.tactics = attack.CollectUniqueTactics(cache.Techniques, matrix.TacticOrder)
 	m.pages = []page{m.explorePage()}
+	m.assetPicker = assetFilterPicker{}
 	m.loading = false
 	m.loadingMatrix = nil
 	m.loadErr = nil
@@ -203,6 +214,9 @@ func (m *model) selectCurrent() {
 	switch item.kind {
 	case itemCategory:
 		m.pushList(strings.ToUpper(item.name), m.itemsForCategory(item.id))
+		if item.id == "assets" {
+			m.activePage().assetList = true
+		}
 	case itemTactic:
 		m.pushList("TECHNIQUES: "+strings.ToUpper(item.name), techniqueItems(attack.ListByTactic(m.cache.Techniques, item.id)))
 	case itemRelation:

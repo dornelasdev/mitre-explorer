@@ -7,6 +7,39 @@ import (
 	"testing"
 )
 
+func TestAssetFiltersMatchOnlyTopLevelMetadata(t *testing.T) {
+	assets := []Asset{
+		{ID: "A0003"},
+		{ID: "A0002", Sectors: []string{"General"}, Platforms: []string{" Windows "}},
+		{ID: "A0001", Sectors: []string{" general ", "Electric"}, Platforms: []string{"Linux", "windows", ""},
+			RelatedAssets: []RelatedAsset{{Name: "Example", Sectors: []string{"Water and Wastewater"}}}},
+	}
+	for _, tc := range []struct {
+		filters AssetFilters
+		want    []string
+	}{
+		{AssetFilters{}, []string{"A0003", "A0002", "A0001"}},
+		{AssetFilters{Sector: "  GENERAL "}, []string{"A0002", "A0001"}},
+		{AssetFilters{Platform: "windows"}, []string{"A0002", "A0001"}},
+		{AssetFilters{Sector: "General", Platform: "LINUX"}, []string{"A0001"}},
+		{AssetFilters{Sector: "Electric", Platform: "Embedded"}, nil},
+		{AssetFilters{Sector: "Elec"}, nil},
+		{AssetFilters{Sector: "Water and Wastewater"}, nil},
+	} {
+		var got []string
+		for _, asset := range FilterAssets(assets, tc.filters) {
+			got = append(got, asset.ID)
+		}
+		if !slices.Equal(got, tc.want) {
+			t.Errorf("filters %+v: got %v, want %v", tc.filters, got, tc.want)
+		}
+	}
+	sectors, platforms := AssetFilterValues(assets)
+	if !slices.Equal(sectors, []string{"Electric", "General"}) || !slices.Equal(platforms, []string{"Linux", "Windows"}) {
+		t.Errorf("filter options were not deduplicated and sorted: sectors=%v platforms=%v", sectors, platforms)
+	}
+}
+
 func TestICSAssetsNormalizeAndRoundTrip(t *testing.T) {
 	cache, err := BuildCacheDataFromSTIX("testdata/ics-assets.json")
 	if err != nil {

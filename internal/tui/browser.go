@@ -104,20 +104,28 @@ func (m model) itemsForCategory(category string) []browseItem {
 			items = append(items, dataComponentItem(entity))
 		}
 	case "assets":
-		for _, asset := range m.cache.Assets {
-			items = append(items, assetItem(asset))
-		}
+		return assetBrowseItems(m.cache.Assets, attack.AssetFilters{})
 	}
 
 	if category != "tactics" {
-		sort.Slice(items, func(i, j int) bool {
-			if items[i].name != items[j].name {
-				return items[i].name < items[j].name
-			}
-			return items[i].id < items[j].id
-		})
+		sortBrowseItems(items)
 	}
 	return items
+}
+
+func assetBrowseItems(assets []attack.Asset, filters attack.AssetFilters) []browseItem {
+	items := entityItems(attack.FilterAssets(assets, filters), assetItem)
+	sortBrowseItems(items)
+	return items
+}
+
+func sortBrowseItems(items []browseItem) {
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].name != items[j].name {
+			return items[i].name < items[j].name
+		}
+		return items[i].id < items[j].id
+	})
 }
 
 func groupItem(entity attack.Group) browseItem {

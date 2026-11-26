@@ -222,6 +222,7 @@ func (app *App) handleList(args []string) error {
 	}
 	entity := normalizeListTarget(args[1])
 	tactic, platform, dataComponent := "", "", ""
+	var assetFilters attack.AssetFilters
 	switch entity {
 	case "techniques":
 		var err error
@@ -229,14 +230,18 @@ func (app *App) handleList(args []string) error {
 		if err != nil {
 			return invalidUsage("list techniques: %v", err)
 		}
-	case "groups", "mitigations", "software", "campaigns", "detections", "analytics", "data-components", "tactics", "platforms", "assets":
+	case "assets":
+		if err := app.requireICSAssets(); err != nil {
+			return err
+		}
+		var err error
+		assetFilters, err = parseAssetListFilters(args[2:])
+		if err != nil {
+			return err
+		}
+	case "groups", "mitigations", "software", "campaigns", "detections", "analytics", "data-components", "tactics", "platforms":
 		if len(args) > 2 {
 			return invalidUsage("list %s does not accept filters", entity)
-		}
-		if entity == "assets" {
-			if err := app.requireICSAssets(); err != nil {
-				return err
-			}
 		}
 	default:
 		return invalidUsage("unknown list target: %s", args[1])
@@ -400,7 +405,12 @@ func (app *App) handleList(args []string) error {
 			fmt.Fprintln(app.out, detailtext.AssetCacheHint)
 			return nil
 		}
-		app.printPaginatedTable("Assets", []string{"ID", "Name"}, assetRows(sortedAssets(cache.Assets), false), []int{10, 60}, pageSize)
+		results := attack.FilterAssets(cache.Assets, assetFilters)
+		if len(results) == 0 {
+			fmt.Fprintln(app.out, "No assets match the selected filters.")
+			return nil
+		}
+		app.printPaginatedTable("Assets", []string{"ID", "Name"}, assetRows(sortedAssets(results), false), []int{10, 60}, pageSize)
 
 	case "tactics":
 		tactics := attack.CollectUniqueTactics(cache.Techniques, app.matrix.TacticOrder)
