@@ -30,7 +30,8 @@ by default.
 - Guided explorer, manual command, and full-screen TUI modes with scoped search
   and in-session matrix selection.
 - Matrix-aware, paginated, plain, and detailed terminal output.
-- CSV and Markdown exports, including mapped relationship reports.
+- CSV and Markdown exports, including ICS assets, procedure citations, and
+  group/software/campaign connections.
 - Automated unit, integration, interactive, and multi-matrix regression tests.
 
 ## Quick Start

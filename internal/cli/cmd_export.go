@@ -67,6 +67,7 @@ func (app *App) handleExport(args []string) error {
 	if err != nil {
 		return invalidUsage("export: %v", err)
 	}
+	opts.Matrix = app.activeMatrixName()
 	if err := validateExportTarget(target, opts); err != nil {
 		return err
 	}
@@ -75,7 +76,6 @@ func (app *App) handleExport(args []string) error {
 		return err
 	}
 	opts.Target = target
-	opts.Matrix = app.activeMatrixName()
 	opts.GeneratedAt = time.Now().Format("2006-01-02 15:04:05")
 	opts.Meta, err = app.loadUpdateMetaForCommand()
 	if err != nil {
@@ -114,6 +114,9 @@ func (app *App) exportRows(cache attack.CacheData, target string, opts ExportOpt
 			{"Analytics", fmt.Sprintf("%d", len(cache.Analytics))},
 			{"Data Components", fmt.Sprintf("%d", len(cache.DataComponents))},
 			{"Relationships", fmt.Sprintf("%d", len(cache.Relationships))},
+		}
+		if opts.Matrix == "ics" {
+			rows = append(rows, []string{"Assets", fmt.Sprintf("%d", len(cache.Assets))})
 		}
 		return []string{"Field", "Value"}, rows, nil
 
@@ -310,7 +313,7 @@ func (app *App) exportRows(cache attack.CacheData, target string, opts ExportOpt
 		)
 		return headers, rows, nil
 	default:
-		return nil, nil, fmt.Errorf("unknown export target: %s", target)
+		return exportCoverageRows(cache, target, opts.For)
 	}
 }
 
@@ -457,19 +460,28 @@ func writeMarkdownMetadataRow(b *strings.Builder, field, value string) {
 }
 
 func markdownCell(s string) string {
-	s = strings.ReplaceAll(s, "\n", " ")
-	s = strings.ReplaceAll(s, "|", "\\|")
-	return s
+	return markdownCellReplacer.Replace(s)
 }
+
+var markdownCellReplacer = strings.NewReplacer("\r\n", " ", "\r", " ", "\n", " ", "\\", "\\\\", "|", "\\|")
 
 func validateExportTarget(target string, opts ExportOptions) error {
 	mapping := false
 	switch target {
-	case "summary", "techniques", "groups", "mitigations", "software", "campaigns", "detections", "analytics", "data-components":
-	case "group-techniques", "mitigation-techniques", "software-techniques", "campaign-techniques", "detection-techniques", "detection-analytics", "detection-components", "analytic-components":
+	case "summary", "techniques", "groups", "mitigations", "software", "campaigns", "detections", "analytics", "data-components", "assets":
+	case "group-techniques", "mitigation-techniques", "software-techniques", "campaign-techniques",
+		"detection-techniques", "detection-analytics", "detection-components", "analytic-components",
+		"technique-procedures", "asset-techniques", "technique-assets",
+		"group-software", "group-campaigns", "software-groups", "software-campaigns", "campaign-software", "campaign-groups":
 		mapping = true
 	default:
 		return invalidUsage("unknown export target: %s", target)
+	}
+	switch target {
+	case "assets", "asset-techniques", "technique-assets":
+		if opts.Matrix != "ics" {
+			return invalidUsage("assets are only available with --matrix ics")
+		}
 	}
 	if mapping && opts.For == "" {
 		return invalidUsage("--for is required for %s", target)

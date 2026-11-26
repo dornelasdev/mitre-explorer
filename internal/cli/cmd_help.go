@@ -204,7 +204,7 @@ func (app *App) printStatusHelp() {
 func (app *App) printExportHelp() {
 	fmt.Fprintln(app.out, "Usage: go run . export <target> [--for <id_or_name>] [--format csv|md] --out <file>")
 	fmt.Fprintln(app.out)
-	fmt.Fprintln(app.out, "Exports cached data into CSV or Markdown reports with matrix-aware metadata.")
+	fmt.Fprintln(app.out, "Exports cached data as CSV or Markdown. Markdown includes matrix metadata.")
 	fmt.Fprintln(app.out)
 	fmt.Fprintln(app.out, "Targets:")
 	fmt.Fprintln(app.out, "  summary")
@@ -216,6 +216,7 @@ func (app *App) printExportHelp() {
 	fmt.Fprintln(app.out, "  detections")
 	fmt.Fprintln(app.out, "  analytics")
 	fmt.Fprintln(app.out, "  data-components")
+	fmt.Fprintln(app.out, "  assets (ICS only)")
 	fmt.Fprintln(app.out)
 	fmt.Fprintln(app.out, "Mapped relationship targets:")
 	fmt.Fprintln(app.out, "  group-techniques")
@@ -226,11 +227,17 @@ func (app *App) printExportHelp() {
 	fmt.Fprintln(app.out, "  detection-analytics")
 	fmt.Fprintln(app.out, "  detection-components")
 	fmt.Fprintln(app.out, "  analytic-components")
+	fmt.Fprintln(app.out, "  technique-procedures (with supplied citations)")
+	fmt.Fprintln(app.out, "  asset-techniques, technique-assets (ICS only)")
+	fmt.Fprintln(app.out, "  group-software, group-campaigns")
+	fmt.Fprintln(app.out, "  software-groups, software-campaigns")
+	fmt.Fprintln(app.out, "  campaign-software, campaign-groups")
 	fmt.Fprintln(app.out)
 	fmt.Fprintln(app.out, "Options:")
 	fmt.Fprintln(app.out, "  --out <file>       Required output path")
 	fmt.Fprintln(app.out, "  --format csv|md    Output format (default: csv)")
 	fmt.Fprintln(app.out, "  --for <id_or_name> Required only for mapped relationship targets")
+	fmt.Fprintln(app.out, "                     Use a technique ID for technique-procedures and technique-assets")
 	fmt.Fprintln(app.out, "  --matrix <matrix>  Select ATT&CK matrix")
 	fmt.Fprintln(app.out, "  --plain            Disable colored terminal messages")
 	fmt.Fprintln(app.out)
@@ -238,6 +245,7 @@ func (app *App) printExportHelp() {
 	fmt.Fprintln(app.out, "  go run . export summary --matrix enterprise --format md --out reports/enterprise-summary.md")
 	fmt.Fprintln(app.out, "  go run . export techniques --matrix mobile --format csv --out reports/mobile-techniques.csv")
 	fmt.Fprintln(app.out, "  go run . export group-techniques --for <group_id_or_name> --matrix enterprise --format md --out reports/group-techniques.md")
+	fmt.Fprintln(app.out, "  go run . export assets --matrix ics --out reports/ics-assets.csv")
 }
 
 func (app *App) printTUIHelp() {

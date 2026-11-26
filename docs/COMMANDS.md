@@ -317,6 +317,8 @@ Use these targets when exporting cache data directly:
 - `detections`: exports detection strategies.
 - `analytics`: exports analytics.
 - `data-components`: exports data components.
+- `assets`: exports ICS asset details, including platforms, sectors, and related
+  asset examples. Requires `--matrix ics`.
 
 Use these targets when exporting mapped relationships:
 
@@ -328,10 +330,19 @@ Use these targets when exporting mapped relationships:
 - `detection-analytics`: exports analytics mapped to a detection strategy.
 - `detection-components`: exports data components connected to a detection strategy.
 - `analytic-components`: exports data components mapped to an analytic.
+- `technique-procedures`: exports procedure text and supplied citations for one
+  exact technique or sub-technique.
+- `asset-techniques` and `technique-assets`: export direct mappings between ICS
+  assets and techniques. Both require `--matrix ics`.
+- `group-software` and `software-groups`: export direct links between groups and software.
+- `campaign-software` and `software-campaigns`: export direct links between campaigns and software.
+- `campaign-groups` and `group-campaigns`: export direct campaign attribution.
 
 Mapped relationship exports also need:
 
-- `--for <id_or_name>`: selects the source object for the mapping.
+- `--for <id_or_name>`: selects the starting object, as named before the first
+  hyphen in the target. For `technique-procedures` and `technique-assets`, supply
+  the technique ID. Do not use `--for` for ordinary lists such as `assets`.
 
 Example:
 
@@ -341,8 +352,17 @@ go run . export group-techniques --for G0020 --format md --out reports/group-tec
 
 Exports techniques mapped to the selected group.
 
-The export targets above do not include ICS assets, procedure citations, or
-group/software/campaign connections.
+For example, export the ICS asset inventory or procedure citations for a technique:
+
+```bash
+go run . export assets --matrix ics --out reports/ics-assets.csv
+go run . export technique-procedures --for T1059 --format md --out reports/procedures.md
+```
+
+Procedure exports have one row per supplied citation. An uncited procedure appears
+once with blank citation columns. The exported row count can therefore exceed the
+number of procedure examples. If an older cache lacks these fields, use
+[`update --rebuild`](#cache-management) with the affected matrix.
 
 ## Matrix Examples
 
